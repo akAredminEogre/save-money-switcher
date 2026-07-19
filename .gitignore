@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# CoDD session checkpoints (resume state, machine-local)
+.codd/greenfield_session.yaml
+
+# misc
+.DS_Store
+tmp/

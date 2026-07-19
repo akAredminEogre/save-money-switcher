@@ -1,0 +1,9 @@
+{
+  "manager": "codd skills",
+  "skill_name": "codd-greenfield",
+  "source": "/home/akaredmineogre/.local/share/uv/tools/codd-dev/lib/python3.12/site-packages/codd/_skills/codd-greenfield",
+  "target": "claude",
+  "scope": "repo",
+  "mode": "copy",
+  "installed_at": "2026-07-20T06:25:34"
+}
