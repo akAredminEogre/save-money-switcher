@@ -1,0 +1,105 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 40cba777f3ecd5300f667becd7de0930e11665345b1ae21e373411f546899e4a
+design_doc_sha: 45b28b3ea742a581b70b429849d8aa71006fd501bf5da3e0d6ddf3d8268f55b9
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T20:05:09.386752Z'
+design_docs:
+- docs/design/realtime_sync_design.md
+tasks:
+- id: implement_realtime_protocol
+  title: Implement realtime sync message protocol
+  description: 'Define the JSON envelope and type surface for realtime_sync in protocol.ts:
+    the Role/GameStage/TvMode unions, DomainEventType, the ServerEvent<T> envelope
+    with monotonic seq and currency "円" marker, command kinds, and the CLOSE_OVER_LIMIT
+    (4001) close code. Ship a focused unit test pinning these enums and the close-code
+    constant. This is a leaf type/constant module with no runtime imports from sibling
+    units.'
+  source_design_doc: docs/design/realtime_sync_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/realtime_sync/protocol.ts
+  - tests/realtime_sync/protocol.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:05:09.386752Z'
+  approved: true
+- id: implement_connection_limit_resolver
+  title: Implement tablet connection limit resolver
+  description: Provide resolveMaxTabletConnections() in src/config/connection_limit.ts
+    as the single resolution point for MAX_TABLET_CONNECTIONS, defaulting to 8 when
+    unset (environment variable is the default mechanism) and following changes to
+    16/32 with no code edit. Judgment code must contain no literal 8 (dod_limit_no_hardcode).
+    It exposes no dedicated test file of its own; its default and config-following
+    behavior are asserted through the admission unit suite.
+  source_design_doc: docs/design/realtime_sync_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/connection_limit.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:05:09.386752Z'
+  approved: true
+- id: implement_tablet_admission
+  title: Implement tablet admission decision
+  description: Implement admitTablet({ limit, connected }, { name }) in src/participants/admission.ts
+    as a pure function returning accept/reject from the current answerer count versus
+    the passed-in limit; the source takes limit as a parameter and does not import
+    the resolver. The bundled unit test imports resolveMaxTabletConnections to prove
+    the decision tracks the configured value across the 8/9, 16/17, and 32/33 boundaries,
+    so this task's harness surface drives the connection_limit resolver.
+  source_design_doc: docs/design/realtime_sync_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/admission.ts
+  - tests/realtime_sync/admission.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_connection_limit_resolver
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:05:09.386752Z'
+  approved: true
+- id: implement_role_projection_fanout
+  title: Implement role projection fan-out filter
+  description: 'Implement projectForRole(event, ctx) in src/realtime_sync/fanout.ts
+    to enforce visibility at the transport layer: answerers receive only their own
+    balance/state, audience receives nothing that reveals others'' answers before
+    disclosure, and host receives full payloads. The module imports the envelope and
+    role types from protocol.ts. Ship the unit test proving pre-disclosure suppression
+    for audience and own-only balance projection for answerers.'
+  source_design_doc: docs/design/realtime_sync_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/realtime_sync/fanout.ts
+  - tests/realtime_sync/fanout.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_realtime_protocol
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:05:09.386752Z'
+  approved: true
+- id: implement_state_snapshot_builder
+  title: Implement server-authority snapshot builder
+  description: Implement buildSnapshot(gameState, ctx, data) in src/realtime_sync/recovery.ts
+    to reconstruct a role-projected state_snapshot from server authority (current
+    question number, stage, tv mode, own balance, own submitted) while structurally
+    excluding other participants' data. The module imports the stage/mode/role types
+    from protocol.ts and applies role scoping itself. Ship the unit test proving answerer
+    recovery to progression plus own balance/submitted with no other-participant leakage.
+  source_design_doc: docs/design/realtime_sync_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/realtime_sync/recovery.ts
+  - tests/realtime_sync/recovery.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_realtime_protocol
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:05:09.386752Z'
+  approved: true

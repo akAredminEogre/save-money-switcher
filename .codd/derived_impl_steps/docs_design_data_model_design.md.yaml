@@ -1,0 +1,779 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 32892292c45099365f06f6a43d1003f3c4fe3a5cd331e1b8775de88276b4fd8e
+task_id: docs/design/data_model_design.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T09:21:15Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: answer_score_value_type
+  kind: value_type
+  rationale: 0〜100 整数の回答レンジを型と実行時アサートで固定し、UI/サーバ/DB CHECK の三層防衛のサーバ・型層を供給する。Question.correctValue・Answer.value・settlements.error/answer_value
+    が同型を共有する。
+  source_design_section: docs/design/data_model_design.md §2.7 / §2.4
+  target_path_hint: src/scoring/answer_score.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/answer_score.ts (AnswerScore, ANSWER_MIN=0, ANSWER_MAX=100, isAnswerScore,
+    assertAnswerScore)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: yen_value_type
+  kind: value_type
+  rationale: 整数円型と確定金額定数（INITIAL_GRANT=10000 / YEN_PER_ERROR=-100 / PITARI_BONUS=1000
+    / CURRENCY="円"）を単一定義し、小数・point/pt/点 を型と assertYen で排除する（DM-3/円建て固定）。
+  source_design_section: docs/design/data_model_design.md §2.7 / §2.6
+  target_path_hint: src/scoring/yen.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/yen.ts (Yen, CURRENCY, INITIAL_GRANT, YEN_PER_ERROR, PITARI_BONUS,
+    assertYen)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: progression_types_predicates
+  kind: domain_predicate
+  rationale: Stage 列挙（accepting..settlement_computed）と isDisclosed/isSettled を単一所有し、再採点範囲判定と終端状態ガードの唯一の前提を提供する（DM-2）。
+  source_design_section: docs/design/data_model_design.md §2.5
+  target_path_hint: src/game_state/progression.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/progression.ts (Stage, Round, DISCLOSED, isDisclosed, isSettled)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: game_state_type
+  kind: domain_type
+  rationale: セッション横断ポインタ（currentQuestionNumber / tvMode a-e / phase lobby|in_progress|finished）を型で確定し
+    game_state シングルトンの構造を規定する。
+  source_design_section: docs/design/data_model_design.md §2.5
+  target_path_hint: src/game_state/game_state.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/game_state.ts (TvMode, GameState)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: question_domain_type
+  kind: domain_type
+  rationale: 問題エンティティ（id/questionNumber/text/imagePath|null/videoPath|null/correctValue:AnswerScore）を定義し、DM-1
+    のメディア任意・正解値 0-100 整数保持を型で固定する。
+  source_design_section: docs/design/data_model_design.md §2.2
+  target_path_hint: src/questions/question.ts
+  inputs:
+  - answer_score_value_type
+  expected_outputs:
+  - src/questions/question.ts (Question)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: participant_domain_type
+  kind: domain_type
+  rationale: 参加者エンティティ（id/name/joinedAt/connectionId）を定義。座席固定割当・事前氏名台帳列を持たない当日その場参加を型で表す。
+  source_design_section: docs/design/data_model_design.md §2.3
+  target_path_hint: src/participants/participant.ts
+  inputs: []
+  expected_outputs:
+  - src/participants/participant.ts (Participant)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: answer_domain_type
+  kind: domain_type
+  rationale: 回答エンティティ（id/questionId/participantId/value:AnswerScore/submittedAt）を定義し
+    answer_submitted の永続構造を確定する。
+  source_design_section: docs/design/data_model_design.md §2.4
+  target_path_hint: src/game_state/answer.ts
+  inputs:
+  - answer_score_value_type
+  expected_outputs:
+  - src/game_state/answer.ts (Answer)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: settlement_domain_type
+  kind: domain_type
+  rationale: 問×人の拠出台帳型 QuestionSettlement（answerValue/error:AnswerScore, deltaYen/pitariBonusYen:Yen,
+    pitariAwarded）を定義し差分再採点の派生構造を確定する。
+  source_design_section: docs/design/data_model_design.md §2.6
+  target_path_hint: src/scoring/settlement.ts
+  inputs:
+  - answer_score_value_type
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/settlement.ts (QuestionSettlement)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: balance_domain_type
+  kind: domain_type
+  rationale: 集計読みモデル型 Balance（participantId/amount:Yen）を定義。amount = 10000 + Σ settlements
+    の不変式の器とする。
+  source_design_section: docs/design/data_model_design.md §2.6
+  target_path_hint: src/scoring/balance.ts
+  inputs:
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/balance.ts (Balance)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: connection_limit_resolver
+  kind: config_resolver
+  rationale: MAX_TABLET_CONNECTIONS の単一解決点（DEFAULT_MAX_TABLET_CONNECTIONS=8 の単一定義＋ConfigSource
+    抽象＋resolveMaxTabletConnections）を実装。解決順=環境変数→config→既定8、判定経路に数値リテラル 8 を置かない（DM-4）。
+  source_design_section: docs/design/data_model_design.md §2.8
+  target_path_hint: src/config/connection_limit.ts
+  inputs: []
+  expected_outputs:
+  - src/config/connection_limit.ts (DEFAULT_MAX_TABLET_CONNECTIONS, ConfigSource,
+    resolveMaxTabletConnections)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: db_schema_migrations
+  kind: db_schema
+  rationale: 8テーブル（questions/participants/answers/rounds/game_state/settlements/balances/config）のスキーマ/マイグレーションを
+    src/persistence/ に定義し、CHECK(0<=value/correct_value/error<=100)・金額 integer・unique(question_id,participant_id)（answers/settlements）・FK・rounds.question_id
+    と balances.participant_id を PK=FK・game_state シングルトンを三層目防衛として強制する。
+  source_design_section: docs/design/data_model_design.md §2.1-§2.8 / §2.11 / §3.1
+  target_path_hint: src/persistence/
+  inputs:
+  - question_domain_type
+  - participant_domain_type
+  - answer_domain_type
+  - progression_types_predicates
+  - game_state_type
+  - settlement_domain_type
+  - balance_domain_type
+  expected_outputs:
+  - src/persistence/schema.ts
+  - src/persistence/migrations (8 tables with CHECK/unique/FK)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: questions_repository
+  kind: repository
+  rationale: QuestionsRepository 契約（bulkInsert/getByNumber/listAll/updateContent）と
+    DB 実装を供給。ランタイム出題を DB から供給（ファイル非依存）し、ライブ編集を永続化して再取得で読み戻せる（producer=登録/編集, consumer=出題読取）。
+  source_design_section: docs/design/data_model_design.md §2.2 / §2.9
+  target_path_hint: src/questions/questions_repository.ts
+  inputs:
+  - question_domain_type
+  - db_schema_migrations
+  expected_outputs:
+  - src/questions/questions_repository.ts (interface)
+  - DB-backed QuestionsRepository implementation
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: participants_repository
+  kind: repository
+  rationale: participants の永続化（insert/list、connection_id 一意で 1人=1台）と DB 実装を供給。恒久台帳・座席列を持たず当日その場参加を成立させる。
+  source_design_section: docs/design/data_model_design.md §2.3 / §2.11
+  target_path_hint: src/participants/participants_repository.ts
+  inputs:
+  - participant_domain_type
+  - db_schema_migrations
+  expected_outputs:
+  - src/participants/participants_repository.ts (interface)
+  - DB-backed ParticipantsRepository implementation
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: answers_repository
+  kind: repository
+  rationale: answers の upsertDuringAccepting（stage=accepting のときのみ挿入/更新を許可＝終端状態ガード,
+    unique(question_id,participant_id) で1行更新）・getOwn（自分の解答のみ）・listForRevealedQuestion（開示後の全解答）を供給し、開示前は他者解答を読みモデルに含めない。
+  source_design_section: docs/design/data_model_design.md §2.4 / §2.11 / §2.5
+  target_path_hint: src/game_state/answers_repository.ts
+  inputs:
+  - answer_domain_type
+  - progression_types_predicates
+  - db_schema_migrations
+  expected_outputs:
+  - src/game_state/answers_repository.ts (interface)
+  - DB-backed AnswersRepository implementation with stage guard
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: rounds_repository
+  kind: repository
+  rationale: rounds の初期化と stage 前進（accepting→answers_locked→answers_opened→answer_revealed→settlement_computed）・読取りを供給。isDisclosed/isSettled
+    による再採点範囲判定の永続前提を保持する。
+  source_design_section: docs/design/data_model_design.md §2.5
+  target_path_hint: src/game_state/rounds_repository.ts
+  inputs:
+  - progression_types_predicates
+  - db_schema_migrations
+  expected_outputs:
+  - src/game_state/rounds_repository.ts (interface)
+  - DB-backed RoundsRepository implementation
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: game_state_repository
+  kind: repository
+  rationale: game_state シングルトン（current_question_number/tv_mode/phase）の取得・更新（phase=finished
+    遷移含む）を供給する。
+  source_design_section: docs/design/data_model_design.md §2.5
+  target_path_hint: src/game_state/game_state_repository.ts
+  inputs:
+  - game_state_type
+  - db_schema_migrations
+  expected_outputs:
+  - src/game_state/game_state_repository.ts (interface)
+  - DB-backed GameStateRepository implementation
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: settlements_repository
+  kind: repository
+  rationale: settlements の upsertForQuestion（unique(question_id,participant_id) で問ごと拠出行を永続）・listForQuestion
+    を供給。error/delta_yen/pitari_bonus_yen を整数円で保持する durable 層。
+  source_design_section: docs/design/data_model_design.md §2.6
+  target_path_hint: src/scoring/settlements_repository.ts
+  inputs:
+  - settlement_domain_type
+  - db_schema_migrations
+  expected_outputs:
+  - src/scoring/settlements_repository.ts (interface)
+  - DB-backed SettlementsRepository implementation
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: balances_repository
+  kind: repository
+  rationale: balances の initialize（amount=INITIAL_GRANT=10000）・getOwn（タブレット自残額のみ）・listAll（TV
+    d/e）・applyDelta（差分更新）を供給。amount は整数円で Σ settlements と一致する集計読みモデルを担う。
+  source_design_section: docs/design/data_model_design.md §2.6 / §2.11
+  target_path_hint: src/scoring/balances_repository.ts
+  inputs:
+  - balance_domain_type
+  - yen_value_type
+  - db_schema_migrations
+  expected_outputs:
+  - src/scoring/balances_repository.ts (interface)
+  - DB-backed BalancesRepository implementation
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: config_repository
+  kind: repository
+  rationale: config テーブル（key/value/updated_at）の read/upsert を供給し、connection_limit_resolver
+    の ConfigSource として MAX_TABLET_CONNECTIONS を解決順（環境変数→config→既定8）へ供給する。
+  source_design_section: docs/design/data_model_design.md §2.8
+  target_path_hint: src/config/config_repository.ts
+  inputs:
+  - connection_limit_resolver
+  - db_schema_migrations
+  expected_outputs:
+  - src/config/config_repository.ts (interface + ConfigSource adapter)
+  - DB-backed ConfigRepository implementation
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: apply_question_score_function
+  kind: pure_function
+  rationale: 1人1問の精算純関数 applyQuestionScore（error=|answer-correct|, delta_yen=error×-100,
+    pitari_bonus_yen=(error===0?+1000:0), balance=input+delta+pitari, currency="円"）。assertAnswerScore/assertYen
+    で 100超・小数・負値を計算前に拒否する。
+  source_design_section: docs/design/data_model_design.md §2.9
+  target_path_hint: src/scoring/apply_question_score.ts
+  inputs:
+  - answer_score_value_type
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/apply_question_score.ts (applyQuestionScore, ScoreInput, ScoreResult)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id021
+  id: settle_question_function
+  kind: pure_function
+  rationale: 当該問の全 answers.value と correct_value から QuestionSettlement[] を導出する純関数（applyQuestionScore
+    を各解答へ適用）。op_compute_settlement の derived 生成器で、op_auto_rescore からも再利用する。
+  source_design_section: docs/design/data_model_design.md §2.9 / §2.6
+  target_path_hint: src/scoring/settle_question.ts
+  inputs:
+  - apply_question_score_function
+  - settlement_domain_type
+  expected_outputs:
+  - src/scoring/settle_question.ts (settleQuestion)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id022
+  id: aggregate_balance_function
+  kind: pure_function
+  rationale: balances.amount = INITIAL_GRANT(10000) + Σ delta_yen + Σ pitari_bonus_yen
+    を settlements から全再計算する純関数。差分更新の監査基準（不変式）となる。
+  source_design_section: docs/design/data_model_design.md §2.9 / §2.6
+  target_path_hint: src/scoring/aggregate_balance.ts
+  inputs:
+  - settlement_domain_type
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/aggregate_balance.ts (aggregateBalance)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id023
+  id: rescore_question_diff_function
+  kind: pure_function
+  rationale: 編集後 correct_value と既存 answers から当該問 settlements を再計算し、旧拠出との差分（新(delta+pitari)−旧(delta+pitari)）を返す純関数。全再計算と一致する不変式を満たす最適化。
+  source_design_section: docs/design/data_model_design.md §2.9
+  target_path_hint: src/scoring/rescore_question.ts
+  inputs:
+  - settle_question_function
+  - aggregate_balance_function
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/rescore_question.ts (rescore diff producing BalanceDelta[])
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id024
+  id: determine_winners_function
+  kind: pure_function
+  rationale: 全問通算 balances.amount 最多のプレイヤー（同点は共同首位）を返す純関数。op_determine_winner の勝者判別の
+    measurement 源を実装する。
+  source_design_section: docs/design/data_model_design.md §2.9 (op_determine_winner)
+  target_path_hint: src/scoring/determine_winner.ts
+  inputs:
+  - balance_domain_type
+  expected_outputs:
+  - src/scoring/determine_winner.ts (determineWinners)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id025
+  id: settlement_persistence_service
+  kind: persistence_service
+  rationale: 'op_compute_settlement の durable 連鎖: settle_question → settlements_repository
+    へ永続 → balances_repository へ反映 → rounds.stage=settlement_computed を1トランザクションで確定し、balances=Σ
+    settlements 不変式を保つ（host トリガー・TV 配信は別ノード）。'
+  source_design_section: docs/design/data_model_design.md §2.9 / §2.6
+  target_path_hint: src/scoring/compute_settlement.ts
+  inputs:
+  - settle_question_function
+  - aggregate_balance_function
+  - settlements_repository
+  - balances_repository
+  - rounds_repository
+  expected_outputs:
+  - src/scoring/compute_settlement.ts (settlement write coupling settlements+balances+rounds.stage)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id026
+  id: auto_rescore_persistence_service
+  kind: persistence_service
+  rationale: 'op_auto_rescore のトリガー忠実性: isDisclosed(rounds.stage) 真かつ correct_value
+    変更のときのみ当該問 settlements を再計算し balances を旧拠出との差分で更新する（c 未到達・text/メディアのみ編集は非誘発）。差分後
+    balances が aggregate_balance の全再計算と一致することを保証する。'
+  source_design_section: docs/design/data_model_design.md §2.9
+  target_path_hint: src/scoring/auto_rescore.ts
+  inputs:
+  - rescore_question_diff_function
+  - aggregate_balance_function
+  - settlements_repository
+  - balances_repository
+  - rounds_repository
+  - progression_types_predicates
+  expected_outputs:
+  - src/scoring/auto_rescore.ts (disclosed-gated differential rescore + persist)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id027
+  id: participant_join_persistence_service
+  kind: persistence_service
+  rationale: 'op_join_game の durable 連鎖: participants へ 1人1レコード（connection_id 一意）を作成し、当該参加者の
+    balances を initialize（amount=INITIAL_GRANT=10000）する。1人1台・賞金先渡し初期化を単一経路で確定する。'
+  source_design_section: docs/design/data_model_design.md §2.3 / §2.6
+  target_path_hint: src/participants/join_persistence.ts
+  inputs:
+  - participants_repository
+  - balances_repository
+  expected_outputs:
+  - src/participants/join_persistence.ts (participant insert + balance init 10000)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id028
+  id: winner_finalize_persistence_service
+  kind: persistence_service
+  rationale: 'op_determine_winner の durable: 10問すべて settlement_computed のとき determine_winners
+    を全 balances から算出し game_state.phase=finished を確定する。'
+  source_design_section: docs/design/data_model_design.md §2.5 / §2.9 (op_determine_winner)
+  target_path_hint: src/game_state/finalize_game.ts
+  inputs:
+  - determine_winners_function
+  - balances_repository
+  - game_state_repository
+  - rounds_repository
+  expected_outputs:
+  - src/game_state/finalize_game.ts (finalize on 10 settled → phase=finished)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id029
+  id: test_apply_question_score
+  kind: unit_test
+  rationale: 誤差5→-500円→残額9500（dod_settle_delta）・誤差0→ピタリ賞+1000→11000・誤差1境界=-100のみ・currency="円"（dod_settle_currency_yen）・整数のみ（dod_settle_integer_only）・101/50.5/-1
+    の拒否を検証する。
+  source_design_section: docs/design/data_model_design.md §2.9
+  target_path_hint: tests/scoring/apply_question_score.test.ts
+  inputs:
+  - apply_question_score_function
+  expected_outputs:
+  - tests/scoring/apply_question_score.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id030
+  id: test_progression_predicates
+  kind: unit_test
+  rationale: isDisclosed が answers_opened=偽・answer_revealed/settlement_computed=真、isSettled
+    が settlement_computed のみ真であること（再採点範囲の境界）を検証する。
+  source_design_section: docs/design/data_model_design.md §2.9 / §2.5
+  target_path_hint: tests/game_state/progression.test.ts
+  inputs:
+  - progression_types_predicates
+  expected_outputs:
+  - tests/game_state/progression.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id031
+  id: test_connection_limit
+  kind: unit_test
+  rationale: 未設定=既定8（dod_limit_default_eight）・設定16/32 を非改修で反映（dod_limit_config_follows）・不正値フォールバックを検証し、判定が解決値参照であること（dod_limit_no_hardcode）を担保する。
+  source_design_section: docs/design/data_model_design.md §2.9 / §2.8
+  target_path_hint: tests/config/connection_limit.test.ts
+  inputs:
+  - connection_limit_resolver
+  expected_outputs:
+  - tests/config/connection_limit.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id032
+  id: test_questions_persistence
+  kind: persistence_test
+  rationale: 登録→再取得で同一 text/correct_value（dod_load_persist）・DB CHECK が 0-100 整数外(-1/101/50.5)を拒否（dod_load_correct_value_integer）・image/video
+    未指定 NULL 許容（dod_load_media_paths_optional）・updateContent 永続と読み戻し（dod_edit_persist）を検証する。
+  source_design_section: docs/design/data_model_design.md §2.2 / §2.11
+  target_path_hint: tests/questions/questions_repository.test.ts
+  inputs:
+  - questions_repository
+  expected_outputs:
+  - tests/questions/questions_repository.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id033
+  id: test_answers_persistence
+  kind: persistence_test
+  rationale: 永続・再表示（dod_submit_persist）・再送信は unique(question_id,participant_id) で1行更新（dod_submit_one_row_per_player）・DB
+    CHECK による 0-100 整数外の拒否（三層目防衛）・stage が answers_locked 以降で挿入/更新拒否＝終端状態ガード（dod_lock_blocks_submit）を検証する。
+  source_design_section: docs/design/data_model_design.md §2.4 / §2.11 / §2.5
+  target_path_hint: tests/game_state/answers_repository.test.ts
+  inputs:
+  - answers_repository
+  - rounds_repository
+  expected_outputs:
+  - tests/game_state/answers_repository.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id034
+  id: test_participant_join_persistence
+  kind: persistence_test
+  rationale: connection_id 一意で1人1台（dod_join_one_device）・自己入力氏名の永続（dod_join_self_name）・balances.amount=10000
+    初期化（dod_settle_initial_grant）を検証する。
+  source_design_section: docs/design/data_model_design.md §2.3 / §2.6
+  target_path_hint: tests/participants/join_persistence.test.ts
+  inputs:
+  - participant_join_persistence_service
+  expected_outputs:
+  - tests/participants/join_persistence.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id035
+  id: test_settlement_persistence
+  kind: persistence_test
+  rationale: 誤差5精算後に balances.amount が精算前より500円少ない（dod_settle_delta）・誤差0で pitari_bonus_yen=+1000
+    反映（dod_settle_pitari_add）・settlements/balances が整数円かつ point/pt/点 不在（dod_settle_currency_yen/dod_settle_integer_only）・rounds.stage=settlement_computed
+    到達を検証する。
+  source_design_section: docs/design/data_model_design.md §2.6 / §2.9
+  target_path_hint: tests/scoring/compute_settlement.test.ts
+  inputs:
+  - settlement_persistence_service
+  expected_outputs:
+  - tests/scoring/compute_settlement.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id036
+  id: test_auto_rescore
+  kind: persistence_test
+  rationale: answer_revealed 以降の正解訂正で settlements/balances 再計算・即時反映（dod_rescore_after_c）・answers_opened
+    以前の正解編集で不変（dod_rescore_no_before_c）・settlement_computed 問で差分再計算（dod_rescore_d_sync）・差分後
+    balances が全再計算と一致（dod_rescore_matches_full_recompute）を検証する。
+  source_design_section: docs/design/data_model_design.md §2.9
+  target_path_hint: tests/scoring/auto_rescore.test.ts
+  inputs:
+  - auto_rescore_persistence_service
+  - aggregate_balance_function
+  expected_outputs:
+  - tests/scoring/auto_rescore.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id037
+  id: test_winner_determination
+  kind: persistence_test
+  rationale: 残額最多が勝者・同点は共同首位（dod_winner_most_balance）と、10問すべて settlement_computed
+    で game_state.phase=finished 確定を検証する。
+  source_design_section: docs/design/data_model_design.md §2.9 (op_determine_winner)
+    / §2.5
+  target_path_hint: tests/scoring/determine_winner.test.ts
+  inputs:
+  - determine_winners_function
+  - winner_finalize_persistence_service
+  expected_outputs:
+  - tests/scoring/determine_winner.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:21:15Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+- *id021
+- *id022
+- *id023
+- *id024
+- *id025
+- *id026
+- *id027
+- *id028
+- *id029
+- *id030
+- *id031
+- *id032
+- *id033
+- *id034
+- *id035
+- *id036
+- *id037
+layer_2_steps: []

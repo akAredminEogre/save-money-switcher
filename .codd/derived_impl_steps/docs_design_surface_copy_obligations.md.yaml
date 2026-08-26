@@ -1,0 +1,428 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 57d81e13bc24144e41d1e3662e19dbada536b45cddb49e80d321c2568f3c54cb
+task_id: docs/design/surface_copy_obligations.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T21:34:58Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: role_labels_single_source
+  kind: copy_source_module
+  rationale: Define ROLE_LABELS (host→司会者 / answerer→解答者 / audience→観客) keyed by Role
+    as the single canonical label source that every surface imports, so internal role
+    identifiers never leak into visible copy.
+  source_design_section: §2.8 可視ラベルの単一供給 / op_map_role_labels_in_copy (dod_labels_single_source)
+  target_path_hint: src/game_state/role_labels.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/role_labels.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: currency_format_single_point
+  kind: copy_source_module
+  rationale: 'Provide CURRENCY_UNIT="円" and formatYen(amount) as the sole money-formatting
+    point: integer-yen only (throws on non-integer), never emits point/pt/点, and correctly
+    renders negatives (−100円/−500円) and +1000円.'
+  source_design_section: §2.5 金額文言・円建て固定 / op_enforce_currency_yen_copy (dod_currency_no_point_token)
+  target_path_hint: src/scoring/currency.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/currency.ts (formatYen, CURRENCY_UNIT)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: stage_status_operational_copy
+  kind: copy_source_module
+  rationale: Map internal stage/event identifiers (accepting/answers_locked/answers_opened/answer_revealed/settlement_computed)
+    to operational words (受付中/締切/解答オープン/正解発表/精算) from a single source, so control_panel
+    and tablet 状態表示 use 運用語 and never leak internal event names.
+  source_design_section: §1.3 内部イベント名→可視表現 / §3.1 状態表示の運用語化
+  target_path_hint: src/game_state/status_copy.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/status_copy.ts (stage→operational label map)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: render_control_panel_surface
+  kind: surface_render
+  rationale: Render the host operational console at /control-panel exposing every
+    host trigger (問題を読み込む/そこまで/解答オープン！/正解発表/精算/次へ/戻る/個別ジャンプ/取消/編集) as 司会者向け operation
+    words, the participant roster (self-input participants.name), and the join QR,
+    while excluding the answerer number-input face; stage状態 uses status_copy and roles
+    use ROLE_LABELS with no internal identifier/event-name/config-key leak.
+  source_design_section: §2.2 / op_render_control_panel_surface (dod_cp_visible_host_triggers,
+    dod_cp_no_answerer_input_face, dod_cp_shows_join_qr_and_roster, dod_cp_no_internal_leak)
+  target_path_hint: src/control_panel/
+  inputs: []
+  expected_outputs:
+  - src/control_panel/ control-panel surface renderer
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: control_panel_connection_count_display
+  kind: count_readback_render
+  rationale: On the host console render the tablet-connection 把握 as "◯/◯台" whose source
+    is the current answerer connection count and the resolved MAX_TABLET_CONNECTIONS;
+    at capacity it reads e.g. 8/8台, and this count is rendered host-only and never
+    surfaced to /tablet, /tv, or /join.
+  source_design_section: §2.2 / op_render_control_panel_surface expected_outcomes
+    (接続「◯/◯台」)
+  target_path_hint: src/control_panel/
+  inputs: []
+  expected_outputs:
+  - src/control_panel/ connection-count display
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: render_tablet_surface
+  kind: surface_render
+  rationale: Render /tablet as an input-only minimal UI limited to 問題番号・4-button 数値入力(0〜100
+    clamp)・送信/送信済み・自分の残額 (latest own balance via formatYen)・受付中/締切 (via status_copy),
+    excluding host controls, others' answers/balances/scores, output content, and
+    全体一覧, with answerer-only copy and no permission-boundary explanation.
+  source_design_section: §2.3 / op_render_tablet_surface (dod_tablet_minimal_elements_only,
+    dod_tablet_no_others_info, dod_tablet_no_control_actions, dod_tablet_answerer_copy_only)
+  target_path_hint: src/tablet/
+  inputs: []
+  expected_outputs:
+  - src/tablet/ tablet surface renderer
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: render_join_surface
+  kind: surface_render
+  rationale: Render /join with a name-input field and 「参加する」 CTA, branching on the
+    family-access decision (granted→氏名入力 / denied→plain copy), showing 満席時「ただいま満席のため参加できません」and
+    an access-denied 平易文, while never exposing seat/端末番号 ledgers, protected 制御盤 nav,
+    or 設定キー名・接続数会計・アクセス制御方式.
+  source_design_section: §2.6 / op_render_join_surface (dod_join_name_input_and_cta,
+    dod_join_no_protected_nav, dod_join_no_seat_ledger_ui, dod_join_full_plain_copy,
+    dod_join_access_denied_plain_copy)
+  target_path_hint: src/participants/
+  inputs: []
+  expected_outputs:
+  - src/participants/ /join surface renderer
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: render_tv_surface_modes
+  kind: surface_render
+  rationale: Render /tv as a passive display that dispatches on game_state.tv_mode
+    to a/b/c/d/e with no input/operation elements, and gates b so that other players'
+    氏名＋解答 are shown only after answers_opened (開示) and never before.
+  source_design_section: §2.4 / op_render_tv_surface (dod_tv_five_modes, dod_tv_hide_before_disclosure,
+    dod_tv_audience_copy_no_control)
+  target_path_hint: src/tv_display/
+  inputs: []
+  expected_outputs:
+  - src/tv_display/ tv-mode dispatcher renderer
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: render_tv_a_question_face
+  kind: surface_render
+  rationale: In a mode render the resolved 出題面 from resolveQuestionFace with the fixed
+    video→image→text order, building media URLs from the resolved source, and never
+    printing raw file-path strings or internal words such as "fallback".
+  source_design_section: §2.4 a / §2.9 / op_render_tv_surface (dod_tv_no_path_or_internal_leak)
+  target_path_hint: src/tv_display/
+  inputs: []
+  expected_outputs:
+  - src/tv_display/ a-mode question-face renderer
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: render_tv_d_settlement_table
+  kind: surface_render
+  rationale: In d mode render the 当該問 6-column 全員表 (氏名/解答/誤差/増減円/ピタリ賞/残額) from settlements+participants+balances,
+    formatting 増減円・残額 through formatYen (円建て固定・点化禁止) and names via participants.name.
+  source_design_section: §2.4 d / §2.5 / op_render_tv_surface (dod_tv_five_modes,
+    dod_currency_yen_all_surfaces)
+  target_path_hint: src/tv_display/render_settlement_table.ts
+  inputs: []
+  expected_outputs:
+  - src/tv_display/render_settlement_table.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: render_tv_e_totals_and_winner
+  kind: surface_render
+  rationale: In e mode render 全問通算 balances for all players via formatYen and mark
+    the 残額最多 player as 勝者判別可能; source is the winner read model (max balances.amount),
+    and 同点 is presented as 複数の共同首位 without inventing a tiebreak priority (F-06).
+  source_design_section: §2.4 e / op_render_tv_surface (dod_tv_winner_visible_e)
+  target_path_hint: src/tv_display/render_totals.ts
+  inputs: []
+  expected_outputs:
+  - src/tv_display/render_totals.ts (renderTvModeE)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: enforce_currency_yen_copy
+  kind: copy_enforcement
+  rationale: Route every money-bearing output — TV d/e, the tablet own-balance, and
+    API/read-model money fields — through integer-yen values and formatYen so all
+    display 円 and no surface or response contains point/pt/点 or a 点化 phrase; assert
+    boundaries −100円/−500円/+1000円 and negative balances still read 円.
+  source_design_section: §2.5 / op_enforce_currency_yen_copy (dod_currency_yen_all_surfaces,
+    dod_currency_no_point_token, dod_currency_no_pointization_phrase)
+  target_path_hint: null
+  inputs: []
+  expected_outputs:
+  - currency-consistent surface + API money copy (single formatYen point)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: map_role_labels_in_copy
+  kind: copy_enforcement
+  rationale: Bind every surface's role-bearing copy to ROLE_LABELS so roles read 司会者/解答者/観客
+    everywhere and the internal identifiers host/answerer/audience never appear in
+    any visible 文言.
+  source_design_section: §2.8 / op_map_role_labels_in_copy (dod_labels_business_facing,
+    dod_labels_single_source)
+  target_path_hint: null
+  inputs: []
+  expected_outputs:
+  - role-label-bound surface copy across control_panel/tablet/tv_display/join
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: test_role_labels_unit
+  kind: unit_test
+  rationale: Assert ROLE_LABELS maps host/answerer/audience to 司会者/解答者/観客 and that
+    no emitted label contains the internal identifiers host/answerer/audience.
+  source_design_section: §2.11 tests/game_state/role_labels.test.ts
+  target_path_hint: tests/game_state/role_labels.test.ts
+  inputs: []
+  expected_outputs:
+  - tests/game_state/role_labels.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: test_currency_format_unit
+  kind: unit_test
+  rationale: Assert formatYen renders 整数円 with 円 for 10000/−100/−500/1000, contains
+    no point/pt/点, and throws on a non-integer amount (e.g. 50.5).
+  source_design_section: §2.11 tests/scoring/currency.test.ts
+  target_path_hint: tests/scoring/currency.test.ts
+  inputs: []
+  expected_outputs:
+  - tests/scoring/currency.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: e2e_surface_copy_helpers
+  kind: test_helper
+  rationale: Provide shared Vitest+Playwright helpers — server-health (`status < 500`
+    baseline), a forbidden-copy scanner (point/pt/点・内部イベント名 answers_locked 等・設定キー名・生ファイルパス・内部ロール識別子・デモ/テスト表記),
+    and 6-column d-table / role-label / 円 assertions — reused by all surface browser
+    specs.
+  source_design_section: §2.11 / §3.1 禁止コピー走査の実装方式
+  target_path_hint: tests/e2e/helpers/
+  inputs: []
+  expected_outputs:
+  - tests/e2e/helpers/assertions.ts
+  - tests/e2e/helpers/server-health.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: test_control_panel_surface_browser
+  kind: browser_e2e_test
+  rationale: Drive /control-panel with Playwright (declared/verified in Vitest) to
+    assert the visible host triggers, roster (self-input names) and join QR are present,
+    the answerer number-input send face is absent, and no 内部ロール識別子/内部イベント名/設定キー名/point/pt/点/デモ表記
+    appear.
+  source_design_section: §2.2 / op_render_control_panel_surface (dod_cp_*)
+  target_path_hint: tests/e2e/control_panel_surface.browser.spec.ts
+  inputs: []
+  expected_outputs:
+  - tests/e2e/control_panel_surface.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: test_tablet_surface_browser
+  kind: browser_e2e_test
+  rationale: Drive /tablet to assert only input-only elements plus own 残額（円）exist,
+    that no 他者情報/出題本文/全体一覧/司会者操作語/内部イベント名/point/pt/点 appear, and that no lock/open/switch
+    control-action locators exist.
+  source_design_section: §2.3 / §2.11 example tests/e2e/tablet_surface.browser.spec.ts
+    (dod_tablet_*)
+  target_path_hint: tests/e2e/tablet_surface.browser.spec.ts
+  inputs: []
+  expected_outputs:
+  - tests/e2e/tablet_surface.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: test_join_surface_browser
+  kind: browser_e2e_test
+  rationale: Drive /join to assert the name input and 参加する CTA are present, seat/端末番号
+    ledger inputs and protected 制御盤 nav are absent, and that 満席/アクセス拒否 states render
+    平易文 without 設定キー名・接続数会計・アクセス制御方式.
+  source_design_section: §2.6 / op_render_join_surface (dod_join_*)
+  target_path_hint: tests/e2e/join_surface.browser.spec.ts
+  inputs: []
+  expected_outputs:
+  - tests/e2e/join_surface.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: test_tv_surface_browser
+  kind: browser_e2e_test
+  rationale: Drive /tv across a〜e to assert the five modes render, other-player answers
+    stay hidden before b, d shows the 円建て 6-column table, e marks the 残額最多 winner
+    (同点 as co-leaders), and no raw file path / fallback / 内部イベント名 / input elements
+    / point/pt/点 appear.
+  source_design_section: §2.4 / op_render_tv_surface (dod_tv_*) / op_render_tv_surface
+    & op_enforce_currency_yen_copy
+  target_path_hint: tests/e2e/tv_surface.browser.spec.ts
+  inputs: []
+  expected_outputs:
+  - tests/e2e/tv_surface.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T21:34:58Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+layer_2_steps: []

@@ -1,0 +1,618 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 4929a0d2ee1517cbaddba1a396a8146597c218b6410b7af5facc344fe60459dc
+task_id: docs/design/question_media_intake_design.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T10:20:55Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: question_domain_type
+  kind: domain_type
+  rationale: 'Defines the `Question` entity (id, questionNumber, text, imagePath|null,
+    videoPath|null, correctValue: AnswerScore) that every intake/edit/media path shares.
+    Fixes NULL-allowed media paths and the 0..100 integer correct value at the type
+    level.'
+  source_design_section: docs/design/question_media_intake_design.md §2.2/§2.3
+  target_path_hint: src/questions/question.ts
+  inputs: []
+  expected_outputs:
+  - src/questions/question.ts (Question interface, imports AnswerScore from ../scoring/answer_score.js)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: intake_record_type
+  kind: domain_type
+  rationale: Declares `QuestionIntakeRecord` (questionNumber, text, correctValue,
+    imagePath?, videoPath?) as the shape of the pre-authored JSON file, mapping camelCase
+    fields to snake_case columns per §2.2.
+  source_design_section: docs/design/question_media_intake_design.md §2.2 / §3.1
+  target_path_hint: src/questions/intake_record.ts
+  inputs: []
+  expected_outputs:
+  - src/questions/intake_record.ts (QuestionIntakeRecord interface)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: questions_repository_port
+  kind: repository_interface
+  rationale: Defines the `QuestionsRepository` port (bulkInsert, getByNumber, listAll,
+    updateContent) plus `QuestionContentPatch`, so runtime questioning is supplied
+    from DB and live edits update DB, decoupled from the concrete engine (QM-1/DM-1).
+  source_design_section: docs/design/question_media_intake_design.md §2.3
+  target_path_hint: src/questions/questions_repository.ts
+  inputs:
+  - question_domain_type
+  expected_outputs:
+  - src/questions/questions_repository.ts (QuestionsRepository, QuestionContentPatch)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: media_root_config_resolver
+  kind: config_resolver
+  rationale: Resolves QUESTION_MEDIA_ROOT via a single config point (`resolveQuestionMediaRoot`)
+    with DEFAULT_QUESTION_MEDIA_ROOT, never hardcoded, so media presence and asset
+    serving share one root definition.
+  source_design_section: docs/design/question_media_intake_design.md §2.4
+  target_path_hint: src/config/media_root.ts
+  inputs: []
+  expected_outputs:
+  - src/config/media_root.ts (resolveQuestionMediaRoot, DEFAULT_QUESTION_MEDIA_ROOT)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: resolve_question_face_pure
+  kind: pure_function
+  rationale: Pure derived resolver `resolveQuestionFace(question)` enforcing the strict
+    N-2 order video→image→text using only the 3 question fields. This is the single
+    owner of a-mode face selection; no reorder/skip permitted (QM-2).
+  source_design_section: docs/design/question_media_intake_design.md §2.4 / §2.7
+  target_path_hint: src/media/resolve_question_face.ts
+  inputs:
+  - question_domain_type
+  expected_outputs:
+  - src/media/resolve_question_face.ts (resolveQuestionFace, QuestionFace, QuestionFaceKind)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: media_presence_fs_adapter
+  kind: fs_adapter
+  rationale: Concrete `MediaPresence.exists(relativePath)` filesystem adapter checking
+    real files under the resolved media root, injected at composition so intake validation
+    can reject unplaced media before showtime (dod_load_media_prevalidated).
+  source_design_section: docs/design/question_media_intake_design.md §2.4 / §2.9 /
+    §3.1
+  target_path_hint: src/media/media_presence.ts
+  inputs:
+  - media_root_config_resolver
+  expected_outputs:
+  - src/media/media_presence.ts (fs-backed MediaPresence implementing the intake_validator
+    port)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: intake_reader
+  kind: intake_reader
+  rationale: Reads/parses the pre-authored JSON file into `QuestionIntakeRecord[]`
+    (measurement source). Producer end of op_load_questions; performs shape parsing
+    only, deferring semantics to the validator.
+  source_design_section: docs/design/question_media_intake_design.md §2.1 / §2.2 /
+    §3.1
+  target_path_hint: src/questions/intake_reader.ts
+  inputs:
+  - intake_record_type
+  expected_outputs:
+  - src/questions/intake_reader.ts (JSON -> QuestionIntakeRecord[])
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: intake_validator
+  kind: intake_validator
+  rationale: '`validateIntake(records, media)` enforces questionNumber 1..10/unique,
+    non-empty text, correctValue via isAnswerScore (0/100 accept; -1/101/50.5 reject),
+    and declared media presence; also declares the `MediaPresence`/`IntakeIssue` ports.
+    This is defense layer one of the 0..100 integer guard.'
+  source_design_section: docs/design/question_media_intake_design.md §2.2 / §2.9
+  target_path_hint: src/questions/intake_validator.ts
+  inputs:
+  - intake_record_type
+  expected_outputs:
+  - src/questions/intake_validator.ts (validateIntake, MediaPresence, IntakeIssue)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: load_questions_orchestrator
+  kind: business_logic
+  rationale: '`loadQuestions(records, media, repo, newId)` runs validation then all-or-nothing
+    bulkInsert (loaded:0 with issues on any error), mapping records to Question rows.
+    Durable-persist orchestrator for op_load_questions (dod_load_persist/dod_load_all_or_nothing).'
+  source_design_section: docs/design/question_media_intake_design.md §2.2
+  target_path_hint: src/questions/load_questions.ts
+  inputs:
+  - question_domain_type
+  - intake_record_type
+  - questions_repository_port
+  - intake_reader
+  - intake_validator
+  expected_outputs:
+  - src/questions/load_questions.ts (loadQuestions, LoadResult)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: questions_repository_db_impl
+  kind: persistence
+  rationale: 'Concrete DB-backed QuestionsRepository: bulkInsert as upsert-by-question_number
+    (idempotent re-load), getByNumber/listAll for runtime supply, updateContent for
+    live edit, with correct_value CHECK(0..100) as the third defense layer surfacing
+    rejection.'
+  source_design_section: docs/design/question_media_intake_design.md §2.3 / §2.10
+    / §3.1
+  target_path_hint: src/persistence/questions_repository_impl.ts
+  inputs:
+  - question_domain_type
+  - questions_repository_port
+  expected_outputs:
+  - src/persistence/questions_repository_impl.ts (QuestionsRepository over the selected
+    DB with CHECK/unique enforcement)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: intake_command_handler
+  kind: server_handler
+  rationale: 'Host-gated /control-panel handler for op_load_questions (file_pick_then_load):
+    guards phase lobby/in-progress-live-edit, composes intake_reader+media adapter+repo+newId
+    into loadQuestions, and serializes LoadResult with per-question issue numbers;
+    non-host is 401/403 (dod_load_host_only/no_adhoc_entry).'
+  source_design_section: docs/design/question_media_intake_design.md §2.1 / §2.9
+  target_path_hint: src/questions/load_questions_handler.ts
+  inputs:
+  - intake_reader
+  - load_questions_orchestrator
+  - questions_repository_db_impl
+  - media_presence_fs_adapter
+  expected_outputs:
+  - src/questions/load_questions_handler.ts (host-gated intake command wiring + issue
+    serialization)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: runtime_question_supply_readback
+  kind: readback_wiring
+  rationale: Wires runtime question resolution (a/c modes and scoring) to read exclusively
+    from questions via getByNumber/listAll, never re-reading the file, so readback
+    returns the same text/correct_value as registered (dod_load_runtime_from_db).
+  source_design_section: docs/design/question_media_intake_design.md §2.1 / §2.3
+  target_path_hint: src/questions/runtime_supply.ts
+  inputs:
+  - questions_repository_port
+  - questions_repository_db_impl
+  expected_outputs:
+  - src/questions/runtime_supply.ts (DB-only question supply used by TV a-mode and
+    rescore)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: media_asset_serving
+  kind: media_serving
+  rationale: Serves image/video assets from the resolved media root at /media, building
+    the URL from resolveQuestionFace.source (never leaking raw paths/`fallback`) and
+    reachable only inside the family-access boundary — the consumer surface that makes
+    TV a-mode media viewable.
+  source_design_section: docs/design/question_media_intake_design.md §2.4 / §2.9
+  target_path_hint: src/media/asset_serving.ts
+  inputs:
+  - media_root_config_resolver
+  - resolve_question_face_pure
+  expected_outputs:
+  - src/media/asset_serving.ts (resolveAssetUrl + /media route gated by access boundary)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: live_edit_orchestrator
+  kind: orchestrator
+  rationale: '`applyLiveEdit(questionId, patch, repo, stage, rescore)` persists the
+    patch via updateContent then triggers rescore ONLY when patch.correctValue is
+    present AND stage.isDisclosed is true; declares the `StageReader`/`RescoreTrigger`
+    ports. Encodes the QM-3 two-condition rescore gate.'
+  source_design_section: docs/design/question_media_intake_design.md §2.5
+  target_path_hint: src/questions/live_edit.ts
+  inputs:
+  - question_domain_type
+  - questions_repository_port
+  expected_outputs:
+  - src/questions/live_edit.ts (applyLiveEdit, StageReader, RescoreTrigger)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: live_edit_command_handler
+  kind: server_handler
+  rationale: 'Host-gated /control-panel inline-edit handler for op_live_edit_correct:
+    server-validates any correctValue via assertAnswerScore (server defense layer),
+    calls applyLiveEdit, and returns the re-fetched Question as readback; non-host
+    is 401/403 (dod_edit_host_only/dod_edit_correct_range_guard).'
+  source_design_section: docs/design/question_media_intake_design.md §2.5 / §2.9
+  target_path_hint: src/questions/live_edit_handler.ts
+  inputs:
+  - live_edit_orchestrator
+  - questions_repository_db_impl
+  expected_outputs:
+  - src/questions/live_edit_handler.ts (host-gated patch handler with correctValue
+    guard + DB read-back)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: rescore_diff_pure
+  kind: pure_function
+  rationale: '`rescoreDiff(answers, oldSettlements, newCorrect)` recomputes each participant''s
+    contribution via applyQuestionScore and returns per-participant balance deltas
+    (new - old, incl. pitari), as the pure derived core of op_auto_rescore.'
+  source_design_section: docs/design/question_media_intake_design.md §2.6
+  target_path_hint: src/scoring/rescore_question.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/rescore_question.ts (rescoreDiff, AnswerRow, OldSettlement, BalanceDelta)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: stage_reader_adapter
+  kind: port_adapter
+  rationale: Concrete `StageReader.isDisclosed(questionId)` reading rounds.stage and
+    applying isDisclosed from progression, so the live-edit gate decides rescore range
+    from real progression state (dod_reveal_marks_disclosed prerequisite).
+  source_design_section: docs/design/question_media_intake_design.md §2.5 / §2.6
+  target_path_hint: src/questions/stage_reader.ts
+  inputs:
+  - live_edit_orchestrator
+  expected_outputs:
+  - src/questions/stage_reader.ts (StageReader over rounds.stage + isDisclosed)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: rescore_trigger_adapter
+  kind: coordinator
+  rationale: 'Concrete `RescoreTrigger.rescoreQuestion(questionId)`: reads existing
+    answers.value + edited correct_value + old settlements, recomputes all settlements
+    (settleQuestion) and applies balance deltas (rescoreDiff) — the durable state
+    re-write for op_auto_rescore that a manual endpoint must not replace.'
+  source_design_section: docs/design/question_media_intake_design.md §2.6
+  target_path_hint: src/scoring/rescore_trigger.ts
+  inputs:
+  - rescore_diff_pure
+  - live_edit_orchestrator
+  expected_outputs:
+  - src/scoring/rescore_trigger.ts (RescoreTrigger wiring rescoreDiff/settleQuestion
+    to settlements + balances repos)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: rescore_tv_de_sync
+  kind: broadcast_consumer
+  rationale: When the rescored round isSettled (d reached), emit the balance update
+    so TV d (6-column table) and TV e (totals) refresh together; c-reached-only rounds
+    recompute settlements without a d/e balance sync (dod_rescore_d_sync).
+  source_design_section: docs/design/question_media_intake_design.md §2.6 / §2.7
+  target_path_hint: src/scoring/rescore_broadcast.ts
+  inputs:
+  - rescore_trigger_adapter
+  expected_outputs:
+  - src/scoring/rescore_broadcast.ts (isSettled-gated TV d/e simultaneous update emission)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: test_resolve_question_face
+  kind: unit_test
+  rationale: 'Verifies the strict fallback: video present (even with image) -> video;
+    no video/image present -> image; both null -> text (QM-2 order preserved).'
+  source_design_section: docs/design/question_media_intake_design.md §2.11
+  target_path_hint: tests/media/resolve_question_face.test.ts
+  inputs:
+  - resolve_question_face_pure
+  expected_outputs:
+  - tests/media/resolve_question_face.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id021
+  id: test_media_root_config
+  kind: unit_test
+  rationale: Verifies resolveQuestionMediaRoot returns the default './question-media'
+    when unset and honors an injected QUESTION_MEDIA_ROOT (no hardcoded root).
+  source_design_section: docs/design/question_media_intake_design.md §2.4
+  target_path_hint: tests/config/media_root.test.ts
+  inputs:
+  - media_root_config_resolver
+  expected_outputs:
+  - tests/config/media_root.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id022
+  id: test_intake_validator
+  kind: unit_test
+  rationale: 'Verifies boundary rejects/accepts: correctValue 0/100 accept, -1/101/50.5
+    reject; duplicate/out-of-range questionNumber reject; empty text reject; missing
+    media path reports the offending question number.'
+  source_design_section: docs/design/question_media_intake_design.md §2.2 / §2.9
+  target_path_hint: tests/questions/intake_validator.test.ts
+  inputs:
+  - intake_validator
+  expected_outputs:
+  - tests/questions/intake_validator.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id023
+  id: test_load_questions
+  kind: unit_test
+  rationale: Verifies happy-path bulkInsert with correct_value retained, all-or-nothing
+    on out-of-range value (loaded:0, bulkInsert not called), and question-numbered
+    rejection when declared media is unplaced.
+  source_design_section: docs/design/question_media_intake_design.md §2.11
+  target_path_hint: tests/questions/load_questions.test.ts
+  inputs:
+  - load_questions_orchestrator
+  expected_outputs:
+  - tests/questions/load_questions.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id024
+  id: test_live_edit_gate
+  kind: unit_test
+  rationale: Verifies rescore fires only for correctValue edits when isDisclosed is
+    true, does not fire when c is not reached, and does not fire for text/media-only
+    edits (QM-3 gate boundaries).
+  source_design_section: docs/design/question_media_intake_design.md §2.11
+  target_path_hint: tests/questions/live_edit.test.ts
+  inputs:
+  - live_edit_orchestrator
+  expected_outputs:
+  - tests/questions/live_edit.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id025
+  id: test_rescore_full_recompute_invariant
+  kind: unit_test
+  rationale: 'Verifies the audit invariant: applying rescoreDiff to prior balances
+    equals a full recompute from answers + edited correct_value (dod_rescore_matches_full_recompute).'
+  source_design_section: docs/design/question_media_intake_design.md §2.6
+  target_path_hint: tests/scoring/rescore_question.test.ts
+  inputs:
+  - rescore_diff_pure
+  expected_outputs:
+  - tests/scoring/rescore_question.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id026
+  id: e2e_question_intake
+  kind: e2e_api_test
+  rationale: 'End-to-end: host loads a JSON file -> questions registered -> re-fetch
+    returns identical text/correct_value from DB (not file); out-of-range/unplaced-media
+    inputs register 0 rows with numbered issues; non-host load is 401/403.'
+  source_design_section: docs/design/question_media_intake_design.md §2.11 (tests/e2e/question-intake.spec.ts)
+  target_path_hint: tests/e2e/question-intake.spec.ts
+  inputs:
+  - intake_command_handler
+  - runtime_question_supply_readback
+  expected_outputs:
+  - tests/e2e/question-intake.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id027
+  id: e2e_live_edit_rescore
+  kind: e2e_api_test
+  rationale: 'End-to-end: editing correct_value after c triggers auto rescore reflected
+    in each balance; editing before c leaves balances unchanged; a d-reached round''s
+    correction diff-recomputes and matches full recompute; media-path edits persist
+    and re-fetch.'
+  source_design_section: docs/design/question_media_intake_design.md §2.11 (tests/e2e/live-edit-rescore.spec.ts)
+  target_path_hint: tests/e2e/live-edit-rescore.spec.ts
+  inputs:
+  - live_edit_command_handler
+  - rescore_trigger_adapter
+  - rescore_tv_de_sync
+  expected_outputs:
+  - tests/e2e/live-edit-rescore.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id028
+  id: e2e_media_fallback_browser
+  kind: e2e_browser_test
+  rationale: 'Browser: TV a-mode renders video/image/text per the resolved face, re-renders
+    per the edited order after a media-path live edit, and never exposes raw file
+    paths or ''fallback'' internal words (dod_tv_a_reflects_live_edit/no_path_leak).'
+  source_design_section: docs/design/question_media_intake_design.md §2.11 (tests/e2e/media-fallback.browser.spec.ts)
+  target_path_hint: tests/e2e/media-fallback.browser.spec.ts
+  inputs:
+  - media_asset_serving
+  - live_edit_command_handler
+  expected_outputs:
+  - tests/e2e/media-fallback.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:20:55Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+- *id021
+- *id022
+- *id023
+- *id024
+- *id025
+- *id026
+- *id027
+- *id028
+layer_2_steps: []

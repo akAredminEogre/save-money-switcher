@@ -1,0 +1,480 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: d1ca12d576f8ce673f46d0af2fea9b7943781139b6bff7e61d54e5483aa4d0d2
+task_id: docs/design/scoring_engine_design.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T10:44:14Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: answer_score_value_type
+  kind: value_type
+  rationale: 回答レンジを 0〜100 整数の単一所有型 AnswerScore として固定し、UI/サーバ/採点の全経路が同一の isAnswerScore/assertAnswerScore
+    を共有する。境界 0=可・100=可・-1/101/50.5=不可 を型と実行時アサートで拒む。
+  source_design_section: §2.2 ドメイン値型（0〜100 整数・整数円・SC-3 の型固定）
+  target_path_hint: src/scoring/answer_score.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/answer_score.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: yen_value_type
+  kind: value_type
+  rationale: 金額を整数円の単一所有型 Yen とし、CURRENCY='円'・INITIAL_GRANT=10000・YEN_PER_ERROR=-100・PITARI_BONUS=1000・QUESTION_COUNT=10
+    を唯一の定義点に置く。point/pt/点 を型・定数のどこにも持たせず、assertYen で小数を排除する（円建て固定 SC-2・整数のみ SC-3）。
+  source_design_section: §2.2 ドメイン値型・§2.6 円建て固定
+  target_path_hint: src/scoring/yen.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/yen.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: settlement_domain_type
+  kind: domain_type
+  rationale: 問×人の拠出台帳 QuestionSettlement（answerValue/error/deltaYen/pitariAwarded/pitariBonusYen）を採点の
+    derived レコード型として定義し、フィールドを AnswerScore と Yen へ収束させる。
+  source_design_section: §2.4 データモデル連携（settlements）
+  target_path_hint: src/scoring/settlement.ts
+  inputs:
+  - answer_score_value_type
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/settlement.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: balance_domain_type
+  kind: domain_type
+  rationale: 集計読みモデル Balance（participantId/amount:Yen）を定義し、残額を整数円型へ固定する。
+  source_design_section: §2.4 データモデル連携（balances）
+  target_path_hint: src/scoring/balance.ts
+  inputs:
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/balance.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: stage_predicates
+  kind: state_predicate
+  rationale: 再採点範囲の唯一の前提となる Stage と isDisclosed(=c 以降 answer_revealed/settlement_computed)/isSettled(=d
+    到達 settlement_computed) を game_state 単一所有で置く。採点エンジンはこれを import して再採点可否・TV d/e
+    同時更新条件を判定し、独自の開示判定を再実装しない。
+  source_design_section: §2.8 進行段階との連携（isDisclosed/isSettled）
+  target_path_hint: src/game_state/progression.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/progression.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: apply_question_score
+  kind: pure_function
+  rationale: 1 人 1 問精算の producer。error=|answer-correct|、deltaYen=error×-100、誤差0で pitariBonusYen=+1000（加算側は確定・実装必須）、balance=入力残額+delta+pitari
+    を整数円で返す。入力は assertAnswerScore で検証し不正値を計算前に弾き、誤差0=+1000／誤差1=-100 の不連続を確定値で固定する。
+  source_design_section: §2.1 確定ルール・§2.3 精算コア applyQuestionScore
+  target_path_hint: src/scoring/apply_question_score.ts
+  inputs:
+  - answer_score_value_type
+  - yen_value_type
+  expected_outputs:
+  - src/scoring/apply_question_score.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: settle_question
+  kind: pure_function
+  rationale: 当該問の全解答へ applyQuestionScore を適用して QuestionSettlement[] を生成する derived
+    生成器。精算(op_compute_settlement)と自動再採点(op_auto_rescore)が共有する計算経路。
+  source_design_section: §2.3 settle_question・§2.9 派生連鎖
+  target_path_hint: src/scoring/settle_question.ts
+  inputs:
+  - apply_question_score
+  - settlement_domain_type
+  expected_outputs:
+  - src/scoring/settle_question.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: aggregate_balance
+  kind: read_model
+  rationale: balances.amount = INITIAL_GRANT(10000)+Σ(deltaYen)+Σ(pitariBonusYen)
+    を全再計算で導く集計読みモデル兼監査基準。空 settlements で 10000（先渡し初期化と一致）を readback し、差分更新はこれと常に一致すべき不変式。拠出減算は
+    F-02 未確定ゆえ現段階 0（加算側 +1000 のみ反映）で、確定後に負の拠出行を Σ へ加える拡張余地を残す。
+  source_design_section: §2.4 初期化・整合不変式・§2.9 集計 read-model・§2.11 F-02
+  target_path_hint: src/scoring/aggregate_balance.ts
+  inputs:
+  - yen_value_type
+  - settlement_domain_type
+  expected_outputs:
+  - src/scoring/aggregate_balance.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: validate_submitted_answer
+  kind: server_validation
+  rationale: 0〜100 整数の二重防衛のサーバ側最終検証。UI を迂回した -1/101/50.5/非数値を assertAnswerScore 経由で拒否し
+    answers へ渡さない（UI 側は tablet が担い、DB CHECK が三層目）。
+  source_design_section: §2.5 二重防衛とサーバ側最終検証
+  target_path_hint: src/scoring/validate_answer.ts
+  inputs:
+  - answer_score_value_type
+  expected_outputs:
+  - src/scoring/validate_answer.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: rescore_question
+  kind: rescore_engine
+  rationale: 開示済み(isDisclosed 真)問の correct_value 訂正で全 settlements を再計算し、balances を旧拠出との差分（新(delta+pitari)−旧(delta+pitari)）で更新する自動再採点の計算。c
+    未到達(isDisclosed 偽)や text/メディアのみ編集では起動せず balances 不変、isSettled(d 到達)問は TV d/e 同時更新の対象。差分更新は最適化であり正しさの基準は
+    aggregateBalance の全再計算。
+  source_design_section: §2.7 自動再採点と差分再計算・§2.8 進行段階連携
+  target_path_hint: src/scoring/rescore_question.ts
+  inputs:
+  - settle_question
+  - aggregate_balance
+  - stage_predicates
+  expected_outputs:
+  - src/scoring/rescore_question.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: determine_winner
+  kind: winner_determination
+  rationale: 10 問すべて settlement_computed の前提で通算 balances.amount 最多を勝者として返す。残額同点は複数の共同首位で返し、優先順位を発明しない(F-06)。
+  source_design_section: §2.10 勝敗判定（SC-1）と権限境界
+  target_path_hint: src/scoring/determine_winner.ts
+  inputs:
+  - balance_domain_type
+  expected_outputs:
+  - src/scoring/determine_winner.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: settlements_repository_contract
+  kind: repository_interface
+  rationale: settlements の durable 書込みを採点(module:scoring)の単一所有点として契約化する(upsertForQuestion/listForQuestion)。精算・再採点で生成した
+    QuestionSettlement をここでのみ永続し、DB 実装を差し替え可能にする（他モジュールは直接書込まない）。
+  source_design_section: §2.4 データモデル連携（永続はリポジトリが担う）
+  target_path_hint: src/scoring/settlements_repository.ts
+  inputs:
+  - settlement_domain_type
+  expected_outputs:
+  - src/scoring/settlements_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: balances_repository_contract
+  kind: repository_interface
+  rationale: balances の durable 書込みを採点単一所有点として契約化する(initialize=10000/getOwn/listAll/applyDelta)。参加時
+    10000 初期化と精算・再採点の差分反映をここへ集約し、amount は aggregateBalance と一致する不変式を保つ。getOwn はタブレット向け自残額のみの
+    readback を支える。
+  source_design_section: §2.4 データモデル連携・整合不変式
+  target_path_hint: src/scoring/balances_repository.ts
+  inputs:
+  - balance_domain_type
+  expected_outputs:
+  - src/scoring/balances_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: scoring_barrel
+  kind: barrel_export
+  rationale: 採点の公開面を再輸出のみで束ね（新規型を定義しない）、消費側が .js 明示指定子で単一所有の値型・関数を import できるようにする。
+  source_design_section: §2.12 モジュール指定子（index.ts 再輸出）
+  target_path_hint: src/scoring/index.ts
+  inputs:
+  - answer_score_value_type
+  - yen_value_type
+  - settlement_domain_type
+  - balance_domain_type
+  - apply_question_score
+  - settle_question
+  - aggregate_balance
+  - rescore_question
+  - determine_winner
+  - validate_submitted_answer
+  expected_outputs:
+  - src/scoring/index.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: test_answer_score
+  kind: unit_test
+  rationale: 境界 0=可・100=可・-1/101/50.5=不可 と assertAnswerScore の RangeError を固定し、0〜100
+    整数の型基盤を検証する。
+  source_design_section: §2.2・§2.5 二重防衛の型基盤
+  target_path_hint: tests/scoring/answer_score.test.ts
+  inputs:
+  - answer_score_value_type
+  expected_outputs:
+  - tests/scoring/answer_score.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: test_yen
+  kind: unit_test
+  rationale: CURRENCY='円'・確定定数値・小数 assertYen 例外を固定し、可視文言/API に point/pt/点 が現れないこと（円建て固定）を走査する。
+  source_design_section: §2.6 円建て固定（SC-2）
+  target_path_hint: tests/scoring/yen.test.ts
+  inputs:
+  - yen_value_type
+  - apply_question_score
+  expected_outputs:
+  - tests/scoring/yen.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: test_apply_question_score
+  kind: unit_test
+  rationale: 誤差5→-500円・残額9500・currency='円'、誤差0→+1000・残額11000、誤差1→-100 のみ、-1/101/50.5
+    は throw を固定し、確定値と誤差0/1 の不連続境界を検証する。
+  source_design_section: §2.12 受け入れ（apply_question_score.test.ts）
+  target_path_hint: tests/scoring/apply_question_score.test.ts
+  inputs:
+  - apply_question_score
+  expected_outputs:
+  - tests/scoring/apply_question_score.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: test_settle_question
+  kind: unit_test
+  rationale: 複数解答から QuestionSettlement[] が error/deltaYen/pitariBonusYen を正しく持つこと、誤差0
+    の pitariAwarded=真 を固定する。
+  source_design_section: §2.3 settle_question・§2.9 派生連鎖
+  target_path_hint: tests/scoring/settle_question.test.ts
+  inputs:
+  - settle_question
+  expected_outputs:
+  - tests/scoring/settle_question.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: test_aggregate_balance
+  kind: unit_test
+  rationale: 空 settlements で 10000（先渡し初期化 dod_settle_initial_grant）、Σ(delta+pitari)
+    の集計を固定し、監査基準としての全再計算を担保する。
+  source_design_section: §2.4 初期化・整合不変式
+  target_path_hint: tests/scoring/aggregate_balance.test.ts
+  inputs:
+  - aggregate_balance
+  expected_outputs:
+  - tests/scoring/aggregate_balance.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: test_validate_answer
+  kind: unit_test
+  rationale: サーバ側で 0/100 受理・-1/101/50.5/非数値拒否を固定し、UI と対の二重防衛のサーバ層を検証する。
+  source_design_section: §2.5 二重防衛とサーバ側最終検証
+  target_path_hint: tests/scoring/validate_answer.test.ts
+  inputs:
+  - validate_submitted_answer
+  expected_outputs:
+  - tests/scoring/validate_answer.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id021
+  id: test_rescore_question
+  kind: unit_test
+  rationale: 正解訂正の差分更新後 balances が answers＋編集後 correct_value からの aggregateBalance
+    全再計算と一致する監査不変式（dod_rescore_matches_full_recompute）を固定する。
+  source_design_section: §2.7・§2.12 受け入れ（rescore_question.test.ts）
+  target_path_hint: tests/scoring/rescore_question.test.ts
+  inputs:
+  - rescore_question
+  - settle_question
+  - aggregate_balance
+  expected_outputs:
+  - tests/scoring/rescore_question.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id022
+  id: test_determine_winner
+  kind: unit_test
+  rationale: 残額最多を勝者として返すこと、および同点で複数の共同首位を返すことを固定する。
+  source_design_section: §2.10・§2.12 受け入れ（determine_winner.test.ts）
+  target_path_hint: tests/scoring/determine_winner.test.ts
+  inputs:
+  - determine_winner
+  expected_outputs:
+  - tests/scoring/determine_winner.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id023
+  id: test_progression
+  kind: unit_test
+  rationale: isDisclosed が answer_revealed/settlement_computed で真、isSettled が settlement_computed
+    のみ真＝再採点範囲・d 同時更新の境界を固定する。
+  source_design_section: §2.8・§2.12 受け入れ（progression.test.ts）
+  target_path_hint: tests/game_state/progression.test.ts
+  inputs:
+  - stage_predicates
+  expected_outputs:
+  - tests/game_state/progression.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T10:44:14Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+- *id021
+- *id022
+- *id023
+layer_2_steps: []

@@ -1,0 +1,197 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: e33de89bdae13bb15c72a109d8aaa30cf025f2937491a8d1e3b536e541a5d64e
+design_doc_sha: 918131868bd48a8fbd3b94f3250b5c1e502e8f245e643240448f15606015db82
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T19:58:34.358070Z'
+design_docs:
+- docs/design/participation_connection_design.md
+tasks:
+- id: config_connection_limit_resolver
+  title: Implement MAX_TABLET_CONNECTIONS single resolution point
+  description: Implement resolveMaxTabletConnections() in src/config/connection_limit.ts
+    as the sole resolver of the tablet connection cap, declaring DEFAULT_MAX_TABLET_CONNECTIONS
+    = 8 as the only literal for the default and reading MAX_TABLET_CONNECTIONS from
+    the environment, falling back to the default on missing/blank/non-integer/<1 values.
+    The focused Vitest check pins the default-8 resolution and env override so no
+    numeric literal 8 leaks into judgment code.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/connection_limit.ts
+  - tests/config/connection_limit.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: config_public_base_url_resolver
+  title: Implement PUBLIC_BASE_URL resolver
+  description: Implement resolvePublicBaseUrl() in src/config/public_base_url.ts as
+    the single resolution point for the cloud public base URL used to assemble the
+    /join link, reading PUBLIC_BASE_URL from the environment. The design declares
+    the resolver and env key but not its error/empty handling, so the unit must define
+    resolution behavior consistent with buildJoinUrl consuming it as a URL base.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/public_base_url.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: config_access_control_config_resolver
+  title: Implement family-access control config resolvers
+  description: Implement resolveAccessMode() (returning "url_secret" | "authenticated"
+    | undefined) and resolveJoinAccessToken() in src/config/access_control_config.ts,
+    resolving JOIN_ACCESS_MODE and JOIN_ACCESS_TOKEN from the environment as the single
+    configuration source for the family-limited gate. Returning undefined when unconfigured
+    is required so downstream checkJoinAccess denies open public access.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/access_control_config.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: participants_name_validation
+  title: Implement self-input display name validation
+  description: Implement isValidDisplayName(raw) and export MAX_DISPLAY_NAME_LENGTH
+    = 20 in src/participants/name.ts, rejecting empty, whitespace-only, and over-length
+    names while counting length in code points. This shared validator is consumed
+    by both the /join UI and server-side registration for double defense. The focused
+    Vitest check pins empty/whitespace rejection and the length boundary.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/name.ts
+  - tests/participants/name.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: participants_admission_pure_function
+  title: Implement tablet admission pure function
+  description: Implement admitTablet({ limit, connected }, { name }) and the AdmissionInput/JoinRequest/AdmissionResult
+    types in src/participants/admission.ts, returning invalid_name for bad names,
+    over_limit when connected >= limit, else { ok:true }, referencing only the passed-in
+    limit with no numeric literal. The focused Vitest check drives resolveMaxTabletConnections
+    to confirm the default-8 (8 ok / 9 rejected) and configured-32 (32 ok / 33 rejected)
+    boundaries follow the config value.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/admission.ts
+  - tests/participants/admission.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - participants_name_validation
+  - config_connection_limit_resolver
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: participants_access_control_gate
+  title: Implement family-limited join access gate
+  description: Implement checkJoinAccess(ctx) in src/participants/access_control.ts,
+    granting only on token match for branch A (url_secret) or authenticated state
+    for branch B, and returning { granted:false } when neither control is configured
+    so open public access never resolves. It reads mode/token via the access_control_config
+    resolvers. The focused Vitest check pins unconfigured-denies plus branch-A token
+    match/mismatch.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/access_control.ts
+  - tests/participants/access_control.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - config_access_control_config_resolver
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: participants_join_link_builder
+  title: Implement /join URL builder
+  description: Implement buildJoinUrl() in src/participants/join_link.ts, composing
+    the cloud public /join URL from resolvePublicBaseUrl() and, when branch A is active,
+    appending the secret token from resolveJoinAccessToken() as query param t. The
+    focused Vitest check asserts the built URL's origin matches PUBLIC_BASE_URL and
+    its path is /join.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/join_link.ts
+  - tests/participants/join_link.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - config_public_base_url_resolver
+  - config_access_control_config_resolver
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: participants_join_qr_renderer
+  title: Implement join URL QR SVG renderer
+  description: Implement renderJoinQrSvg() in src/participants/qr.ts, encoding the
+    resolved /join public URL into an SVG QR using the qrcode npm library. The design
+    pairs this with buildJoinUrl but shows no import between them, so the unit is
+    inferred to accept the join URL as input (the control-panel surface obtains it
+    from buildJoinUrl) and to depend only on the external qrcode package.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/qr.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: participants_repository
+  title: Implement participants persistence repository
+  description: Implement insertParticipant() and listParticipants() in src/participants/participant_repository.ts
+    over the participants table (id, name, joined_at, connection_id), owning record
+    persistence and participant-list read-back with no seat-number column or preregistered-name
+    ledger. This document defines the schema responsibility but delegates physical/DB
+    design to design:data-model-design, so the unit is inferred to bind to that external
+    persistence layer; its focused check is a DB round-trip (insert then list).
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/participant_repository.ts
+  test_kinds:
+  - integration
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true
+- id: participants_registration
+  title: Implement participant registration on admission
+  description: Implement registerParticipant() in src/participants/registration.ts,
+    creating exactly one participants record bound to connection_id per confirmed
+    join (1 person = 1 device) and re-applying isValidDisplayName as server-side final
+    defense before insertParticipant. The design illustrates delegating the body to
+    a re-exported registration_impl module, and the /join orchestration that sequences
+    access→name→limit before calling it is owned by design:realtime-sync-design; its
+    focused check is an integration test of the persist path.
+  source_design_doc: docs/design/participation_connection_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/registration.ts
+  test_kinds:
+  - integration
+  dependencies:
+  - participants_admission_pure_function
+  - participants_name_validation
+  - participants_repository
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T19:58:34.358070Z'
+  approved: true

@@ -1,0 +1,245 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 3b6c8a9f1d13f3aa10e40c87879a73b2ae0f5be1315884faa3d0e4d6d1e3b958
+design_doc_sha: 5ee76a8f6ae9052981f561d9651c8ee1706c5dea227c283fbac402f661ac2115
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T08:56:05.583116Z'
+design_docs:
+- docs/design/scoring_engine_design.md
+tasks:
+- id: impl_answer_score_value_type
+  title: Implement AnswerScore 0-100 integer value type
+  description: Implement the AnswerScore domain type with ANSWER_MIN/ANSWER_MAX, the
+    isAnswerScore type guard, and assertAnswerScore that throws RangeError on non-integer
+    or out-of-range input (§2.2). This fixes the 0-100 integer type demanded by SC-3
+    and is the shared base guard for the settlement and server-side validation paths.
+    Its boundary behavior is exercised transitively through the applyQuestionScore
+    unit test.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/answer_score.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_yen_value_type
+  title: Implement Yen integer type and scoring constants
+  description: Implement the Yen integer-yen type, the CURRENCY="円" constant, the
+    scoring constants INITIAL_GRANT=10000 / YEN_PER_ERROR=-100 / PITARI_BONUS=1000
+    / QUESTION_COUNT=10, and assertYen rejecting non-integers (§2.2). This enforces
+    SC-2 円建て固定 (no point/pt/点 anywhere) and SC-3 integer-only arithmetic. Its integer-guard
+    behavior is exercised transitively through the applyQuestionScore unit test.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/yen.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_settlement_record_type
+  title: Define QuestionSettlement record type
+  description: Define the QuestionSettlement interface (questionId, participantId,
+    answerValue, error, deltaYen, pitariAwarded, pitariBonusYen) shared verbatim with
+    the data-model settlements ledger (§2.4). This is a type-only contract consumed
+    by the settle, aggregate, and rescore units and is verified through the unit tests
+    that construct it.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/settlement.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_answer_score_value_type
+  - impl_yen_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_balance_record_type
+  title: Define Balance read-model record type
+  description: Define the Balance read-model interface (participantId, amount) where
+    amount = 10000 + Σ settlements (§2.4). This type-only contract is consumed by
+    winner determination and is exercised through the determineWinners unit test.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/balance.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_yen_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_apply_question_score
+  title: Implement applyQuestionScore settlement core with unit test
+  description: Implement the pure per-player/per-question core applyQuestionScore
+    computing error=|answer-correct|, deltaYen=error×-100, pitari +1000 only when
+    error is 0, updated balance, and currency, validating inputs through assertAnswerScore/assertYen
+    (§2.3). Bundle the declared Vitest focused check tests/scoring/apply_question_score.test.ts
+    covering the 10000→9500 (-500) case, the +1000 vs -100 discontinuity at error
+    0 vs 1, and rejection of 101/50.5/-1 (SC-1/SC-2/SC-3).
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/apply_question_score.ts
+  - tests/scoring/apply_question_score.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_answer_score_value_type
+  - impl_yen_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_settle_question
+  title: Implement settleQuestion answer-to-settlement mapping
+  description: Implement settleQuestion and the AnswerRow input type, mapping a question's
+    answers to a QuestionSettlement[] by applying applyQuestionScore per answer (§2.3,
+    op_compute_settlement derived step). Its focused behavior is exercised directly
+    by the rescore_question unit test, which imports settleQuestion.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/settle_question.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_apply_question_score
+  - impl_answer_score_value_type
+  - impl_settlement_record_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_aggregate_balance
+  title: Implement aggregateBalance read-model computation
+  description: Implement aggregateBalance computing amount = INITIAL_GRANT + Σ(deltaYen
+    + pitariBonusYen), so aggregateBalance([]) === 10000 matches the SC-1 grant initialization
+    and serves as the correctness ground truth for the differential-update invariant
+    (§2.3/§2.4). Its behavior is exercised directly by the rescore_question unit test,
+    which imports aggregateBalance.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/aggregate_balance.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_yen_value_type
+  - impl_settlement_record_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_rescore_question
+  title: Implement rescoreQuestion differential re-scoring with unit test
+  description: Implement rescoreQuestion (with BalanceDelta/RescoreResult) that re-settles
+    a question under an edited correct_value and returns per-participant balance deltas
+    = new contribution − old contribution, the SC-4 auto re-scoring step (§2.7). Bundle
+    the declared Vitest check tests/scoring/rescore_question.test.ts asserting dod_rescore_matches_full_recompute;
+    that test additionally drives settleQuestion and aggregateBalance in-process.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/rescore_question.ts
+  - tests/scoring/rescore_question.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_settle_question
+  - impl_aggregate_balance
+  - impl_yen_value_type
+  - impl_answer_score_value_type
+  - impl_settlement_record_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_determine_winner
+  title: Implement determineWinners with unit test
+  description: Implement determineWinners returning the max-balance player(s), returning
+    all co-leaders on ties without inventing a tiebreak (SC-1 residual balance-max
+    rule; F-06 tie ordering deliberately not invented) (§2.10). Bundle the declared
+    Vitest check tests/scoring/determine_winner.test.ts verifying the single-winner
+    max case.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/determine_winner.ts
+  - tests/scoring/determine_winner.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_balance_record_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_validate_answer
+  title: Implement validateSubmittedAnswer server-side final defense with unit test
+  description: 'Implement validateSubmittedAnswer delegating to assertAnswerScore
+    so UI-bypassing -1/101/50.5/non-numeric values never reach answers, forming the
+    server half of the SC-3 two-tier defense (§2.5). Inferred (from the §2.5 release-blocking
+    boundaries 0/100 accept and -1/101/50.5 reject, for which no test file is shown
+    while §2.12 declares the tests/scoring/*.test.ts convention): a focused Vitest
+    check tests/scoring/validate_answer.test.ts asserting those boundaries directly
+    on validateSubmittedAnswer.'
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/validate_answer.ts
+  - tests/scoring/validate_answer.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_answer_score_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_progression_stage
+  title: Implement Stage predicates isDisclosed/isSettled with unit test
+  description: Implement the Stage union and the read-only predicates isDisclosed
+    (true from answer_revealed/c onward) and isSettled (settlement_computed/d only)
+    used to scope auto re-scoring; the module holds no stage-transition authority
+    (SC-4/§2.8). Bundle the declared Vitest check tests/game_state/progression.test.ts
+    verifying the c-onset and d-only boundaries.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/progression.ts
+  - tests/game_state/progression.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
+- id: impl_scoring_index
+  title: Implement src/scoring/index.ts public barrel
+  description: Implement the scoring module barrel re-exporting applyQuestionScore,
+    settleQuestion, aggregateBalance, rescoreQuestion, determineWinners, validateSubmittedAnswer
+    and the QuestionSettlement/Balance/AnswerScore/Yen types with NodeNext .js specifiers
+    as the module's public surface (§2.12). Verified at compile time by consumers;
+    carries no behavior of its own.
+  source_design_doc: docs/design/scoring_engine_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/index.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_apply_question_score
+  - impl_settle_question
+  - impl_aggregate_balance
+  - impl_rescore_question
+  - impl_determine_winner
+  - impl_validate_answer
+  - impl_settlement_record_type
+  - impl_balance_record_type
+  - impl_answer_score_value_type
+  - impl_yen_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T08:56:05.583116Z'
+  approved: true
