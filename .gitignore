@@ -6,9 +6,15 @@ venv/
 
 # Node
 node_modules/
+dist/
 
 # CoDD session checkpoints (resume state, machine-local)
 .codd/greenfield_session.yaml
+# CoDD verify output (regenerated each run, machine-local)
+.codd/verify/
+
+# Test artifacts
+test-results/
 
 # misc
 .DS_Store

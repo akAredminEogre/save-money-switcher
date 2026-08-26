@@ -1,0 +1,11 @@
+{
+  "//": "Runnable emit for the server bootstrap. Extends the strict NodeNext base but emits JS (noEmit off) from src only, so `node dist/main.js` matches the runbook's single-process HTTP authority. Type-check gate stays on tsconfig.json (noEmit).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["tests/**/*"]
+}

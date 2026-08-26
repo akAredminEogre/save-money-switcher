@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "built_at": "2026-08-16T05:43:23.033569+00:00",
+  "built_at": "2026-08-26T11:56:50.062038+00:00",
   "project_root": "/home/akaredmineogre/akAredminEogre-project/save-money-switcher",
   "nodes": [
     {
@@ -14003,6 +14003,33 @@
       }
     },
     {
+      "id": "src/main.ts",
+      "kind": "impl_file",
+      "path": "src/main.ts",
+      "attributes": {
+        "language": "typescript",
+        "imports": [
+          "node:http",
+          "node:http",
+          "./realtime_sync/protocol.js",
+          "./realtime_sync/fanout.js",
+          "./realtime_sync/recovery.js",
+          "./config/public_base_url.js",
+          "./config/connection_limit.js",
+          "./participants/join_surface.js",
+          "./participants/join_surface.js",
+          "./participants/join_link.js",
+          "./participants/qr.js",
+          "./control_panel/control_panel_view.js",
+          "./control_panel/render_control_panel.js",
+          "./game_state/progression.js",
+          "./tv_display/render_tv_surface.js",
+          "./tablet/render_tablet_surface.js"
+        ],
+        "runtime_evidence": []
+      }
+    },
+    {
       "id": "src/media/media_presence.ts",
       "kind": "impl_file",
       "path": "src/media/media_presence.ts",
@@ -14669,9 +14696,6 @@
         "imports": [
           "../scoring/currency.js",
           "../game_state/role_labels.js",
-          "../scoring/settlement.js",
-          "../scoring/balance.js",
-          "../participants/participant.js",
           "./tv_surface_view.js",
           "./render_totals.js"
         ],
@@ -14687,8 +14711,6 @@
         "imports": [
           "../scoring/currency.js",
           "../scoring/determine_winner.js",
-          "../scoring/balance.js",
-          "../participants/participant.js",
           "./tv_surface_view.js"
         ],
         "runtime_evidence": []
@@ -14708,7 +14730,6 @@
           "./render_totals.js",
           "../questions/question.js",
           "./render_disclosure.js",
-          "./render_correct_value.js",
           "./render_settlement_table.js",
           "./render_totals.js",
           "./tv_surface_view.js"
@@ -14735,7 +14756,8 @@
         "imports": [
           "vitest",
           "../src/participants/admission.js",
-          "../src/config/connection_limit.js"
+          "../src/config/connection_limit.js",
+          "../src/participants/name.js"
         ]
       }
     },
@@ -15049,6 +15071,19 @@
           "vitest",
           "../../src/game_state/round_machine.js",
           "../../src/game_state/progression.js"
+        ]
+      }
+    },
+    {
+      "id": "tests/game_state/tv_machine.test.ts",
+      "kind": "test_file",
+      "path": "tests/game_state/tv_machine.test.ts",
+      "attributes": {
+        "language": "typescript",
+        "imports": [
+          "vitest",
+          "../../src/game_state/tv_machine.js",
+          "../../src/game_state/tv_mode.js"
         ]
       }
     },
@@ -16249,6 +16284,11 @@
     },
     {
       "from_id": "docs/infra/deployment_setup.md",
+      "to_id": "src/main.ts",
+      "kind": "expects"
+    },
+    {
+      "from_id": "docs/infra/deployment_setup.md",
       "to_id": "src/participants/name.ts",
       "kind": "expects"
     },
@@ -16265,6 +16305,11 @@
     {
       "from_id": "docs/operations/runbook.md",
       "to_id": "src/config/connection_limit.ts",
+      "kind": "expects"
+    },
+    {
+      "from_id": "docs/operations/runbook.md",
+      "to_id": "src/main.ts",
       "kind": "expects"
     },
     {
@@ -16481,6 +16526,11 @@
       "from_id": "docs/test/test_strategy.md",
       "to_id": "docs/test/acceptance_criteria.md",
       "kind": "depends_on"
+    },
+    {
+      "from_id": "docs/test/test_strategy.md",
+      "to_id": "src/main.ts",
+      "kind": "expects"
     },
     {
       "from_id": "src/config/access_control_config.ts",
@@ -16743,14 +16793,89 @@
       "kind": "imports"
     },
     {
+      "from_id": "src/game_state/tv_machine.ts",
+      "to_id": "tests/game_state/tv_machine.test.ts",
+      "kind": "tested_by"
+    },
+    {
       "from_id": "src/game_state/tv_mode.ts",
       "to_id": "src/game_state/progression.ts",
       "kind": "imports"
     },
     {
       "from_id": "src/game_state/tv_mode.ts",
+      "to_id": "tests/game_state/tv_machine.test.ts",
+      "kind": "tested_by"
+    },
+    {
+      "from_id": "src/game_state/tv_mode.ts",
       "to_id": "tests/game_state/tv_mode.test.ts",
       "kind": "tested_by"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/config/connection_limit.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/config/public_base_url.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/control_panel/control_panel_view.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/control_panel/render_control_panel.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/game_state/progression.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/participants/join_link.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/participants/join_surface.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/participants/qr.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/realtime_sync/fanout.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/realtime_sync/protocol.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/realtime_sync/recovery.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/tablet/render_tablet_surface.ts",
+      "kind": "imports"
+    },
+    {
+      "from_id": "src/main.ts",
+      "to_id": "src/tv_display/render_tv_surface.ts",
+      "kind": "imports"
     },
     {
       "from_id": "src/media/media_presence.ts",
@@ -16860,6 +16985,11 @@
     {
       "from_id": "src/participants/join_surface.ts",
       "to_id": "tests/participants/join_surface.test.ts",
+      "kind": "tested_by"
+    },
+    {
+      "from_id": "src/participants/name.ts",
+      "to_id": "tests/admission.test.ts",
       "kind": "tested_by"
     },
     {
@@ -17484,22 +17614,7 @@
     },
     {
       "from_id": "src/tv_display/render_settlement_table.ts",
-      "to_id": "src/participants/participant.ts",
-      "kind": "imports"
-    },
-    {
-      "from_id": "src/tv_display/render_settlement_table.ts",
-      "to_id": "src/scoring/balance.ts",
-      "kind": "imports"
-    },
-    {
-      "from_id": "src/tv_display/render_settlement_table.ts",
       "to_id": "src/scoring/currency.ts",
-      "kind": "imports"
-    },
-    {
-      "from_id": "src/tv_display/render_settlement_table.ts",
-      "to_id": "src/scoring/settlement.ts",
       "kind": "imports"
     },
     {
@@ -17516,16 +17631,6 @@
       "from_id": "src/tv_display/render_settlement_table.ts",
       "to_id": "tests/tv_display/render_tv_surface.test.ts",
       "kind": "tested_by"
-    },
-    {
-      "from_id": "src/tv_display/render_totals.ts",
-      "to_id": "src/participants/participant.ts",
-      "kind": "imports"
-    },
-    {
-      "from_id": "src/tv_display/render_totals.ts",
-      "to_id": "src/scoring/balance.ts",
-      "kind": "imports"
     },
     {
       "from_id": "src/tv_display/render_totals.ts",

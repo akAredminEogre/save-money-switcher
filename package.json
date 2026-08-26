@@ -4,7 +4,9 @@
   },
   "scripts": {
     "test": "vitest run",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "build:server": "tsc -p tsconfig.build.json",
+    "start": "npm run build:server && node dist/main.js"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
