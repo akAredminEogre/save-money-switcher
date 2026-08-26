@@ -35,6 +35,16 @@ import { renderControlPanelHtml } from "./control_panel/render_control_panel.js"
 import { INITIAL_STAGE } from "./game_state/progression.js";
 import { renderTvSurface, serializeTvSurface } from "./tv_display/render_tv_surface.js";
 import { renderTabletSurface } from "./tablet/render_tablet_surface.js";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import type { Role } from "./realtime_sync/protocol.js";
+import { applyHostCommand, applyAnswer, applyJoin } from "./server/orchestrator.js";
+import {
+  addConnection,
+  removeConnection,
+  broadcast,
+  setHostContextProvider,
+} from "./server/sse.js";
 
 /**
  * 待受ポート。E2E ハーネス（tests/e2e/helpers/env.ts）と runbook のローカル起動権威は
@@ -93,6 +103,68 @@ function htmlDocument(title: string, body: string): string {
 }
 
 /**
+ * progressive enhancement のページ外装: 面の初期 chrome を `#app` コンテナで包み、当該面の
+ * SSE 購読 client.js を末尾で読む。既存の可視 chrome（innerText・操作要素・data-* ロケータ）は
+ * そのまま保ち、追加要素は非可視の `<div id="app">` ラッパと `<script>` に限る（既存 E2E 非破壊）。
+ */
+function page(title: string, innerFragment: string, clientName: string): string {
+  return htmlDocument(
+    title,
+    `<div id="app">${innerFragment}</div>` +
+      `<script src="/client/${clientName}.client.js"></script>`,
+  );
+}
+
+/** client 資産ディレクトリ（`npm run start`/`dev` は repo ルートから起動する契約・README 参照）。 */
+const CLIENT_ASSET_DIR = join(process.cwd(), "public");
+/** 供給を許す client 資産名（パストラバーサル遮断のホワイトリスト）。 */
+const CLIENT_ASSET_NAME = /^[a-z_]+\.client\.js$/;
+
+/** `public/<name>.client.js` を静的配信する（許可名のみ・存在しなければ 404）。 */
+async function serveClientAsset(res: ServerResponse, name: string): Promise<void> {
+  if (!CLIENT_ASSET_NAME.test(name)) {
+    sendHtml(res, 404, htmlDocument("Not Found", `<main><p>Not Found</p></main>`));
+    return;
+  }
+  try {
+    const body = await readFile(join(CLIENT_ASSET_DIR, name), "utf8");
+    res.writeHead(200, {
+      "Content-Type": "text/javascript; charset=utf-8",
+      "Cache-Control": "no-cache",
+    });
+    res.end(body);
+  } catch {
+    sendHtml(res, 404, htmlDocument("Not Found", `<main><p>Not Found</p></main>`));
+  }
+}
+
+/** POST body（JSON）を読み取る。壊れた JSON は `null` を返す（呼出側が 400 に写す）。 */
+function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", (chunk) => {
+      data += chunk;
+      if (data.length > 1_000_000) req.destroy();
+    });
+    req.on("end", () => {
+      if (data === "") return resolve({});
+      try {
+        resolve(JSON.parse(data));
+      } catch {
+        resolve(null);
+      }
+    });
+    req.on("error", () => resolve(null));
+  });
+}
+
+/** JSON 応答を返す（API エンドポイント用）。 */
+function sendJson(res: ServerResponse, status: number, payload: unknown): void {
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(payload));
+}
+
+/**
  * `/join` の参加受付面を HTML へ整形する。`participants` の {@link renderJoinSurface} が返す
  * ビューモデルを描画するのみ（判定ロジックは持ち込まない）。ローカル/検証セッションは開放
  * （アクセス許可・非満席）として氏名入力欄と「参加する」を提示する。
@@ -106,22 +178,22 @@ function serializeJoinSurface(view: JoinSurfaceViewModel): string {
           `maxlength="${f.maxLength}" aria-label="${escapeHtml(view.prompt)}">`,
       )
       .join("");
-    const body =
+    return (
       `<main data-surface="join">` +
       `<h1>${escapeHtml(view.heading)}</h1>` +
       `<p>${escapeHtml(view.prompt)}</p>` +
       `<form>${inputs}<button type="submit">${escapeHtml(view.submitLabel)}</button></form>` +
-      `</main>`;
-    return htmlDocument("参加受付", body);
+      `</main>`
+    );
   }
   if (view.kind === "login_required" && view.login !== undefined) {
-    const body =
+    return (
       `<main data-surface="join"><p>${escapeHtml(view.message)}</p>` +
-      `<a href="${escapeHtml(view.login.path)}">${escapeHtml(view.login.label)}</a></main>`;
-    return htmlDocument("参加受付", body);
+      `<a href="${escapeHtml(view.login.path)}">${escapeHtml(view.login.label)}</a></main>`
+    );
   }
   // access_denied / full: 平易文のみ（保護ナビ・設定キー名を露出しない）。
-  return htmlDocument("参加受付", `<main data-surface="join"><p>${escapeHtml(view.message)}</p></main>`);
+  return `<main data-surface="join"><p>${escapeHtml(view.message)}</p></main>`;
 }
 
 /** TV 受動表示面（観客向け）の文書タイトル。 */
@@ -159,11 +231,11 @@ function getJoinQrSvg(): Promise<string> {
  * のみを描画し、実データを持ち込まない。相互作用要素・司会者操作語・内部語は含めない。
  */
 function tvPassiveShell(mode: "a" | "c", heading: string, note: string): string {
-  const body =
+  return (
     `<section class="tv-surface tv-mode-${mode}">` +
     `<div class="tv-line">${escapeHtml(heading)}</div>` +
-    `<div class="tv-line">${escapeHtml(note)}</div></section>`;
-  return htmlDocument(TV_TITLE, body);
+    `<div class="tv-line">${escapeHtml(note)}</div></section>`
+  );
 }
 
 /**
@@ -174,23 +246,14 @@ function tvPassiveShell(mode: "a" | "c", heading: string, note: string): string 
 function renderTvHtml(modeParam: string | null): string {
   switch (modeParam) {
     case "b":
-      return htmlDocument(
-        TV_TITLE,
-        serializeTvSurface(
-          renderTvSurface({ mode: "b", disclosure: { disclosed: false, answers: [] } }),
-        ),
+      return serializeTvSurface(
+        renderTvSurface({ mode: "b", disclosure: { disclosed: false, answers: [] } }),
       );
     case "d":
-      return htmlDocument(
-        TV_TITLE,
-        serializeTvSurface(renderTvSurface({ mode: "d", settlement: [] })),
-      );
+      return serializeTvSurface(renderTvSurface({ mode: "d", settlement: [] }));
     case "e":
-      return htmlDocument(
-        TV_TITLE,
-        serializeTvSurface(
-          renderTvSurface({ mode: "e", totals: { entries: [], finished: false } }),
-        ),
+      return serializeTvSurface(
+        renderTvSurface({ mode: "e", totals: { entries: [], finished: false } }),
       );
     case "c":
       return tvPassiveShell("c", "正解", "正解の発表をお待ちください。");
@@ -216,6 +279,63 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
+  // client 資産（progressive enhancement の SSE 購読スクリプト）の静的配信。
+  if (path.startsWith("/client/")) {
+    await serveClientAsset(res, path.slice("/client/".length));
+    return;
+  }
+
+  // ── interactive 層（Phase1）: コマンド endpoints・SSE live push ──
+
+  // SSE live 配信: ロール別サーフェスを接続へ保持し、各コマンド後に再描画を push する。
+  if (path === "/events" && req.method === "GET") {
+    const roleParam = url.searchParams.get("role");
+    const role: Role =
+      roleParam === "host" || roleParam === "answerer" || roleParam === "audience"
+        ? roleParam
+        : "audience";
+    const participantId = url.searchParams.get("participantId");
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    res.write(": connected\n\n");
+    const id = addConnection(res, role, participantId);
+    req.on("close", () => removeConnection(id));
+    return;
+  }
+
+  // ホスト操作コマンド（HOST_ONLY・制御盤トリガー）→ orchestrator → 全接続へ broadcast。
+  if (path === "/host/command" && req.method === "POST") {
+    const body = (await readJsonBody(req)) as { command?: unknown; mode?: unknown } | null;
+    if (body === null) return sendJson(res, 400, { ok: false, error: "不正な JSON です。" });
+    const result = applyHostCommand(body.command, body.mode);
+    if (result.ok) broadcast();
+    return sendJson(res, result.ok ? 200 : result.status ?? 400, { ok: result.ok, error: result.error });
+  }
+
+  // タブレット解答（0〜100・受付中のみ）→ orchestrator → broadcast。
+  if (path === "/tablet/answer" && req.method === "POST") {
+    const body = (await readJsonBody(req)) as { participantId?: unknown; value?: unknown } | null;
+    if (body === null) return sendJson(res, 400, { ok: false, error: "不正な JSON です。" });
+    const result = applyAnswer(body.participantId, body.value);
+    if (result.ok) broadcast();
+    return sendJson(res, result.ok ? 200 : result.status ?? 400, { ok: result.ok, error: result.error });
+  }
+
+  // 参加確定（氏名自己入力）→ orchestrator → broadcast。participantId をクライアントへ返す。
+  if (path === "/join" && req.method === "POST") {
+    const body = (await readJsonBody(req)) as { name?: unknown } | null;
+    if (body === null) return sendJson(res, 400, { ok: false, error: "不正な JSON です。" });
+    const result = applyJoin(body.name);
+    if (result.ok) broadcast();
+    if (!result.ok || result.participant === undefined) {
+      return sendJson(res, result.status ?? 400, { ok: false, error: result.error });
+    }
+    return sendJson(res, 200, { ok: true, participantId: result.participant.id });
+  }
+
   if (path === "/join") {
     // ローカル/検証セッションは開放（許可・非満席・要ログインなし）として受付面を描画する。
     const view = renderJoinSurface({
@@ -223,13 +343,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       loginRedirectRequired: false,
       atCapacity: false,
     });
-    sendHtml(res, 200, serializeJoinSurface(view));
+    sendHtml(res, 200, page("参加受付", serializeJoinSurface(view), "join"));
     return;
   }
 
   // TV（観客向け受動表示）: URL の mode 指定を既存 render モジュールへ配線して面を描画する。
+  // ?mode 指定は静的モード表示（E2E 等）ゆえ client は live 購読しない（tv.client.js が判定）。
   if (path === "/tv") {
-    sendHtml(res, 200, renderTvHtml(url.searchParams.get("mode")));
+    sendHtml(res, 200, page(TV_TITLE, renderTvHtml(url.searchParams.get("mode")), "tv"));
     return;
   }
 
@@ -245,7 +366,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       joinUrl: resolveJoinUrl(),
       joinQrSvg,
     });
-    sendHtml(res, 200, htmlDocument("進行制御盤", renderControlPanelHtml(view)));
+    sendHtml(res, 200, page("進行制御盤", renderControlPanelHtml(view), "control_panel"));
     return;
   }
 
@@ -258,7 +379,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       ownBalanceYen: 0,
       status: "accepting",
     });
-    sendHtml(res, 200, htmlDocument("解答", tablet));
+    sendHtml(res, 200, page("解答", tablet, "tablet"));
     return;
   }
 
@@ -279,6 +400,25 @@ try {
   publicBaseUrl = `http://127.0.0.1:${PORT}`;
 }
 const maxTabletConnections = resolveMaxTabletConnections();
+
+// 参加 QR（SVG）は入力非依存の静的グラフィックゆえ起動時に一度だけ符号化してキャッシュし、SSE の
+// 制御盤 live 再描画（host 断片）へ同期供給する。実プレイ（`session.loaded`）が始まる頃には解決済み。
+let joinQrSvgCache = "";
+void getJoinQrSvg()
+  .then((svg) => {
+    joinQrSvgCache = svg;
+  })
+  .catch(() => {
+    /* QR 符号化失敗は制御盤 QR 面のみの局所影響ゆえ boot は継続する。 */
+  });
+
+// SSE の host 断片再構築に要する config/QR コンテキストの供給関数を登録する。
+setHostContextProvider((connectedTablets) => ({
+  joinUrl: resolveJoinUrl(),
+  joinQrSvg: joinQrSvgCache,
+  maxTabletConnections,
+  connectedTablets,
+}));
 
 const server = createServer((req, res) => {
   // 非同期ハンドラの拒否は健全性ベースライン（< 500 契約）を守るため 500 で握り、未処理

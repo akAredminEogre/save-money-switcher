@@ -57,3 +57,43 @@ AI 呼び出しは既定で `claude --print`（Opus）を使う（`codd.yaml` �
 
 - `codd version` → 3.37.0
 - `codd greenfield --dry-run` が実行計画を表示すること（証跡: MAS リポ `tmp/cmd_2159_verify/`）
+
+## ローカル試遊（Phase1・家族クイズを手元で遊ぶ）
+
+前提: **Node 20** ／ npm。リポジトリのルート（本 README のある場所）で実行する。
+
+```bash
+npm install          # 依存の取得（qrcode 等）
+npm run dev          # tsc で dist へビルドし node dist/main.js を起動（= npm run start と同等）
+```
+
+起動すると `http://localhost:3000` で待受する（WSL2 の localhost forwarding で Windows ブラウザからも到達可）。
+`.env` は任意（`.env.example` を複製して調整可。未設定でも既定値で動く）。
+
+### 画面（URL）
+
+| 役割 | URL | 用途 |
+|------|-----|------|
+| 司会者（制御盤） | `/control-panel` | 進行操作（出題→締切→開示→正解発表→精算→次へ）と参加者一覧・参加QR |
+| TV（観客） | `/tv` | 出題・解答オープン・正解・精算・総合一覧を live 表示（司会者操作に追従） |
+| 解答者（タブレット） | `/join` → `/tablet` | 氏名を入力して参加 → −10/−1/+1/+10 で 0〜100 を作り送信 |
+
+同一 PC の複数タブ（制御盤・TV・タブレット×人数分）で 1 卓を試遊できる（QR による実機参加は Phase2）。
+
+### 遊び方（最小ループ）
+
+1. `/join` を人数分のタブレットで開き、氏名を入れて「参加する」（`/tablet` へ遷移する）。
+2. 制御盤 `/control-panel` で **「問題を読み込む」** → 第1問を出題（TV が出題面 a に切替）。
+3. 各タブレットが **−10/−1/+1/+10** で 0〜100 を作り **送信**。
+4. 制御盤で **「そこまで」（締切）→「解答オープン！」（TV=b）→「正解発表」（TV=c）→「精算」（TV=d）**。
+   TV(d) に 6 列表（氏名/解答/誤差/増減円/ピタリ賞/残額）と各自の残額（円）が反映される。
+5. **「問題を読み込む」** をもう一度押すと次の問へ進む。10 問すべて精算後に押すと総合一覧（TV=e・勝者）へ。
+   任意の時点で **「個別ジャンプ」→「総合一覧」** でも e を表示できる。
+
+live 反映は **SSE**（Server-Sent Events）で行う（`/events?role=host|answerer|audience`・ws 依存なし）。
+各画面は progressive enhancement で、初期 chrome は静的に返し `client.js` が SSE 購読・操作を担う。
+
+### スマホ実機で試す場合（任意）
+
+同一 PC 複数タブなら不要。別端末（スマホ）で参加するなら、`0.0.0.0` bind＋WSL2 IP（`ip addr`）＋
+Windows 側 `netsh interface portproxy` の転送設定を併用し、`PUBLIC_BASE_URL` に到達可能な URL を設定する。
