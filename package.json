@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.json",
+    "build:server": "tsc -p tsconfig.build.json",
+    "start": "npm run build:server && sh -c '[ -f .env ] && exec node --env-file=.env dist/main.js || exec node dist/main.js'",
+    "dev": "npm run build:server && sh -c '[ -f .env ] && exec node --env-file=.env dist/main.js || exec node dist/main.js'"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "playwright": "^1.62.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

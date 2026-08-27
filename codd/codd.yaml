@@ -1,0 +1,801 @@
+version: 0.1.0
+codd_required_version: null
+codd_required_version_strict: false
+project:
+  frameworks: []
+  name: save-money-switcher
+  language: typescript
+ai_command: claude --print --permission-mode bypassPermissions --dangerously-skip-permissions
+  --model claude-opus-4-8 --effort max --tools ""
+ai_commands:
+  plan_derive: null
+  design_doc_extract: null
+  criteria_expand: null
+ai:
+  call_timeout_seconds: null
+coding_principles: null
+scan:
+  source_dirs:
+  - src/
+  test_dirs:
+  - tests/
+  doc_dirs:
+  - docs/
+  config_files: []
+  exclude:
+  - '**/node_modules/**'
+  - '**/__pycache__/**'
+  - '**/dist/**'
+graph:
+  store: jsonl
+  path: codd/scan
+bands:
+  green:
+    min_confidence: 0.9
+    min_evidence_count: 2
+  amber:
+    min_confidence: 0.5
+propagation:
+  max_depth: 10
+  stop_at_contract_boundary: true
+coherence:
+  capability_patterns: {}
+  path_prefix_tolerant:
+  - src/
+  - lib/
+  - app/
+hitl:
+  mode: cooperative
+requirement_completeness:
+  project_type: null
+  channels:
+  - askuserquestion
+  - ntfy
+  - lexicon
+  ntfy_topic: ''
+  questions: []
+  ai_missing_items: false
+  semantic_check: false
+  ai_generate_options: false
+  ai_timeout_seconds: 30
+implement:
+  syntax_gate: true
+  syntax_gate_max_attempts: 3
+  confusable_check: true
+  no_usable_file_retries: 3
+  implement_oracle: true
+  oracle_max_attempts: 5
+  orphan_artifact_gate: enforce
+  oracle_timeout_seconds: 600
+  oracle_install_timeout_seconds: 900
+  oracle_broad_strategy: incremental
+  oracle_broad_wall_clock_seconds: 2700
+  oracle_broad_max_rechecks: 8
+  oracle_broad_chunk_size: 1
+  oracle_residual_chunk_size: 2
+  oracle_legacy_broad_enabled: false
+  output_root: null
+  root_artifact_patterns:
+  - .github/**
+  - .gitlab-ci.yml
+  - pyproject.toml
+  - setup.cfg
+  - package.json
+  - Dockerfile*
+  - docker-compose*
+  - .gitignore
+  - README*
+  - Makefile
+  - LICENSE*
+fix:
+  test_command: null
+  max_attempts: 3
+  phenomenon:
+    propagate_impl: true
+restore:
+  git_evidence:
+    enabled: true
+generate:
+  body_retry:
+    max_retries: 2
+test_coverage:
+  gate: true
+  max_retries: 2
+  docs:
+  - docs/test/test_strategy.md
+verify:
+  typecheck_command: null
+  test_command: null
+  source_integrity: true
+  allow_structural_only: false
+  test_timeout_seconds: 600
+  install_preflight: true
+  install_timeout_seconds: 900
+  report_output: docs/test/verify_report.md
+  e2e_setup_command: null
+  e2e_command: null
+  e2e_deploy_command: null
+  e2e_ci_command: null
+runtime:
+  crud_flow_targets: []
+  action_outcome_targets: []
+typecheck:
+  enabled: false
+  command: null
+  max_repair_attempts: 3
+conventions: []
+extraction:
+  frontmatter_alias: {}
+surface_reconciliation:
+  enabled: true
+  authoring_verbs: []
+orphan_cover_markers:
+  enabled: true
+requirement_reconciliation:
+  enabled: true
+  docs: []
+  sections: []
+  out_of_scope_markers: []
+  max_unit_warnings: 30
+operations_derive:
+  enabled: false
+dependency_freshness:
+  enabled: true
+  severity: amber
+artifact_contract:
+  enabled: false
+  severity: amber
+  stages: {}
+enables_nudge:
+  enabled: true
+greenfield:
+  elicit: true
+  max_repair_attempts: 10
+  coverage_gate: true
+  ntfy_topic: ''
+  propagate_commit: false
+  chunk_size: null
+  timeout_per_chunk: 600
+  vb_rework:
+    max_rounds: 2
+derive:
+  api_facade_coverage_max_retries: 2
+  deliverable_surface_max_retries: 2
+deliverable:
+  excluded_surfaces: []
+ci:
+  provider: github_actions
+  workflow_glob: .github/workflows/*.yml,.github/workflows/*.yaml
+  required_triggers:
+  - push
+  - pull_request
+  runtime_check: false
+  staleness_days: 14
+  default_branch: main
+required_artifacts:
+  project_type: web
+wave_config:
+  '1':
+  - node_id: test:acceptance-criteria
+    output: docs/test/acceptance_criteria.md
+    title: 受け入れ基準（Acceptance Criteria）
+    depends_on:
+    - id: req:save-money-switcher-requirements
+      relation: derives_from
+      semantic: governance
+    conventions:
+    - targets:
+      - module:scoring
+      - module:tablet
+      reason: 回答・判定・スコアリングは 0〜100 の整数のみ受理し、小数・負値・100 超は UI とサーバの双方で拒否する（論点G）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      - module:tv_display
+      reason: 現金感を薄めない＝円建て・ポイント等への置換禁止（表示・内部表現とも円／論点B★設計原則）。違反時リリース不可。
+    - targets:
+      - module:control_panel
+      - role:host
+      reason: 締切・開示・取消の発動権限は司会者（制御盤）のみで、副司会・解答者端末からは不可（論点7）。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 同時接続上限は既定 8 台・ハードコード禁止・設定で 8→16→32 へ非改修変更可（論点10）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      - module:game_flow
+      reason: c 正解発表後の正解ライブ編集は自動再採点し残額・TV d/e へ即時反映（E-3残）。違反時リリース不可。
+    - targets:
+      - module:realtime_sync
+      reason: クラウド実行の WEB アプリで全端末をリアルタイム同期し、ホスト PC をサーバにしない（2026-08-08 確定）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+    - scoring
+    - game_flow
+    - participants
+    - control_panel
+    - tablet
+    - tv_display
+    - realtime_sync
+    - config
+  - node_id: governance:decision-records
+    output: docs/governance/decision_records.md
+    title: 決定記録（殿裁可 ADR 集：論点1〜11・A〜G・N-1〜N-4・E-3残・撤回履歴）
+    depends_on:
+    - id: req:save-money-switcher-requirements
+      relation: derives_from
+      semantic: governance
+    conventions:
+    - targets:
+      - module:realtime_sync
+      reason: 旧オフライン LAN 前提（論点2）は 2026-08-08 に撤回済で、クラウド実行・当日インターネット接続前提のみが有効。撤回済前提での実装はリリース不可。
+    - targets:
+      - module:scoring
+      reason: 得点ルール確定値（先渡し 10,000 円・誤差1=−100 円・ピタリ賞 1,000 円横取り・10問・残額最多勝ち）は改変禁止の確定入力。旧軍師推奨の点化・500
+        点は無効。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 接続上限は設定外出し・ハードコード禁止（論点10）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+    - scoring
+    - game_flow
+    - participants
+    - control_panel
+    - tablet
+    - tv_display
+    - realtime_sync
+    - config
+  '2':
+  - node_id: design:system-design
+    output: docs/design/system_design.md
+    title: システム設計（クラウド WEB アプリ・アーキテクチャ概要）
+    depends_on:
+    - id: test:acceptance-criteria
+      relation: constrained_by
+      semantic: governance
+    - id: governance:decision-records
+      relation: constrained_by
+      semantic: governance
+    conventions:
+    - targets:
+      - module:realtime_sync
+      reason: クラウド上のサーバへ制御盤／TV／解答者端末を接続しインターネット経由でリアルタイム同期（WebSocket 等）。ホスト PC をサーバにしない。違反時リリース不可。
+    - targets:
+      - db:questions
+      - module:questions
+      reason: 問題は事前ファイル読込で DB 登録・DB 保持し、ランタイムは DB から供給（E-1/E-2）。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 接続上限は既定 8・ハードコード禁止・設定変更で 32 台程度まで破綻しない同期基盤を選定軸に含める（論点10）。違反時リリース不可。
+    - targets:
+      - module:participants
+      reason: 家族限定のアクセス制御（URL 秘匿か認証か）を設計責務として明示し、未定でも設計分岐として抱えること。無制御公開はリリース不可。
+    - targets:
+      - module:control_panel
+      - role:host
+      - role:answerer
+      reason: 司会者（制御盤）・解答者（タブレット入力専用）・観客（TV）のロール境界と権限差を全体設計に反映する（論点7・第三要件）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+    - scoring
+    - game_flow
+    - participants
+    - control_panel
+    - tablet
+    - tv_display
+    - realtime_sync
+    - config
+  '3':
+  - node_id: design:realtime-sync-design
+    output: docs/design/realtime_sync_design.md
+    title: リアルタイム同期設計（WebSocket・状態配信・接続管理）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:realtime_sync
+      reason: クラウド経由の WebSocket 等でリアルタイム同期し、締切・開示・モード切替が全端末へ同期反映されること。ホスト PC をサーバにしない。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 接続上限判定は設定値を参照し、上限超過時は接続を断る挙動が設定変更に追随すること（論点10）。違反時リリース不可。
+    - targets:
+      - module:realtime_sync
+      reason: 回線断は運用リスクとして扱い、切断・再接続時の状態整合（進行状態・回答保持）を設計で担保すること。違反時リリース不可。
+    modules:
+    - realtime_sync
+    - game_flow
+    - participants
+  - node_id: design:data-model-design
+    output: docs/design/data_model_design.md
+    title: データモデル設計（問題・プレイヤー・回答・進行・精算）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - db:questions
+      - module:questions
+      reason: 問題データは動画パス・画像パス（任意）・テキスト・正解値を保持し、ファイル読込で DB 登録・ゲーム中もライブ編集で DB 更新（E-2/E-3/N-2）。違反時リリース不可。
+    - targets:
+      - db:rounds
+      - module:game_flow
+      reason: 各問がどのモードまで進んだか（b/c/d）を保持し、再採点判定を可能にする進行状態を持つこと（E-3残）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      reason: 回答・誤差・増減円・残額はすべて 0〜100 整数前提の整数円で保持し、小数・ポイント表現を持たない（論点G・B）。違反時リリース不可。
+    - targets:
+      - db:config
+      - module:config
+      reason: 接続上限等の可変パラメータはハードコードせず設定として保持できる構造にする（論点10）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+    - scoring
+    - game_flow
+    - participants
+    - config
+  - node_id: design:question-media-intake-design
+    output: docs/design/question_media_intake_design.md
+    title: 問題・出題メディア入稿設計（ファイル読込→DB・動画/画像/テキスト・ライブ編集）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    - id: design:data-model-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:questions
+      reason: 問題は事前ファイル読込で DB 登録・保持し、当日その場入力方式は採らない（E-1）。違反時リリース不可。
+    - targets:
+      - module:media
+      reason: a 出題面の解決は『動画 →（無ければ）画像 →（無ければ）テキスト』の3段フォールバック順を厳守する（N-2）。違反時リリース不可。
+    - targets:
+      - module:questions
+      - module:scoring
+      - module:game_flow
+      reason: ゲーム進行中も問題・正解の双方をライブ編集でき、編集は DB 更新として反映され、開示済み問題では自動再採点を誘発する（E-3/E-3残）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+  - node_id: design:scoring-engine-design
+    output: docs/design/scoring_engine_design.md
+    title: 採点エンジン設計（賞金先渡し・誤差減算・ピタリ賞・自動再採点）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    - id: design:data-model-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:scoring
+      reason: 先渡し 10,000 円・誤差1=−100 円・ピタリ賞（誤差0）は他プレイヤーから 1,000 円獲得・10問・残額最多勝ちの確定ルールを厳守（A〜D）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      - module:tv_display
+      reason: 現金感を薄めない＝円建て・ポイント置換禁止（表示・内部表現とも円）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      reason: 回答・誤差・減算額はすべて 0〜100 整数前提の整数円で計算する（論点G）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      - module:game_flow
+      reason: c 正解発表後の正解訂正は自動再採点し、d 精算済みなら残額差分も再計算し TV d/e を同時更新する（E-3残）。違反時リリース不可。
+    modules:
+    - scoring
+    - game_flow
+  - node_id: design:participation-connection-design
+    output: docs/design/participation_connection_design.md
+    title: 参加登録・接続管理設計（QR 参加・氏名自己入力・接続上限外出し）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    - id: design:realtime-sync-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:participants
+      reason: 参加はホスト画面の QR（クラウド公開 URL）を読み氏名を自己入力し、1人=1台（入力専用）で紐付ける。端末番号固定割当は不採用（論点9改）。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 同時接続上限は既定 8・ハードコード禁止・設定パラメータとして外出しし、上限超過時は接続を断る挙動が設定値を参照して機能すること（論点10）。違反時リリース不可。
+    - targets:
+      - module:participants
+      reason: 家族限定アクセス制御方式を設計責務として抱え、無認証の無制限公開を採らないこと。違反時リリース不可。
+    modules:
+    - participants
+    - config
+    - realtime_sync
+  '4':
+  - node_id: design:operational-behavior-model
+    output: docs/design/operational_behavior_model.md
+    title: 運用挙動モデル（Operational Behavior Model：actor/action/state/outcome＋操作到達導線）
+    depends_on:
+    - id: design:scoring-engine-design
+      relation: depends_on
+      semantic: technical
+    - id: design:participation-connection-design
+      relation: depends_on
+      semantic: technical
+    - id: design:question-media-intake-design
+      relation: depends_on
+      semantic: technical
+    - id: design:realtime-sync-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:control_panel
+      - role:host
+      reason: 締切（そこまで）・開示（解答オープン）・正解発表・精算・モード切替（次へ/戻る/個別ジャンプ）・取消は司会者（制御盤）のみが発動でき、各操作の到達導線（制御盤上の可視トリガー）を定義すること。副司会・解答者端末からの発動や
+        API 直叩きは不可（論点7・N-3）。違反時リリース不可。
+    - targets:
+      - role:answerer
+      - module:tablet
+      reason: 解答者アクションは回答入力（+1/−1/+10/−10）と送信のみで、締切・開示・他者情報閲覧は禁止（第三要件・N-1）。到達導線は QR
+        参加→氏名入力→入力画面に限定する。違反時リリース不可。
+    - targets:
+      - module:game_flow
+      reason: 進行状態（受付中→締切→b 開示→c 正解発表→d 精算→e 一覧）と各問の到達モード（b/c/d）を actor/action/outcome
+        として定義し、再採点誘発条件を実装が省略できない契約にする（E-3残）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      reason: 各アクションの outcome（減算・ピタリ賞横取り・残額更新・自動再採点）を確定値どおりに定義し、E2E テストへ先送りしないこと。違反時リリース不可。
+    modules:
+    - control_panel
+    - tablet
+    - tv_display
+    - game_flow
+    - scoring
+    - participants
+  - node_id: design:surface-copy-obligations
+    output: docs/design/surface_copy_obligations.md
+    title: 画面・導線・文言 設計義務（制御盤／タブレット／TV5モード）
+    depends_on:
+    - id: design:operational-behavior-model
+      relation: depends_on
+      semantic: technical
+    - id: design:system-design
+      relation: constrained_by
+      semantic: governance
+    conventions:
+    - targets:
+      - module:control_panel
+      - role:host
+      reason: 制御盤サーフェスの目的・対象（司会者）・許可導線（締切/開示/正解発表/精算/次へ・戻る・個別ジャンプ/問題・正解ライブ編集/取消）・禁止導線を定義し、文言は司会者の運用言語で表すこと（N-3・論点7）。違反時リリース不可。
+    - targets:
+      - module:tablet
+      - role:answerer
+      reason: タブレットは入力専用最小 UI（問題番号・数値入力・送信済み表示・自分の残額のみ）に限定し、出題内容・他者情報・全体一覧の提示を禁止する。文言は解答者向けで、内部処理・権限境界の説明やデモ/テスト用ラベルを載せないこと（N-1・第三要件）。違反時リリース不可。
+    - targets:
+      - module:tv_display
+      reason: TV は MC 切替の 5 モード（a 出題[動画/画像/テキスト]／b 解答オープン／c 正解発表／d 当該問全員表[氏名/解答/誤差/増減円/ピタリ賞/残額]／e
+        全問通算一覧）を観客向け文言で提示し、開示前は他者解答を伏せること（第三要件・N-2・N-4）。違反時リリース不可。
+    - targets:
+      - module:tv_display
+      - module:scoring
+      reason: 金額表示は円建てで現金感を薄めず、ポイント等への置換や点化文言を禁止する（論点B）。違反時リリース不可。
+    modules:
+    - control_panel
+    - tablet
+    - tv_display
+  '5':
+  - node_id: detailed_design:shared-domain-model
+    output: docs/detailed_design/shared_domain_model.md
+    title: 共有ドメインモデル（型・用語・所有境界／Mermaid クラス図）
+    depends_on:
+    - id: design:data-model-design
+      relation: depends_on
+      semantic: technical
+    - id: design:system-design
+      relation: constrained_by
+      semantic: governance
+    conventions:
+    - targets:
+      - module:scoring
+      - module:questions
+      reason: 回答・誤差・残額は 0〜100 整数／整数円、金額は円建てで表現し、ポイント型・小数型を共有ドメインに持たせない（論点G・B）。違反時リリース不可。
+    - targets:
+      - role:host
+      - role:answerer
+      reason: 司会者・解答者・観客のロールと権限境界を型・所有境界として明示し、実装がロール境界を曖昧化できないこと（論点7・第三要件）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+    - scoring
+    - game_flow
+    - participants
+    - config
+  - node_id: detailed_design:er-crud-model
+    output: docs/detailed_design/er_crud_model.md
+    title: ER 図・CRUD マトリクス（問題・プレイヤー・回答・進行・設定／Mermaid ER）
+    depends_on:
+    - id: design:data-model-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - db:questions
+      - module:questions
+      reason: 問題テーブルは動画/画像/テキスト/正解値を保持しライブ編集で更新可能（E-2/E-3/N-2）。違反時リリース不可。
+    - targets:
+      - db:rounds
+      - module:game_flow
+      reason: 問題別進行（b/c/d）を永続化し再採点判定の根拠にする（E-3残）。違反時リリース不可。
+    - targets:
+      - db:config
+      - module:config
+      reason: 接続上限等の可変値を設定として持ち、コードに定数リテラル埋め込みしない（論点10）。違反時リリース不可。
+    modules:
+    - questions
+    - scoring
+    - game_flow
+    - participants
+    - config
+  - node_id: detailed_design:state-machines
+    output: docs/detailed_design/state_machines.md
+    title: 状態機械（ゲーム進行・問題別進行 b/c/d・接続ライフサイクル／Mermaid state）
+    depends_on:
+    - id: design:operational-behavior-model
+      relation: depends_on
+      semantic: technical
+    - id: design:scoring-engine-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:game_flow
+      - role:host
+      reason: 受付中→締切→開示→正解発表→精算→一覧の遷移トリガーは司会者のみで、次へ/戻る/個別ジャンプの逆送り・ジャンプ経路も状態機に含める（論点7・N-3）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      - module:game_flow
+      reason: c 到達後の正解編集で自動再採点、d 到達後は残額差分再計算と TV d/e 更新へ遷移することを状態機で規定する（E-3残）。違反時リリース不可。
+    - targets:
+      - module:participants
+      - module:config
+      reason: 接続ライフサイクルは上限（設定値）到達時に新規接続を拒否する遷移を持つこと（論点10）。違反時リリース不可。
+    modules:
+    - game_flow
+    - scoring
+    - participants
+    - config
+  - node_id: detailed_design:sequence-flows
+    output: docs/detailed_design/sequence_flows.md
+    title: 主要シーケンス（参加・回答・締切・開示・正解発表・精算・再採点・モード切替／Mermaid sequence）
+    depends_on:
+    - id: design:operational-behavior-model
+      relation: depends_on
+      semantic: technical
+    - id: design:realtime-sync-design
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:realtime_sync
+      - module:control_panel
+      reason: 締切・開示・モード切替は制御盤発火→サーバ→全端末同期のシーケンスで表し、司会者以外の発火経路を描かない（論点7）。違反時リリース不可。
+    - targets:
+      - module:scoring
+      - module:game_flow
+      reason: 開示済み問題の正解ライブ編集→自動再採点→残額反映→TV d/e 更新の順序をシーケンスで確定する（E-3残）。違反時リリース不可。
+    - targets:
+      - module:participants
+      reason: QR 読取→氏名自己入力→接続確立（上限内なら受理・超過なら拒否）のシーケンスを描く（論点9改・10）。違反時リリース不可。
+    modules:
+    - realtime_sync
+    - game_flow
+    - scoring
+    - participants
+    - tv_display
+    - control_panel
+  - node_id: detailed_design:component-dependency-map
+    output: docs/detailed_design/component_dependency_map.md
+    title: コンポーネント依存マップ（モジュール境界・依存方向／Mermaid graph）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    - id: detailed_design:shared-domain-model
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:tablet
+      - module:tv_display
+      reason: タブレット（入力専用）と TV（提示専用）の責務を分離し、タブレットが提示・他者情報を持つ依存を作らない（第三要件・N-1）。違反時リリース不可。
+    - targets:
+      - module:config
+      reason: 接続上限等の設定値は config を経由して参照し、各モジュールに定数埋め込みしない依存構造とする（論点10）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+    - scoring
+    - game_flow
+    - participants
+    - control_panel
+    - tablet
+    - tv_display
+    - realtime_sync
+    - config
+  '6':
+  - node_id: plan:implementation-plan
+    output: docs/plan/implementation_plan.md
+    title: 実装計画（MVP マイルストーン・順序・過剰実装禁止）
+    depends_on:
+    - id: detailed_design:sequence-flows
+      relation: depends_on
+      semantic: technical
+    - id: detailed_design:state-machines
+      relation: depends_on
+      semantic: technical
+    - id: detailed_design:er-crud-model
+      relation: depends_on
+      semantic: technical
+    - id: design:operational-behavior-model
+      relation: constrained_by
+      semantic: governance
+    conventions:
+    - targets:
+      - module:tv_display
+      - module:scoring
+      reason: MVP 正解発表は開示一覧＋正解値＋得点増減（円）まで。効果音・カウントダウン・アニメ・ランキング演出は MVP 後で、過剰実装しない（論点F）。違反時リリース不可。
+    - targets:
+      - module:control_panel
+      - role:host
+      reason: 取消は初版から司会者権限の操作として含める。具体挙動に曖昧が残れば推測実装せず F028 で殿判断を仰ぐ（論点7）。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 接続上限のハードコード禁止・設定外出しを実装順序に組み込む（論点10）。違反時リリース不可。
+    modules:
+    - questions
+    - media
+    - scoring
+    - game_flow
+    - participants
+    - control_panel
+    - tablet
+    - tv_display
+    - realtime_sync
+    - config
+  - node_id: infra:deployment-setup
+    output: docs/infra/deployment_setup.md
+    title: インフラ・CI/CD・デプロイ設計（クラウド・WebSocket・設定外出し）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    - id: design:realtime-sync-design
+      relation: depends_on
+      semantic: technical
+    - id: design:participation-connection-design
+      relation: constrained_by
+      semantic: governance
+    conventions:
+    - targets:
+      - module:realtime_sync
+      reason: クラウドへデプロイでき WebSocket 等のリアルタイム通信を扱える構成とし、ホスト PC をサーバにしない（2026-08-08
+        確定）。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 接続上限は起動時/デプロイ時に与えられる設定パラメータ（環境変数等）として外出しし、32 台程度まで破綻しないこと（論点10）。違反時リリース不可。
+    - targets:
+      - module:participants
+      reason: 家族限定アクセス制御（URL 秘匿か認証か）のデプロイ時方式を確定し、無制御公開でリリースしないこと。違反時リリース不可。
+    modules:
+    - realtime_sync
+    - config
+    - participants
+  - node_id: operations:runbook
+    output: docs/operations/runbook.md
+    title: 運用手順書（当日回線確保・回線断時運用・接続上限変更）
+    depends_on:
+    - id: design:system-design
+      relation: depends_on
+      semantic: technical
+    - id: infra:deployment-setup
+      relation: depends_on
+      semantic: technical
+    conventions:
+    - targets:
+      - module:realtime_sync
+      reason: 本番当日のインターネット接続を前提とし、回線断を運用リスクとして扱い再接続・状態復帰手順を明記すること（2026-08-08 確定）。違反時リリース不可。
+    - targets:
+      - module:config
+      - module:participants
+      reason: 接続上限（8→16→32）の設定変更手順をコード改修なしの運用操作として記すこと（論点10）。違反時リリース不可。
+    modules:
+    - realtime_sync
+    - config
+    - participants
+  '7':
+  - node_id: test:test-strategy
+    output: docs/test/test_strategy.md
+    title: Test Strategy and Verifiable Behavior Registry
+    depends_on:
+    - id: req:save-money-switcher-requirements
+      relation: derives_from
+      semantic: governance
+    - id: test:acceptance-criteria
+      relation: depends_on
+      semantic: verification
+    - id: governance:decision-records
+      relation: depends_on
+      semantic: verification
+    - id: design:system-design
+      relation: depends_on
+      semantic: verification
+    - id: design:realtime-sync-design
+      relation: depends_on
+      semantic: verification
+    - id: design:data-model-design
+      relation: depends_on
+      semantic: verification
+    - id: design:question-media-intake-design
+      relation: depends_on
+      semantic: verification
+    - id: design:scoring-engine-design
+      relation: depends_on
+      semantic: verification
+    - id: design:participation-connection-design
+      relation: depends_on
+      semantic: verification
+    - id: design:operational-behavior-model
+      relation: depends_on
+      semantic: verification
+    - id: design:surface-copy-obligations
+      relation: depends_on
+      semantic: verification
+    - id: detailed_design:shared-domain-model
+      relation: depends_on
+      semantic: verification
+    - id: detailed_design:er-crud-model
+      relation: depends_on
+      semantic: verification
+    - id: detailed_design:state-machines
+      relation: depends_on
+      semantic: verification
+    - id: detailed_design:sequence-flows
+      relation: depends_on
+      semantic: verification
+    - id: detailed_design:component-dependency-map
+      relation: depends_on
+      semantic: verification
+    - id: plan:implementation-plan
+      relation: depends_on
+      semantic: verification
+    - id: infra:deployment-setup
+      relation: depends_on
+      semantic: verification
+    - id: operations:runbook
+      relation: depends_on
+      semantic: verification
+    conventions: []
+    modules:
+    - config
+    - control_panel
+    - game_flow
+    - media
+    - participants
+    - questions
+    - realtime_sync
+    - scoring
+    - tablet
+    - tv_display

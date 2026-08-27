@@ -1,0 +1,307 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: c86144e7b5f511933bf9b0a740d3e15b786498dfc44b8497220d7585698efde9
+design_doc_sha: 121890ab8c7dde507aeae595a811f12f33d687b7a8e39e248f5e4ec39ef942cf
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T20:10:49.617770Z'
+design_docs:
+- docs/design/surface_copy_obligations.md
+tasks:
+- id: impl_role_labels
+  title: Implement single-source visible role labels
+  description: Create src/game_state/role_labels.ts exporting the Role union ("host"|"answerer"|"audience")
+    and ROLE_LABELS mapping to 司会者/解答者/観客 as the single supply of business-facing
+    role labels for every surface (§2.8, op_map_role_labels_in_copy). No label value
+    may contain an internal identifier.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/role_labels.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: impl_currency_format
+  title: Implement single-point yen formatter
+  description: Create src/scoring/currency.ts with CURRENCY_UNIT="円" and formatYen(amount)
+    that formats integer yen via toLocaleString and throws on non-integers, as the
+    sole money-formatting point for TV(d/e) and tablet balance (§2.5, op_enforce_currency_yen_copy).
+    No point/pt/点 token may appear in the type, output, or copy.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/currency.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: impl_resolve_question_face
+  title: Implement question-face resolver (video→image→text)
+  description: 'Implement the pure resolveQuestionFace under src/questions/ (with
+    media types under src/media/) that resolves the TV mode-a question face by precedence
+    video→image→text and returns display-ready values carrying no raw file path or
+    internal word such as fallback (§2.4a, §2.9, dod_tv_no_path_or_internal_leak).
+    Inference: the design names the function, location, and behavior but no explicit
+    file; this resolver file is the implied implementation unit.'
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/resolve_question_face.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: impl_control_panel_surface
+  title: Implement control-panel host console surface
+  description: Build the /control-panel surface under src/control_panel/ presenting
+    every §2.7 host trigger (問題を読み込む/そこまで/解答オープン！/正解発表/精算/次へ/戻る/個別ジャンプ/取消/問題・正解を編集),
+    the participant roster of self-entered names, the join QR, and the 「◯/◯台」connection
+    count in operational language (op_render_control_panel_surface). It must not render
+    the answerer numeric-input face, invent a sub-host role, or leak internal identifiers/event
+    names/config keys/point tokens; role wording draws from ROLE_LABELS.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/control_panel/
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_role_labels
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: impl_tablet_surface
+  title: Implement input-only tablet surface
+  description: Build the /tablet surface under src/tablet/ limited to the problem
+    number, the −10/−1/+1/+10 stepper clamped to 0–100, 送信/送信済み, own balance in yen,
+    and 受付中/締切 status (op_render_tablet_surface). It must expose no host controls,
+    no others' info, no question body, no 全体一覧, and no permission-boundary explanation;
+    balance is formatted through formatYen and role wording through ROLE_LABELS.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/tablet/
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_role_labels
+  - impl_currency_format
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: impl_tv_display_surface
+  title: Implement TV five-mode passive display surface
+  description: Build the /tv surface under src/tv_display/ rendering the five audience-facing
+    modes — a question face via resolveQuestionFace, b names+answers only after disclosure,
+    c correct value, d six-column settlement table (render_settlement_table.ts), e
+    cumulative totals with winner highlighting (render_totals.ts) — with all money
+    in yen (op_render_tv_surface). It contains no input/control element and leaks
+    no raw path, internal word, or event name; it consumes formatYen, ROLE_LABELS,
+    and resolveQuestionFace.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/tv_display/
+  - src/tv_display/render_settlement_table.ts
+  - src/tv_display/render_totals.ts
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_role_labels
+  - impl_currency_format
+  - impl_resolve_question_face
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: impl_join_surface
+  title: Implement participant join surface
+  description: Build the /join surface under src/participants/ with a name input and
+    「参加する」, plus job-to-be-done plain copy for full (「ただいま満席のため参加できません」) and access-denied
+    states (op_render_join_surface). It must not render a pre-registered name/seat
+    ledger, must not expose protected control-panel navigation to unauthenticated/unjoined
+    visitors, and must not leak config keys, connection accounting, role identifiers,
+    or the access-control method; role wording draws from ROLE_LABELS.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_role_labels
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: unit_role_labels
+  title: Unit-test role-label mapping and single source
+  description: Add tests/game_state/role_labels.test.ts (Vitest) asserting ROLE_LABELS
+    maps host/answerer/audience to 司会者/解答者/観客 and that no label value contains an
+    internal identifier, covering dod_labels_business_facing and dod_labels_single_source
+    (§2.11).
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/game_state/role_labels.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_role_labels
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: unit_currency_format
+  title: Unit-test yen formatter and point-token absence
+  description: Add tests/scoring/currency.test.ts (Vitest) asserting formatYen renders
+    integer yen containing 円 with no point/pt/点 and throws on non-integer input, covering
+    the yen-only formatting point and dod_currency_no_point_token at unit level (§2.5,
+    §2.11).
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/scoring/currency.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_currency_format
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: unit_resolve_question_face
+  title: Unit-test question-face resolution precedence
+  description: 'Add a Vitest unit test for resolveQuestionFace asserting the video→image→text
+    precedence and that resolved output carries no raw file path or internal word
+    (fallback / *_path values), covering the mode-a boundary cases and dod_tv_no_path_or_internal_leak
+    at unit level. Inference: the design fixes the resolver behavior but no explicit
+    test file; this focused check is the implied unit-level evidence.'
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/questions/resolve_question_face.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - impl_resolve_question_face
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: e2e_control_panel_surface
+  title: E2E-scan control-panel obligations
+  description: Add tests/e2e/control_panel_surface.browser.spec.ts driving /control-panel
+    with Playwright (declared and asserted in Vitest) to verify the visible host triggers,
+    the join QR and roster, the absence of the answerer input face, and no internal
+    identifier/event-name/config-key/point leak (dod_cp_*). Rollback-after-取消 face
+    assertions remain test.fixme() per §3.2.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/e2e/control_panel_surface.browser.spec.ts
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_control_panel_surface
+  - e2e_shared_harness_helpers
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: e2e_tablet_surface
+  title: E2E-scan tablet obligations
+  description: Add tests/e2e/tablet_surface.browser.spec.ts (per §2.11) driving /tablet
+    with Playwright and asserting in Vitest that only input-only elements exist, that
+    no others' info/question body/全体一覧/host controls are present, and that no host
+    operational words/internal event names/point tokens appear (dod_tablet_*).
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/e2e/tablet_surface.browser.spec.ts
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_tablet_surface
+  - e2e_shared_harness_helpers
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: e2e_tv_surface
+  title: E2E-scan TV five-mode obligations
+  description: Add tests/e2e/tv_surface.browser.spec.ts driving /tv with Playwright
+    to verify the five modes render as specified, others' answers stay hidden before
+    disclosure (mode b), the mode-e winner is judgeable, no input/control element
+    exists, and no raw path/internal word/event name leaks (dod_tv_*). Mode-a playback
+    fallback stays flagged (F-06', test.fixme where unresolved).
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/e2e/tv_surface.browser.spec.ts
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_tv_display_surface
+  - e2e_shared_harness_helpers
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: e2e_join_surface
+  title: E2E-scan join obligations
+  description: Add tests/e2e/join_surface.browser.spec.ts driving /join with Playwright
+    to verify the name input and 「参加する」, the absence of seat/name-ledger inputs, no
+    protected navigation for unauthenticated/unjoined visitors, and plain full/access-denied
+    copy that leaks no config key/connection accounting/role identifier/access method
+    (dod_join_*). Access-control branch behavior (F-05) stays test.fixme() until a
+    branch is implemented.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/e2e/join_surface.browser.spec.ts
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_join_surface
+  - e2e_shared_harness_helpers
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: e2e_currency_copy_scan
+  title: E2E-scan yen copy across all surfaces
+  description: Add tests/e2e/currency_copy.browser.spec.ts driving all four surfaces
+    to assert money renders in yen and that no point/pt/点 or pointization phrase appears
+    in visible copy, covering dod_currency_no_point_token and dod_currency_no_pointization_phrase
+    across surfaces (§2.5, op_enforce_currency_yen_copy). API-response scanning is
+    out of scope here because the API artifact is owned by the sibling operational-behavior-model.
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/e2e/currency_copy.browser.spec.ts
+  test_kinds:
+  - e2e
+  dependencies:
+  - impl_control_panel_surface
+  - impl_tablet_surface
+  - impl_tv_display_surface
+  - impl_join_surface
+  - e2e_shared_harness_helpers
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true
+- id: e2e_shared_harness_helpers
+  title: Build shared E2E harness helpers
+  description: 'Provide the shared helpers under tests/e2e/helpers/ (imported with
+    .js specifiers) that boot and poll the app to a <500 health response within 60s,
+    inject verification-env values (E2E_BASE_URL/PUBLIC_BASE_URL/MAX_TABLET_CONNECTIONS/access-control),
+    launch the Playwright browser, and run forbidden-copy regex scans (§2.10, §2.11).
+    Inference: the design names this helper location and harness behavior but no explicit
+    files; these utilities are the implied shared unit the browser specs import.'
+  source_design_doc: docs/design/surface_copy_obligations.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/e2e/helpers/
+  test_kinds:
+  - e2e
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:10:49.617770Z'
+  approved: true

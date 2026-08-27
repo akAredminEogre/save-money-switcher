@@ -1,0 +1,220 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 2cf4b2907407e52e260bcd21e5c9b1c14de4930ab3e064f371a7232d0097450e
+design_doc_sha: 000e7ff7f33c46649804c0889e27b5317c188c3daae2d2cd3138b661b63f6755
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T20:13:59.568655Z'
+design_docs:
+- docs/detailed_design/state_machines.md
+tasks:
+- id: implement_progression_state
+  title: Author Stage type and disclosure predicates
+  description: Define the canonical `Stage` union (accepting, answers_locked, answers_opened,
+    answer_revealed, settlement_computed) and the pure predicates `isDisclosed` (true
+    from answer_revealed) and `isSettled` (true only at settlement_computed) in the
+    single-owner module. These predicates are the boundary interface consumed by scoring,
+    realtime_sync and participants, which import them and never re-declare the state
+    judgement (§3.1, §4.1).
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/progression.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: implement_game_phase
+  title: Author GamePhase and derivePhase
+  description: Define `GamePhase` (lobby, in_progress, finished), `QUESTION_COUNT
+    = 10`, and `derivePhase(activated, settledCount)` returning finished when all
+    10 questions are settled, else in_progress when activated, else lobby (§2.1, §4.1).
+    The phase is a derived aggregate view over the round stages that consumers read
+    rather than re-implement.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/phase.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: implement_round_machine
+  title: Author Round Stage forward/reverse transitions
+  description: Implement the pure `nextStage(current, command)` over lock/open/reveal/settle
+    and the reverse-edge candidate `previousStage(current)`, rejecting illegal transitions
+    (e.g. reveal before answers_opened, settle from accepting) with RangeError as
+    the single owner of transition legality (SM-1, §4.2). Only the transition topology
+    is authored here; the durable undo side-effects stay F-03 and are not invented.
+    Imports the `Stage` type from progression.ts.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/round_machine.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_progression_state
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: implement_tv_mode_map
+  title: Author TvMode type and stageToTvMode
+  description: 'Define the `TvMode` union (a–e) and `stageToTvMode(stage)` returning
+    the default TV mode per stage (accepting/answers_locked→a, answers_opened→b, answer_revealed→c,
+    settlement_computed→d) as the single canonical owner read by tv_display and realtime_sync
+    (§2.4, §3.1). Inference: because the function types its parameter as a Stage under
+    the single-ownership rule, it imports the `Stage` type from progression.ts.'
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/tv_mode.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_progression_state
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: implement_tv_machine
+  title: Author TV navigation functions
+  description: Implement the display-only navigation pure functions `nextMode` (a→b→c→d→e→a),
+    `backMode` (reverse, wrapping a→e), and `jumpMode` (direct to any requested mode)
+    over an ordered a–e list (§4.2). These drive the TV Mode Machine independently
+    of the round stage and never roll back rounds.stage. Imports the `TvMode` type
+    from tv_mode.ts.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/tv_machine.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_tv_mode_map
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: implement_rescore_trigger
+  title: Author auto-rescore trigger boundary
+  description: 'Implement `planRescore(stage, patch)` returning {rescore:false} unless
+    the patch touches correctValue and isDisclosed(stage) is true, otherwise {rescore:true,
+    syncTvDE: isSettled(stage)} (SM-2, §4.3). This owns only the trigger decision;
+    the actual recomputation is owned by src/scoring/ and invoked by the caller. Imports
+    `isDisclosed`, `isSettled`, and the `Stage` type from progression.ts.'
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/rescore_trigger.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_progression_state
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: implement_connection_limit
+  title: Author tablet connection limit resolver
+  description: Implement `resolveMaxTabletConnections(env)` as the single resolution
+    point for the tablet cap, defaulting to the sole constant DEFAULT_MAX_TABLET_CONNECTIONS
+    = 8 and parsing MAX_TABLET_CONNECTIONS as a positive integer (RangeError otherwise)
+    so 16/32 follow with no code change (SM-3, §4.4). The default is declared only
+    by this constant so no literal 8 leaks into decision code.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/connection_limit.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: implement_connection_machine
+  title: Author connection admission decision
+  description: Define the `ConnectionState` set (handshaking, admitted, connected,
+    disconnected, rejected) and `admitTablet(connectedAnswerers, env)` returning ok
+    while below the resolved cap and over_limit at or above it (SM-3, §4.4). The judgement
+    references only the resolved value, keeping no numeric literal 8 in the decision
+    code. Imports `resolveMaxTabletConnections` from connection_limit.ts.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/connection_machine.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_connection_limit
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: test_round_machine
+  title: Check Round Stage transitions and disclosure flags
+  description: Vitest unit checks that the forward path accepting→answers_locked→answers_opened→answer_revealed→settlement_computed
+    is legal, that reveal before answers_opened and settle from accepting throw RangeError,
+    that isDisclosed/isSettled flip at the c/d boundaries, and that previousStage
+    yields the undo topology (§4.5). Drives `nextStage`/`previousStage` from round_machine.ts
+    and `isDisclosed`/`isSettled` from progression.ts in-process.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/game_state/round_machine.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_round_machine
+  - implement_progression_state
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: test_rescore_trigger
+  title: Check auto-rescore trigger boundaries
+  description: Vitest unit checks that a correctValue edit at answer_revealed plans
+    rescore without TV d/e sync, at settlement_computed plans rescore with sync, and
+    that a pre-c correctValue edit or a text-only edit plan no rescore (SM-2, §4.5).
+    Drives `planRescore` from rescore_trigger.ts in-process.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/game_state/rescore_trigger.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_rescore_trigger
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: test_tv_machine
+  title: Check TV navigation cycling
+  description: Vitest unit checks that nextMode cycles a→b→c→d→e→a, backMode reverses
+    with the a→e wrap, and jumpMode returns any requested mode directly (§4.5). Drives
+    `nextMode`/`backMode`/`jumpMode` from tv_machine.ts in-process.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/game_state/tv_machine.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_tv_machine
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true
+- id: test_connection_machine
+  title: Check connection cap boundaries
+  description: Vitest unit checks the cap edges — default 8 admits the 8th and rejects
+    the 9th, and injected MAX_TABLET_CONNECTIONS 16/32 admit/reject at their boundaries
+    with no code change (SM-3, §4.5). Drives `admitTablet` from connection_machine.ts
+    in-process with an injected env.
+  source_design_doc: docs/detailed_design/state_machines.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/participants/connection_machine.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_connection_machine
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:13:59.568655Z'
+  approved: true

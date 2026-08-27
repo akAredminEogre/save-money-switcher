@@ -1,0 +1,190 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: ce2ec8f3377bfe75b0c0b205d9a7bc8f18f3a39a44e56e9d808bc4b6e18ca802
+design_doc_sha: 4f27cef915ec9c8ffca8585a33996b9e8617bbff6a0f3fbdf4bb3c291c8c4e59
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T04:11:35.882640Z'
+design_docs:
+- docs/design/system_design.md
+tasks:
+- id: config_connection_limit
+  title: Implement MAX_TABLET_CONNECTIONS resolver
+  description: Implement resolveMaxTabletConnections() in src/config/connection_limit.ts
+    as the single resolution point for the tablet connection ceiling. It returns 8
+    when MAX_TABLET_CONNECTIONS is unset and follows a configured value such as 32
+    with no code change, embedding no literal 8 in enforcement.
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/connection_limit.ts
+  - tests/connection_limit.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: participants_admission
+  title: Implement tablet admission gate
+  description: 'Implement admitTablet() in src/participants/admission.ts to reject
+    new connections once connected reaches the ceiling while leaving existing connections
+    intact. Inference: per §2.7 admission.ts references config''s resolveMaxTabletConnections
+    for its effective limit, though the unit test injects an explicit limit.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/admission.ts
+  - tests/admission.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - config_connection_limit
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: scoring_validate_answer
+  title: Implement server-side answer validator
+  description: 'Implement assertIntegerAnswer() in src/scoring/validate_answer.ts
+    as the server half of the dual guard, accepting only 0–100 integers and rejecting
+    negatives, decimals, values above 100, and non-numeric input. Inference: the design
+    names no dedicated test, so tests/validate_answer.test.ts is derived from the
+    INV-6 boundary set (0/100 pass, −1/101/50.5 fail).'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/validate_answer.ts
+  - tests/validate_answer.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: game_state_progression
+  title: Implement question progression state model
+  description: 'Implement src/game_state/progression.ts defining the QuestionProgress
+    type and the accepting→answers_locked→answers_opened→answer_revealed→settlement_computed
+    transitions, plus a disclosed predicate (stage ≥ answer_revealed) used to bound
+    rescoring. Inference: no test is named, so tests/progression.test.ts is derived
+    to cover legal transitions and the post-lock submit-terminal guard.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/progression.ts
+  - tests/progression.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: scoring_apply_question_score
+  title: Implement per-question scoring
+  description: 'Implement applyQuestionScore in src/scoring/apply_question_score.ts,
+    re-exported from apply_question_score_impl.ts, returning { error, delta, currency:
+    "円" } with error = |answer − correct|, delta = error × −100, and +1000 on a pitari
+    (error 0). It validates input through assertIntegerAnswer and imports the QuestionProgress
+    type from game_state, keeping amounts in yen with no point/pt/点.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/apply_question_score.ts
+  - src/scoring/apply_question_score_impl.ts
+  - tests/scoring.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - scoring_validate_answer
+  - game_state_progression
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: scoring_rescore_on_correction
+  title: Implement differential rescoring on correction
+  description: 'Implement src/scoring/rescore_on_correction.ts so that, for questions
+    at stage answer_revealed or later, every answer''s error/delta is recomputed from
+    the edited correct_value and the balance difference applied; pre-c questions are
+    excluded. It reuses applyQuestionScore and reads the progression stage to bound
+    the range. Inference: the file name is derived from the design-named tests/rescoring.test.ts.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/rescore_on_correction.ts
+  - tests/rescoring.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - scoring_apply_question_score
+  - game_state_progression
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: tablet_answer_stepper
+  title: Implement tablet 4-button stepper clamp
+  description: 'Implement the +1/−1/+10/−10 stepper in src/tablet/ so the composed
+    value cannot fall below 0 or exceed 100, forming the UI half of the INV-6 dual
+    guard. Inference: the design names neither file nor test, so src/tablet/answer_stepper.ts
+    and tests/answer_stepper.test.ts are derived from §2.9''s explicit four-button
+    boundary behavior.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/tablet/answer_stepper.ts
+  - tests/answer_stepper.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: questions_resolve_surface
+  title: Implement a-mode surface fallback resolver
+  description: 'Implement the TV a-mode fallback in src/questions/resolve_surface.ts,
+    resolving a question to video when video_path is set, else image when image_path
+    is set, else text. Inference: the design names no artifact, so the file and tests/resolve_surface.test.ts
+    are derived from §2.8''s three-stage fallback and dod_tv_a_fallback.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/resolve_surface.ts
+  - tests/resolve_surface.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: scoring_determine_winner
+  title: Implement winner determination
+  description: 'Implement src/scoring/determine_winner.ts selecting the participant
+    holding the most yen from the final balances for the e-mode winner display. Inference:
+    the design names no artifact, so the file and tests/determine_winner.test.ts are
+    derived from op_determine_winner and the residual-most-wins rule.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/determine_winner.ts
+  - tests/determine_winner.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true
+- id: participants_authorize_host
+  title: Implement host-only trigger authorization
+  description: 'Implement a single-point requireHost guard in src/participants/authorize.ts
+    that allows lock/open/reveal/settle/undo only for role host and rejects non-host
+    sessions with 401/403. Inference: the design mandates one role-judgment point
+    but names no artifact, so the file and tests/authorize.test.ts are derived from
+    INV-5, §2.5/§2.10 and dod_lock_host_only/dod_undo_host_only.'
+  source_design_doc: docs/design/system_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/authorize.ts
+  - tests/authorize.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:11:35.882640Z'
+  approved: true

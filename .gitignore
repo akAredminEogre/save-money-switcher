@@ -6,9 +6,20 @@ venv/
 
 # Node
 node_modules/
+dist/
+
+# Local env (実値は非コミット・.env.example のみ追跡)
+.env
 
 # CoDD session checkpoints (resume state, machine-local)
 .codd/greenfield_session.yaml
+# CoDD verify output (regenerated each run, machine-local)
+.codd/verify/
+
+# Test artifacts
+test-results/
+# Smoke/E2E screenshots (may contain PII, machine-local)
+screenshots/
 
 # misc
 .DS_Store

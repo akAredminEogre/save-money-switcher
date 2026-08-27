@@ -1,0 +1,65 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 0e52bda7d49a9dc282f5cb2b0e15f9826d58b275106992cfe9a84d18b658fbe0
+design_doc_sha: 727329e0a6b3529ef8c520059e8c70636e93352818b1742a318a988bb7312ee4
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T09:05:33.716761Z'
+design_docs:
+- docs/design/operational_behavior_model.md
+tasks:
+- id: game_state_progression
+  title: Implement progression stage predicates
+  description: Author src/game_state/progression.ts declaring the Stage union (accepting,
+    answers_locked, answers_opened, answer_revealed, settlement_computed) and the
+    pure predicates isDisclosed (true only for answer_revealed and settlement_computed)
+    and isSettled (true only for settlement_computed), per the §2.2 code and the re-scoring
+    disclosure gate in §2.6. This is a module this OBM document explicitly owns (§2.10
+    assigns src/game_state/ here). Relative imports and re-exports must carry the
+    emitted .js extension per the NodeNext rule (§1.3).
+  source_design_doc: docs/design/operational_behavior_model.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/progression.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:05:33.716761Z'
+  approved: true
+- id: game_state_tv_mode
+  title: Implement stage-to-TV-mode mapping
+  description: 'Author src/game_state/tv_mode.ts declaring the TvMode union (a–e)
+    and the pure stageToTvMode map: accepting/answers_locked→a, answers_opened→b,
+    answer_revealed→c, settlement_computed→d; mode e (通算) is reached via host mode-switch
+    only and is not produced from a stage, so it is excluded from the return type
+    (§2.2). The file type-only imports Stage from ./progression.js with the mandatory
+    .js extension (§1.3).'
+  source_design_doc: docs/design/operational_behavior_model.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/tv_mode.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - game_state_progression
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:05:33.716761Z'
+  approved: true
+- id: game_state_progression_tv_mode_unit_test
+  title: Unit-test progression predicates and TV-mode mapping
+  description: 'Author tests/game_state/tv_mode.test.ts (Vitest, per §2.10) asserting
+    the five-way stageToTvMode mapping and the isDisclosed/isSettled boundaries: answers_opened
+    → isDisclosed false; answer_revealed → isDisclosed true and isSettled false; settlement_computed
+    → isSettled true. This is the focused OBM-3 check for the single-source src/game_state
+    helpers; the shown test file imports from both tv_mode.js and progression.js.'
+  source_design_doc: docs/design/operational_behavior_model.md
+  v_model_layer: detailed
+  expected_outputs:
+  - tests/game_state/tv_mode.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - game_state_tv_mode
+  - game_state_progression
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:05:33.716761Z'
+  approved: true

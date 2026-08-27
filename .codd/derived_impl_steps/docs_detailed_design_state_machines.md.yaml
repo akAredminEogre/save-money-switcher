@@ -1,0 +1,344 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: f889b9d152b623220a885a592979d2c6e9bd82c8e0503ef673a0f717393525e2
+task_id: docs/detailed_design/state_machines.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T22:32:07Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: define_stage_type_and_disclosure_predicates
+  kind: domain_type_and_predicate
+  rationale: Establish the single-owner Round Stage union and the isDisclosed/isSettled
+    predicates that alone decide the rescore range (c-以降 / d-到達); every upper layer
+    imports these with .js specifiers rather than re-declaring them.
+  source_design_section: detailed_design:state-machines §2.2, §3.1, §4.1
+  target_path_hint: src/game_state/progression.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/progression.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: define_game_phase_derivation
+  kind: derived_state_function
+  rationale: 'Define GamePhase, QUESTION_COUNT=10, and derivePhase(activated, settledCount):
+    source measurement is the count of settlement_computed rounds, threshold 10 derives
+    finished, activated-but-<10 derives in_progress, else lobby. This is the count
+    boundary and its edge behavior.'
+  source_design_section: detailed_design:state-machines §2.1, §4.1
+  target_path_hint: src/game_state/phase.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/phase.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: define_tv_mode_and_stage_mapping
+  kind: domain_type_and_mapping
+  rationale: Define TvMode (a–e) and stageToTvMode mapping each stage to its default
+    TV mode (accepting/answers_locked→a, answers_opened→b, answer_revealed→c, settlement_computed→d;
+    e is never produced by stage mapping). Imports Stage via a .js specifier.
+  source_design_section: detailed_design:state-machines §2.4, §4.2
+  target_path_hint: src/game_state/tv_mode.ts
+  inputs:
+  - define_stage_type_and_disclosure_predicates
+  expected_outputs:
+  - src/game_state/tv_mode.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: implement_round_stage_machine
+  kind: state_transition_function
+  rationale: Implement RoundCommand plus nextStage (forward via COMMAND_FROM/FORWARD;
+    illegal transitions such as reveal from answers_locked or settle from accepting
+    throw RangeError; terminal settlement_computed has no forward) and previousStage
+    (undo reverse-edge topology only). Functions stay pure/side-effect-free; the host-only
+    guard and durable rollback of settlements/balances are the caller's (realtime_sync
+    single role point) and F-03's, not this module's.
+  source_design_section: detailed_design:state-machines §2.2, §3.2, §4.2
+  target_path_hint: src/game_state/round_machine.ts
+  inputs:
+  - define_stage_type_and_disclosure_predicates
+  expected_outputs:
+  - src/game_state/round_machine.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: implement_tv_mode_machine
+  kind: state_transition_function
+  rationale: 'Implement nextMode/backMode/jumpMode over ORDER a,b,c,d,e with wrap
+    edges (next: e→a for the next question, back: a→e) and jump as identity to any
+    target; these pure functions back the 3-system (次へ/戻る/個別ジャンプ) navigation whose
+    host gating and tv_mode_changed broadcast are the caller''s.'
+  source_design_section: detailed_design:state-machines §2.4, §4.2
+  target_path_hint: src/game_state/tv_machine.ts
+  inputs:
+  - define_tv_mode_and_stage_mapping
+  expected_outputs:
+  - src/game_state/tv_machine.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: implement_rescore_trigger_gate
+  kind: automatic_trigger_gate
+  rationale: 'Implement LiveEditPatch, RescorePlan, and planRescore(stage, patch)
+    — the automatic-rescore trigger gate: rescore ⟺ patch.correctValue !== undefined
+    ∧ isDisclosed(stage); syncTvDE = isSettled(stage). This owns the start/skip decision
+    only (scoring executes the recompute, realtime_sync syncs TV d/e), encoding the
+    c-未到達 and text/media-only non-triggering boundaries so a direct rescore call cannot
+    bypass the gate.'
+  source_design_section: detailed_design:state-machines §2.3, §4.3
+  target_path_hint: src/game_state/rescore_trigger.ts
+  inputs:
+  - define_stage_type_and_disclosure_predicates
+  expected_outputs:
+  - src/game_state/rescore_trigger.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: implement_connection_limit_resolution
+  kind: config_threshold_resolution
+  rationale: 'Define the sole DEFAULT_MAX_TABLET_CONNECTIONS=8 constant and resolveMaxTabletConnections(env):
+    measurement source is env MAX_TABLET_CONNECTIONS, default persists as the only
+    literal 8, readback is the resolver, edge behavior is missing/empty→8 and non-positive/non-integer→RangeError,
+    so 16/32 follow the setting with no code change and no literal 8 on the judgment
+    path.'
+  source_design_section: detailed_design:state-machines §2.5, §3.3, §4.4
+  target_path_hint: src/config/connection_limit.ts
+  inputs: []
+  expected_outputs:
+  - src/config/connection_limit.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: implement_connection_lifecycle_admission
+  kind: state_machine_admission
+  rationale: Define ConnectionState (handshaking/admitted/connected/disconnected/rejected),
+    AdmitResult, and admitTablet(connectedAnswerers, env) returning over_limit when
+    connectedAnswerers >= resolveMaxTabletConnections(env) else ok — the pure over-limit
+    rejection trigger with boundaries 8/9, 16/17, 32/33. The connection_rejected +
+    WS close(4001) and existing-connection immutability are realtime_sync's; admission
+    itself is a pure decision.
+  source_design_section: detailed_design:state-machines §2.5, §3.3, §4.4
+  target_path_hint: src/participants/connection_machine.ts
+  inputs:
+  - implement_connection_limit_resolution
+  expected_outputs:
+  - src/participants/connection_machine.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: test_round_stage_machine
+  kind: unit_test
+  rationale: Vitest coverage of forward legality (accepting→answers_locked→answers_opened→answer_revealed→settlement_computed),
+    illegal-transition rejection (answers_locked reveal and accepting settle throw
+    RangeError), the isDisclosed/isSettled boundary (answers_opened false, answer_revealed
+    disclosed, only settlement_computed settled), and previousStage undo topology
+    (settlement_computed→answer_revealed, accepting→null).
+  source_design_section: detailed_design:state-machines §4.5
+  target_path_hint: tests/game_state/round_machine.test.ts
+  inputs:
+  - implement_round_stage_machine
+  - define_stage_type_and_disclosure_predicates
+  expected_outputs:
+  - tests/game_state/round_machine.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: test_rescore_trigger_gate
+  kind: unit_test
+  rationale: Vitest coverage that a correctValue edit at answer_revealed yields {rescore:true,syncTvDE:false}
+    and at settlement_computed yields {rescore:true,syncTvDE:true}, while a correctValue
+    edit at answers_opened (c 未到達) and a text/media-only edit yield {rescore:false}
+    — the exact non-誘発 boundaries.
+  source_design_section: detailed_design:state-machines §4.5
+  target_path_hint: tests/game_state/rescore_trigger.test.ts
+  inputs:
+  - implement_rescore_trigger_gate
+  expected_outputs:
+  - tests/game_state/rescore_trigger.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: test_tv_mode_machine
+  kind: unit_test
+  rationale: Vitest coverage of nextMode wrap (a→b, d→e, e→a), backMode wrap (c→b,
+    a→e), and jumpMode identity to any target across a–e.
+  source_design_section: detailed_design:state-machines §4.5
+  target_path_hint: tests/game_state/tv_machine.test.ts
+  inputs:
+  - implement_tv_mode_machine
+  expected_outputs:
+  - tests/game_state/tv_machine.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: test_tv_mode_stage_mapping
+  kind: unit_test
+  rationale: 'Vitest coverage of stageToTvMode per-stage mapping: accepting/answers_locked→a,
+    answers_opened→b, answer_revealed→c, settlement_computed→d, asserting e is never
+    derived from a stage.'
+  source_design_section: detailed_design:state-machines §2.4, §4.2
+  target_path_hint: tests/game_state/tv_mode.test.ts
+  inputs:
+  - define_tv_mode_and_stage_mapping
+  expected_outputs:
+  - tests/game_state/tv_mode.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: test_game_phase_derivation
+  kind: unit_test
+  rationale: 'Vitest coverage of derivePhase at the 10-question boundary: not-activated→lobby,
+    activated with settledCount 9→in_progress, settledCount 10→finished — the count
+    threshold edge.'
+  source_design_section: detailed_design:state-machines §2.1, §4.1
+  target_path_hint: tests/game_state/phase.test.ts
+  inputs:
+  - define_game_phase_derivation
+  expected_outputs:
+  - tests/game_state/phase.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: test_connection_limit_resolution
+  kind: unit_test
+  rationale: 'Vitest readback verification for the connection threshold: unset/empty
+    env→8, "16"/"32"→that integer, and invalid (non-positive/non-integer)→RangeError,
+    confirming the resolver is the single source and no literal 8 sits on the judgment
+    path.'
+  source_design_section: detailed_design:state-machines §3.3, §4.4
+  target_path_hint: tests/config/connection_limit.test.ts
+  inputs:
+  - implement_connection_limit_resolution
+  expected_outputs:
+  - tests/config/connection_limit.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: test_connection_lifecycle_admission
+  kind: unit_test
+  rationale: 'Vitest coverage of admitTablet boundaries: default 8 (connected 7→ok,
+    8→over_limit), env-injected 16 (15→ok, 16→over_limit) and 32 (31→ok, 32→over_limit),
+    proving the over-limit rejection follows the configured value without code change.'
+  source_design_section: detailed_design:state-machines §4.5
+  target_path_hint: tests/participants/connection_machine.test.ts
+  inputs:
+  - implement_connection_lifecycle_admission
+  expected_outputs:
+  - tests/participants/connection_machine.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T22:32:07Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+layer_2_steps: []

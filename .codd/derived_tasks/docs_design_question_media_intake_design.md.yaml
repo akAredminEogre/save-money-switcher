@@ -1,0 +1,202 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 397c3ab43673f2d92f3b1271e8ba94b08029f4fda168a086d91c1723642ed84d
+design_doc_sha: d7d92d05f2e2f181cf88b36f8ea22e2db1cd09ecdb304dfe8697376387b0fab3
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T09:02:30.709582Z'
+design_docs:
+- docs/design/question_media_intake_design.md
+tasks:
+- id: intake_record
+  title: Define QuestionIntakeRecord intake type
+  description: Declare the `QuestionIntakeRecord` TypeScript interface (questionNumber
+    1..10, non-empty text, correctValue 0..100, optional imagePath/videoPath) modeling
+    one entry of the pre-game JSON intake file, using camelCase fields that map to
+    the snake_case `questions` columns per §2.3. This is a pure type module with no
+    runtime imports; its focused check verifies the shape compiles and matches the
+    documented field and optionality contract.
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/intake_record.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: intake_reader
+  title: Read intake JSON file into records
+  description: Implement `src/questions/intake_reader.ts` to read the default JSON-array
+    intake file from disk and return `QuestionIntakeRecord[]`, the sole initial-intake
+    mechanism (QM-1); it does not persist and is never re-read at runtime. The design
+    names this reader in §1.3/§2.1 but shows no body, so the parse-and-shape logic
+    is inferred from the JSON intake format in §2.2. Focused unit check parses a well-formed
+    array and rejects malformed JSON.
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/intake_reader.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - intake_record
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: intake_validator
+  title: Validate intake records
+  description: 'Implement `validateIntake` plus the `MediaPresence` and `IntakeIssue`
+    types per §2.2: enforce questionNumber 1..10 and uniqueness, non-empty text, correctValue
+    via the shared `isAnswerScore` (0..100 integer, first defense layer), and declared
+    image/video paths existing under the media root via the injected `MediaPresence`.
+    Each issue carries its field name so callers can render problem-number-tagged
+    messages; `isAnswerScore` is imported from the inherited scoring module. Focused
+    unit checks cover every rejection reason and the all-clear path.'
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/intake_validator.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - intake_record
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: questions_repository
+  title: Define QuestionsRepository port
+  description: 'Declare the `QuestionsRepository` interface and `QuestionContentPatch`
+    type per §2.3: `bulkInsert` (upsert by question_number), `getByNumber`/`listAll`
+    for runtime supply from the DB (QM-1), and `updateContent` for live edits. This
+    authors the port only; a concrete DB-backed adapter is materially required but
+    its persistence technology is explicitly deferred to the data-model design (§3.1)
+    and is not written here. The `Question` domain type it references is inherited
+    from the data-model design.'
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/questions_repository.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: load_questions
+  title: Orchestrate all-or-nothing intake load
+  description: 'Implement `loadQuestions` and `LoadResult` per §2.2: run `validateIntake`,
+    register zero rows on any issue (all-or-nothing), otherwise map records to `Question`
+    rows with a generated id and call `bulkInsert`, returning the loaded count and
+    issues. The provided `tests/questions/load_questions.test.ts` drives this entrypoint
+    with a mocked repository and media-presence to assert successful insert, correct_value
+    range rejection, and missing-media rejection.'
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/load_questions.ts
+  - tests/questions/load_questions.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - intake_record
+  - intake_validator
+  - questions_repository
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: media_root
+  title: Resolve question media root from config
+  description: Implement `resolveQuestionMediaRoot` and `DEFAULT_QUESTION_MEDIA_ROOT`
+    (`./question-media`) per §2.4, reading `QUESTION_MEDIA_ROOT` from the shared inherited
+    `ConfigSource` abstraction with no hardcoding. Focused unit check covers an env-provided
+    value, blank/undefined falling back to the default, and whitespace handling.
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/media_root.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: media_presence
+  title: Provide fs-backed MediaPresence adapter
+  description: Implement a concrete `MediaPresence` whose `exists(relativePath)` checks
+    the file under the resolved `QUESTION_MEDIA_ROOT` using Node fs, binding `resolveQuestionMediaRoot`
+    to the port consumed by intake validation. The design keeps `MediaPresence` abstract
+    for test-swapping (§2.2/§2.4), but a production fs adapter is materially implied
+    and inferred here, with its path (`src/media/media_presence.ts`) inferred within
+    the layout contract. Focused unit check uses a temp directory to confirm present
+    and absent resolution.
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/media/media_presence.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - media_root
+  - intake_validator
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: resolve_question_face
+  title: Resolve 3-stage question face
+  description: 'Implement the pure `resolveQuestionFace` with its `QuestionFace`/`QuestionFaceKind`
+    types per §2.4/QM-2: return video when videoPath is non-null, else image when
+    imagePath is non-null, else text — strict order, no reordering or stage-skipping,
+    no external I/O. The `Question` input type is inherited from the data-model design.
+    The provided `tests/media/resolve_question_face.test.ts` asserts video precedence,
+    image fallback, and text fallback.'
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/media/resolve_question_face.ts
+  - tests/media/resolve_question_face.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: live_edit
+  title: Apply live edit with rescore gate
+  description: 'Implement `applyLiveEdit` and the `StageReader`/`RescoreTrigger` ports
+    per §2.5/QM-3: persist the content patch via `updateContent`, then trigger rescore
+    only when the patch includes correctValue AND the question is disclosed. Concrete
+    `StageReader` (game_flow rounds.stage) and `RescoreTrigger` (scoring) adapters
+    are injected and owned by their inherited modules, not authored here. The provided
+    `tests/questions/live_edit.test.ts` drives this entrypoint with mocks to assert
+    the two-condition gate.'
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/live_edit.ts
+  - tests/questions/live_edit.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - questions_repository
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true
+- id: rescore_question
+  title: Compute rescore balance deltas
+  description: 'Implement the pure `rescoreDiff` and its `AnswerRow`/`OldSettlement`/`BalanceDelta`
+    types per §2.6: for a corrected correctValue, recompute each participant''s settlement
+    via the inherited `applyQuestionScore` and return the yen delta versus the prior
+    settlement, keeping every value yen-denominated. `applyQuestionScore`, `AnswerScore`,
+    and `Yen` are imported from the inherited scoring module. Focused unit check confirms
+    diff deltas equal the full recompute from answers and correct_value (the §2.6
+    invariant).'
+  source_design_doc: docs/design/question_media_intake_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/rescore_question.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:02:30.709582Z'
+  approved: true

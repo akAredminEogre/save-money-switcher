@@ -1,0 +1,10 @@
+sessions:
+- timestamp: '2026-08-15T01:14:21.989933Z'
+  findings_total: 12
+  approved: 12
+  rejected: 0
+  deferred: 0
+  pending: 0
+  duplicates: 0
+  findings_md: findings.md
+  requirements_md: null

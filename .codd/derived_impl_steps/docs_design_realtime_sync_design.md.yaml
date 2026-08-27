@@ -1,0 +1,634 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 8741389c93582a159a49248fb6c85ffd687f583f4c69cfd8ff556addb53dc0d7
+task_id: docs/design/realtime_sync_design.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T20:25:37Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: define_message_protocol
+  kind: protocol_types
+  rationale: 'Establish the shared JSON envelope and vocabulary every producer/consumer
+    references: Role, GameStage, TvMode, the DomainEventType union, ServerEvent<T>
+    (with seq/stage/tvMode/currency/payload/ts), the client command union with allowed
+    roles, and CLOSE_OVER_LIMIT=4001. Money-bearing events carry currency "円" only.'
+  source_design_section: §2.3 protocol.ts
+  target_path_hint: src/realtime_sync/protocol.ts
+  inputs: []
+  expected_outputs:
+  - src/realtime_sync/protocol.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: role_connection_registry
+  kind: connection_registry
+  rationale: Keep per-role (host/answerer/audience) registries with connect/disconnect
+    accounting; this hub is the single broadcast origin and the authoritative answerer-slot
+    counter for limit judgment.
+  source_design_section: §2.2/§2.4 hub.ts
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - define_message_protocol
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: role_projection_filter
+  kind: role_projection
+  rationale: projectForRole strips out-of-visibility fields at the transport layer
+    so answerers never receive others' answers/balances/scores and audience never
+    sees pre-disclosure answers; host receives full payloads.
+  source_design_section: §2.5 fanout.ts (dod_broadcast_role_projection/dod_disclosure_hidden_before)
+  target_path_hint: src/realtime_sync/fanout.ts
+  inputs:
+  - define_message_protocol
+  expected_outputs:
+  - src/realtime_sync/fanout.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: ws_server_and_upgrade
+  kind: ws_server
+  rationale: Cloud-only ws listener accepts same-origin HTTP upgrades, fixes the declared
+    role into the hub as the single judgment point, and serves /healthz (<500). The
+    control-panel browser holds no listening socket (host PC is not a server).
+  source_design_section: §2.1/§2.2/§2.11 server.ts (op_establish_connection, dod_conn_cloud_authority)
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - role_connection_registry
+  - define_message_protocol
+  expected_outputs:
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: admit_and_reject_over_limit
+  kind: connection_admission
+  rationale: 'On each accept, re-read resolveMaxTabletConnections() (config single
+    point) and call admitTablet with the live answerer count; on over_limit unicast
+    connection_rejected then WS close(4001), leaving existing connections/participants/answers/balances
+    unchanged. Boundaries: default 8 admits ≤8 and rejects the 9th; setting 16 → ≤16/reject
+    17; 32 → ≤32/reject 33; host/audience are a separate channel not counted; a freed
+    slot re-admits up to the same count.'
+  source_design_section: §2.6 op_enforce_connection_limit (dod_limit_default_eight/config_follows/no_hardcode/existing_unaffected)
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - ws_server_and_upgrade
+  - define_message_protocol
+  expected_outputs:
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: recovery_snapshot_builder
+  kind: state_recovery_builder
+  rationale: buildSnapshot reconstructs current_question_number/stage/tv_mode from
+    authoritative game_state plus balances and answers, then role-projects it (answerer
+    → own balance and submitted flag only). Server authority is the sole source; client-stored
+    values are never trusted.
+  source_design_section: §2.7 recovery.ts (op_recover_on_reconnect, dod_reconnect_server_authority/own_balance)
+  target_path_hint: src/realtime_sync/recovery.ts
+  inputs:
+  - role_projection_filter
+  expected_outputs:
+  - src/realtime_sync/recovery.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: unicast_snapshot_on_connect
+  kind: state_snapshot_unicast
+  rationale: Immediately after the role is fixed on connect, unicast a role-projected
+    state_snapshot so late/reconnecting endpoints converge to the latest state before
+    joining live delivery.
+  source_design_section: §2.1 op_establish_connection readback
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - recovery_snapshot_builder
+  - ws_server_and_upgrade
+  expected_outputs:
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: heartbeat_and_slot_release
+  kind: heartbeat_timer
+  rationale: Ping every 15s and confirm disconnect after 30s of no pong (timer trigger
+    with the 30s boundary), removing the connection from the hub and releasing the
+    answerer slot so limit accounting matches live connections and re-admit is possible.
+  source_design_section: §2.7/§2.11 heartbeat.ts (ping 15s / pong 30s)
+  target_path_hint: src/realtime_sync/heartbeat.ts
+  inputs:
+  - role_connection_registry
+  expected_outputs:
+  - src/realtime_sync/heartbeat.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: resume_token_and_rebind
+  kind: resume_binding
+  rationale: Issue an opaque per-session resume token at join and rebind a reconnecting
+    participant to its existing id; invalid/expired tokens are treated as a fresh
+    join and re-run the limit judgment (admit_and_reject_over_limit).
+  source_design_section: '§2.7 rejoin.ts (op_recover_on_reconnect boundary: invalid/expired
+    token → new join)'
+  target_path_hint: src/realtime_sync/rejoin.ts
+  inputs:
+  - role_connection_registry
+  - admit_and_reject_over_limit
+  expected_outputs:
+  - src/realtime_sync/rejoin.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: broadcast_domain_event_with_seq
+  kind: event_broadcast
+  rationale: On each confirmed game_state/balances transition (or system-driven event)
+    the hub mints a domain event with a monotonically increasing seq and fans it out
+    through projectForRole to every connection of the target role.
+  source_design_section: §2.4 op_broadcast_state_transition (dod_broadcast_all_role_endpoints)
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - role_connection_registry
+  - role_projection_filter
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: command_dispatch_and_role_guard
+  kind: permission_guard
+  rationale: 'A single command dispatcher checks the connection''s fixed role as the
+    sole judgment point: host-only commands (lock/open/reveal/settle/undo/switch_mode/live_edit)
+    proceed only for role host, while non-host attempts return command_denied (403;
+    401 unauthenticated) without closing the socket; answerer commands (submit_answer/join/resume)
+    route to their handlers.'
+  source_design_section: §2.3/§2.9 (RS-INV-4, dod_*_host_only)
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - ws_server_and_upgrade
+  - define_message_protocol
+  expected_outputs:
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: propagate_deadline_lock
+  kind: deadline_propagation
+  rationale: host lock applies stage=answers_locked and broadcasts answers_locked
+    to all connected answerer tablets, synchronously locking input; the terminal-state
+    guard then rejects any subsequent submit_answer server-side.
+  source_design_section: §2.8 op_propagate_deadline (dod_deadline_sync_lock)
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - command_dispatch_and_role_guard
+  - broadcast_domain_event_with_seq
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: propagate_disclosure_open
+  kind: disclosure_propagation
+  rationale: host open applies answers_opened and broadcasts to TV(b) all names+answers;
+    before answers_opened, projectForRole withholds others' answers from every role
+    so disclosure is a strict cross-actor reflection.
+  source_design_section: §2.8 op_propagate_disclosure (dod_disclosure_hidden_before/reveals_on_tv)
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - command_dispatch_and_role_guard
+  - broadcast_domain_event_with_seq
+  - role_projection_filter
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: propagate_reveal_correct
+  kind: reveal_propagation
+  rationale: host reveal applies answer_revealed and broadcasts to TV(c) so the correct
+    value is shown and the round becomes disclosed (c-or-later), enabling downstream
+    auto-rescore eligibility.
+  source_design_section: §2.8 reveal row
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - command_dispatch_and_role_guard
+  - broadcast_domain_event_with_seq
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: propagate_settlement_and_balance
+  kind: settlement_propagation
+  rationale: 'host settle broadcasts settlement_computed plus balance_updated: TV(d/e)
+    receive the yen table (currency "円") while each answerer is projected only its
+    own balance; auto_rescore of a disclosed round emits balance_updated diffs and
+    updates TV d/e together, and no rescore event is emitted for a c-unreached edit
+    (boundary case).'
+  source_design_section: §2.8 settle/auto_rescore rows (RS-INV-5/6)
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - command_dispatch_and_role_guard
+  - broadcast_domain_event_with_seq
+  - role_projection_filter
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: propagate_mode_switch
+  kind: mode_switch_propagation
+  rationale: host switch_mode (next/back/individual-jump — all three systems) updates
+    tv_mode and broadcasts tv_mode_changed so every connected TV switches to the corresponding
+    mode a–e.
+  source_design_section: §2.8 op_propagate_mode_switch (dod_mode_switch_sync_tv)
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - command_dispatch_and_role_guard
+  - broadcast_domain_event_with_seq
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: propagate_undo
+  kind: undo_propagation
+  rationale: host undo emits trigger_undone to the relevant surfaces; only the host-only
+    firing and event delivery are implemented here, while the rewind scope stays F-03
+    undetermined (boundary, not invented).
+  source_design_section: §2.8 undo row / §3.2 (dod_undo_host_only)
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - command_dispatch_and_role_guard
+  - broadcast_domain_event_with_seq
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: submit_answer_upsert_ack
+  kind: answer_submit_pipeline
+  rationale: submit_answer first passes the consumed server-side 0–100 integer validation
+    (scoring/validate_answer); accepted only while stage=accepting, it upserts the
+    answers row on unique(question_id, participant_id) before returning submit_ack
+    unicast; range-out values get no ack and are rejected, and the ack is never fanned
+    out to other answerers/audience.
+  source_design_section: §2.3/§2.5/§2.7 op_submit_answer (dod_answer_no_duplicate,
+    submit_ack own-only)
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - command_dispatch_and_role_guard
+  - role_projection_filter
+  expected_outputs:
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: preserve_answer_across_reconnect
+  kind: answer_preservation
+  rationale: Because answers are upserted on the unique key before ack, an ack-before
+    disconnect + resume re-send produces no duplicate row, an after-lock resume re-send
+    is rejected while the existing row is retained, and the reconnect state_snapshot
+    reflects the submitted status.
+  source_design_section: §2.7 op_preserve_answer_across_reconnect (dod_answer_preserved_across_reconnect)
+  target_path_hint: src/realtime_sync/recovery.ts
+  inputs:
+  - submit_answer_upsert_ack
+  - recovery_snapshot_builder
+  expected_outputs:
+  - src/realtime_sync/recovery.ts
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: recover_on_reconnect_flow
+  kind: reconnect_flow
+  rationale: On reconnect+resume the server rebinds via token, builds a role-projected
+    snapshot from authoritative game_state/balances/answers, unicasts it, and merges
+    the endpoint into live delivery; TV/tablet sync continues via cloud authority
+    even while the control panel is disconnected.
+  source_design_section: §2.7 op_recover_on_reconnect (dod_reconnect_progression/control_panel_resilient)
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - resume_token_and_rebind
+  - recovery_snapshot_builder
+  - heartbeat_and_slot_release
+  expected_outputs:
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id021
+  id: latency_reflection_gate
+  kind: latency_gate
+  rationale: Measure/verify that a confirmed state transition reaches all target-role
+    endpoints within p95 ≤ 2000ms (provisional F-04 gate) so the threshold is observable
+    and can be updated when an SLA is fixed.
+  source_design_section: §2.4/§2.11 dod_broadcast_latency_gate (F-04)
+  target_path_hint: null
+  inputs:
+  - broadcast_domain_event_with_seq
+  expected_outputs:
+  - tests/e2e/realtime_sync.spec.ts (latency assertion)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id022
+  id: server_bootstrap_entry
+  kind: bootstrap
+  rationale: startRealtimeServer wires protocol/hub/fanout/recovery/heartbeat/rejoin
+    and begins listening, re-exported from server.ts so the cloud process has one
+    entrypoint.
+  source_design_section: §2.2 server_bootstrap.ts (startRealtimeServer)
+  target_path_hint: src/realtime_sync/server_bootstrap.ts
+  inputs:
+  - ws_server_and_upgrade
+  - command_dispatch_and_role_guard
+  - broadcast_domain_event_with_seq
+  - heartbeat_and_slot_release
+  - resume_token_and_rebind
+  expected_outputs:
+  - src/realtime_sync/server_bootstrap.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id023
+  id: test_protocol_unit
+  kind: unit_test
+  rationale: 'Assert the envelope/enum/close-code contract: seq is present and monotonic,
+    money-bearing events carry currency "円", CLOSE_OVER_LIMIT is 4001, and the command→allowed-role
+    mapping marks host-only commands.'
+  source_design_section: §2.10 tests/realtime_sync/protocol.test.ts
+  target_path_hint: tests/realtime_sync/protocol.test.ts
+  inputs:
+  - define_message_protocol
+  expected_outputs:
+  - tests/realtime_sync/protocol.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id024
+  id: test_admission_limit_follows_config
+  kind: unit_test
+  rationale: 'Verify the limit judgment references resolveMaxTabletConnections (not
+    a literal 8): default 8 admits the 8th/rejects the 9th, and setting 32 admits
+    the 32nd/rejects the 33rd.'
+  source_design_section: §2.10 tests/realtime_sync/admission.test.ts
+  target_path_hint: tests/realtime_sync/admission.test.ts
+  inputs:
+  - admit_and_reject_over_limit
+  expected_outputs:
+  - tests/realtime_sync/admission.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id025
+  id: test_fanout_role_projection
+  kind: unit_test
+  rationale: Assert projectForRole returns null (no others' answers) for audience
+    before disclosure and projects only own balance for answerer with other participant
+    ids absent from the payload.
+  source_design_section: §2.10 tests/realtime_sync/fanout.test.ts
+  target_path_hint: tests/realtime_sync/fanout.test.ts
+  inputs:
+  - role_projection_filter
+  expected_outputs:
+  - tests/realtime_sync/fanout.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id026
+  id: test_recovery_reconnect
+  kind: unit_test
+  rationale: Assert the answerer snapshot restores current question number/stage/tv_mode
+    and own balance/submitted while excluding other participants (server-authoritative
+    recovery).
+  source_design_section: §2.10 tests/realtime_sync/recovery.test.ts
+  target_path_hint: tests/realtime_sync/recovery.test.ts
+  inputs:
+  - recovery_snapshot_builder
+  expected_outputs:
+  - tests/realtime_sync/recovery.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id027
+  id: test_e2e_multi_endpoint_ws
+  kind: integration_test
+  rationale: Drive multiple ws clients to verify multi-endpoint reflection with seq,
+    over-limit rejection via connection_rejected + close(4001), reconnect recovery,
+    and answer preservation with no duplicate; every HTTP response asserted <500 first.
+  source_design_section: §2.10 tests/e2e/realtime_sync.spec.ts
+  target_path_hint: tests/e2e/realtime_sync.spec.ts
+  inputs:
+  - server_bootstrap_entry
+  - admit_and_reject_over_limit
+  - recover_on_reconnect_flow
+  - preserve_answer_across_reconnect
+  expected_outputs:
+  - tests/e2e/realtime_sync.spec.ts
+  - tests/e2e/helpers/
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id028
+  id: test_e2e_browser
+  kind: browser_test
+  rationale: Playwright (library import, Vitest declares/verifies) opens control-panel/TV/tablet
+    to confirm deadline/disclosure/mode-switch reflect across endpoints and that TV↔tablet
+    sync survives a control-panel disconnect.
+  source_design_section: §2.10 tests/e2e/realtime_sync.browser.spec.ts
+  target_path_hint: tests/e2e/realtime_sync.browser.spec.ts
+  inputs:
+  - propagate_deadline_lock
+  - propagate_disclosure_open
+  - propagate_mode_switch
+  - recover_on_reconnect_flow
+  expected_outputs:
+  - tests/e2e/realtime_sync.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:25:37Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+- *id021
+- *id022
+- *id023
+- *id024
+- *id025
+- *id026
+- *id027
+- *id028
+layer_2_steps: []

@@ -1,0 +1,271 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: bb3c35a3d9dcf338493481ddde09205ccb911996f7852b00368a0107dca804fa
+design_doc_sha: dd19d26c6c8813cf5799610c3e16bca4cb8e5dd9ecc531a9cb219928cc0378d1
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T09:10:14.432677Z'
+design_docs:
+- docs/design/data_model_design.md
+tasks:
+- id: define_answer_score_value_type
+  title: Define AnswerScore value type and guards
+  description: Implement the AnswerScore value type with ANSWER_MIN=0/ANSWER_MAX=100
+    and the isAnswerScore / assertAnswerScore guards that fix the 0–100 integer range
+    at both the type and runtime layers (§2.7, DM-3). Focused unit checks assert 0
+    and 100 pass while -1, 101, and 50.5 are rejected.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/answer_score.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_yen_currency_value_type
+  title: Define Yen currency value type and guard
+  description: Implement the Yen integer-currency value type with CURRENCY='円', INITIAL_GRANT=10000,
+    YEN_PER_ERROR=-100, PITARI_BONUS=1000 and the assertYen integer guard (§2.7, DM-3,
+    INV-7). Focused unit checks assert non-integer amounts throw and no point/pt/点
+    representation is admitted.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/yen.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: implement_apply_question_score
+  title: Implement applyQuestionScore settlement function
+  description: Implement the pure applyQuestionScore function computing error=|answer-correct|,
+    delta=error×-100, the +1000 pitari bonus at error 0, and the updated integer-yen
+    balance while tagging the result currency (§2.9, DM-3). Ship the design's Vitest
+    cases (error 5 → -500, error 0 → +1000, rejection of 101/50.5/-1). It imports
+    the AnswerScore and Yen guards.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/apply_question_score.ts
+  - tests/scoring/apply_question_score.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - define_answer_score_value_type
+  - define_yen_currency_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: implement_server_answer_validation
+  title: Implement server-side answer range validation
+  description: Implement the server-side answer range guard validate_answer enforcing
+    0–100 integers as the second defense layer before persistence, with 0/100 accepted
+    and -1/101/50.5 rejected (§2.4, §2.11). The file is named in the design without
+    a body, so its exact signature is inferred; it must reuse the AnswerScore guards
+    rather than re-encode the range.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/validate_answer.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - define_answer_score_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_settlement_interface
+  title: Define QuestionSettlement ledger interface
+  description: Define the QuestionSettlement interface (questionId, participantId,
+    answerValue, error, deltaYen, pitariAwarded, pitariBonusYen) as the per-question
+    contribution ledger row, with monetary fields typed Yen and answer/error typed
+    AnswerScore (§2.6, DM-3). A focused type check confirms only integer-yen and 0–100
+    fields exist and no point/pt/点 field appears. It imports AnswerScore and Yen.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/settlement.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - define_answer_score_value_type
+  - define_yen_currency_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_balance_read_model_interface
+  title: Define Balance read-model interface
+  description: Define the Balance read-model interface (participantId, amount:Yen)
+    representing 10000 + Σ settlements (§2.6, DM-3). A focused type check confirms
+    amount is integer yen and carries no point/pt/点 field. It imports the Yen value
+    type.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/balance.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - define_yen_currency_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_question_entity
+  title: Define Question entity type
+  description: Define the Question domain type (id, questionNumber 1..10, text, imagePath|null,
+    videoPath|null, correctValue:AnswerScore) mapping the questions table (§2.2, DM-1).
+    It imports AnswerScore to fix correctValue to the 0–100 integer range; a focused
+    type check confirms the optional media paths and field shape.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/question.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - define_answer_score_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_questions_repository_contract
+  title: Define QuestionsRepository contract
+  description: Define the QuestionsRepository contract (bulkInsert, getByNumber, listAll,
+    updateContent) and the QuestionContentPatch type enabling file-load bulk registration,
+    DB-sourced runtime supply, and live-edit persistence (§2.2, DM-1). It imports
+    the Question type; the concrete DB implementation is deferred to the build phase
+    per §3.1.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/questions/questions_repository.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - define_question_entity
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_participant_entity
+  title: Define Participant entity type
+  description: Define the Participant domain type (id, name self-entered non-empty,
+    joinedAt ISO-8601, connectionId unique) mapping the participants table with one-person-one-device
+    semantics and no seat or pre-registered roster columns (§2.3, AC-07). A focused
+    type check confirms the field shape.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/participant.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: implement_connection_admission
+  title: Implement connection admission check
+  description: Implement src/participants/admission.ts to accept or reject a new tablet
+    connection by comparing the current connected count against the resolved MAX_TABLET_CONNECTIONS,
+    referencing only the resolved value with no literal 8 in the decision path (§2.8,
+    DM-4). The file is named without a body, so its signature is inferred; it invokes
+    the connection-limit resolver.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/admission.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - implement_connection_limit_resolver
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_answer_entity
+  title: Define Answer entity type
+  description: Define the Answer domain type (id, questionId, participantId, value:AnswerScore,
+    submittedAt ISO-8601) mapping the answers table as the answer_submitted durable
+    record (§2.4, DM-3). It imports AnswerScore to fix value to 0–100 integers; a
+    focused type check confirms the field shape.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/answer.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - define_answer_score_value_type
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: implement_round_progression_predicates
+  title: Implement round progression predicates
+  description: Implement the Stage and Round types and the isDisclosed / isSettled
+    predicates that gate the rescore range (disclosed = answer_revealed|settlement_computed,
+    settled = settlement_computed) (§2.5, DM-2). Ship the design's Vitest cases covering
+    the c- and d-stage boundaries. The module is self-contained with no imports.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/progression.ts
+  - tests/game_state/progression.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_game_state_pointer
+  title: Define GameState session pointer
+  description: Define the TvMode type and the singleton GameState pointer interface
+    (currentQuestionNumber, tvMode a–e, phase lobby|in_progress|finished) holding
+    the session-wide progression pointer separated from per-round stage (§2.5). A
+    focused type check confirms the enum members and field shape. The module has no
+    imports.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/game_state.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: implement_connection_limit_resolver
+  title: Implement connection-limit resolver
+  description: Implement DEFAULT_MAX_TABLET_CONNECTIONS=8, the ConfigSource abstraction,
+    and resolveMaxTabletConnections with precedence env → config → default and fallback
+    on non-positive or non-integer input (§2.8, DM-4). Ship the design's Vitest cases
+    (undefined → 8, '32' → 32). This is the single default definition and sole resolution
+    point, kept off the decision path.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/connection_limit.ts
+  - tests/config/connection_limit.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true
+- id: define_persistence_schema
+  title: Define persistence schema and migrations
+  description: Define the schema/migration for the eight tables (questions, participants,
+    answers, rounds, game_state, settlements, balances, config) under the src/persistence/
+    fence, enforcing integer types, 0–100 range CHECKs, unique(question_id, participant_id)
+    on answers/settlements, FKs, and the game_state singleton as third-layer defense-in-depth
+    (§2.10, §2.11, §3.1). The concrete filename and DB dialect are inferred and deferred
+    to build-phase selection; integration checks assert the CHECK/unique/FK constraints
+    reject -1/101/50.5 and duplicates.
+  source_design_doc: docs/design/data_model_design.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/persistence/schema.ts
+  test_kinds:
+  - integration
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T09:10:14.432677Z'
+  approved: true

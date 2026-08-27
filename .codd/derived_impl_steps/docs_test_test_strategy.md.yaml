@@ -1,0 +1,612 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 9f47d5ee4a765c99485fecc83984ebe5117827a944f38911cf9730f6d06e11d3
+task_id: docs/test/test_strategy.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T06:02:52Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: reconcile_connection_limit_signature
+  kind: contract_reconciliation
+  rationale: 'The docs give three incompatible signatures for resolveMaxTabletConnections:
+    ConfigSource.read (data_model_design §2.8), no-arg process.env (participation_connection_design
+    §2.10 admission.test.ts), and env-object (implementation_plan M0 connection_limit.test.ts).
+    Adopt the state_machines §4.4 form `resolveMaxTabletConnections(env: NodeJS.ProcessEnv
+    = process.env)`, which is the only signature that satisfies both output tests
+    (`({})`/`({MAX_TABLET_CONNECTIONS:''16''})` and bare `()` with process.env).'
+  source_design_section: test_strategy.md §1.6 (VB-12); state_machines.md §4.4 vs
+    participation_connection_design.md §2.10 vs implementation_plan.md M0
+  target_path_hint: src/config/connection_limit.ts
+  inputs: []
+  expected_outputs:
+  - 'decision: resolveMaxTabletConnections(env=process.env) single signature honored
+    by connection_limit.ts + both consuming tests'
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: src_scoring_answer_score
+  kind: value_type
+  rationale: AnswerScore (0..100 integer) with ANSWER_MIN/ANSWER_MAX, isAnswerScore
+    and assertAnswerScore is the single-owner value type imported by apply_question_score
+    and intake_validator; assertAnswerScore is what makes the scoring test's -1/101/50.5
+    throw.
+  source_design_section: scoring_engine_design.md §2.2 / shared_domain_model.md §4.1
+  target_path_hint: src/scoring/answer_score.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/answer_score.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: src_scoring_yen
+  kind: value_type
+  rationale: Yen (integer yen) with CURRENCY='円', INITIAL_GRANT=10000, YEN_PER_ERROR=-100,
+    PITARI_BONUS=1000 and assertYen supplies the confirmed monetary constants consumed
+    by apply_question_score and aggregate_balance; the 円 literal underpins the scoring
+    test's currency assertion.
+  source_design_section: scoring_engine_design.md §2.2 / shared_domain_model.md §4.1
+  target_path_hint: src/scoring/yen.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/yen.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: src_config_connection_limit
+  kind: config_resolver
+  rationale: resolveMaxTabletConnections(env=process.env) plus the sole DEFAULT_MAX_TABLET_CONNECTIONS=8
+    constant is the single settings-resolution point (no literal 8 in judging code);
+    it is imported directly by both connection_limit.test.ts and admission.test.ts.
+  source_design_section: participation_connection_design.md §2.5 / decision_records.md
+    §2.7 / state_machines.md §4.4
+  target_path_hint: src/config/connection_limit.ts
+  inputs:
+  - reconcile_connection_limit_signature
+  expected_outputs:
+  - src/config/connection_limit.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: src_game_state_role_labels
+  kind: label_map
+  rationale: Role union and ROLE_LABELS (host→司会者, answerer→解答者, audience→観客) is the
+    single visible-label source; role_labels.test.ts asserts the mapping and that
+    no label leaks the internal identifiers.
+  source_design_section: surface_copy_obligations.md §2.8 / shared_domain_model.md
+    §4.1 (VB-80)
+  target_path_hint: src/game_state/role_labels.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/role_labels.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: src_participants_name
+  kind: domain_validator
+  rationale: isValidDisplayName and MAX_DISPLAY_NAME_LENGTH=20 (codepoint length,
+    rejects empty/whitespace/over-length) is imported by admission.ts; without it
+    admitTablet cannot return reason='invalid_name' and admission.test.ts cannot compile.
+  source_design_section: participation_connection_design.md §2.4.2 / §3.1
+  target_path_hint: src/participants/name.ts
+  inputs: []
+  expected_outputs:
+  - src/participants/name.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: src_scoring_settlement
+  kind: domain_type
+  rationale: QuestionSettlement (questionId, participantId, answerValue, error, deltaYen,
+    pitariAwarded, pitariBonusYen) is the per-question ledger type produced by settleQuestion
+    and consumed by aggregateBalance/rescoreQuestion in the rescore test.
+  source_design_section: scoring_engine_design.md §2.4 / data_model_design.md §2.6
+  target_path_hint: src/scoring/settlement.ts
+  inputs:
+  - src_scoring_answer_score
+  - src_scoring_yen
+  expected_outputs:
+  - src/scoring/settlement.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: src_scoring_balance
+  kind: domain_type
+  rationale: 'Balance (participantId, amount: Yen) is the aggregate read-model type
+    consumed by determineWinners; determine_winner.test.ts constructs Balance literals.'
+  source_design_section: scoring_engine_design.md §2.4 / data_model_design.md §2.6
+  target_path_hint: src/scoring/balance.ts
+  inputs:
+  - src_scoring_yen
+  expected_outputs:
+  - src/scoring/balance.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: src_questions_question
+  kind: domain_type
+  rationale: 'Question (id, questionNumber, text, imagePath|null, videoPath|null,
+    correctValue: AnswerScore) is mapped by load_questions and referenced by QuestionsRepository/QuestionContentPatch
+    used in the load test.'
+  source_design_section: data_model_design.md §2.2 / question_media_intake_design.md
+    §2.3
+  target_path_hint: src/questions/question.ts
+  inputs:
+  - src_scoring_answer_score
+  expected_outputs:
+  - src/questions/question.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: src_questions_repository
+  kind: repository_contract
+  rationale: QuestionsRepository (bulkInsert/getByNumber/listAll/updateContent) and
+    QuestionContentPatch is the type load_questions.test.ts imports and mocks with
+    vi.fn; it defines the durable-persistence boundary the unit test stubs.
+  source_design_section: question_media_intake_design.md §2.3 / data_model_design.md
+    §2.2
+  target_path_hint: src/questions/questions_repository.ts
+  inputs:
+  - src_questions_question
+  expected_outputs:
+  - src/questions/questions_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: src_questions_intake_record
+  kind: domain_type
+  rationale: QuestionIntakeRecord (questionNumber, text, correctValue, imagePath?,
+    videoPath?) is the JSON-array input shape validateIntake and loadQuestions accept
+    in the load test.
+  source_design_section: question_media_intake_design.md §2.2
+  target_path_hint: src/questions/intake_record.ts
+  inputs: []
+  expected_outputs:
+  - src/questions/intake_record.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: src_scoring_apply_question_score
+  kind: pure_function
+  rationale: 'applyQuestionScore(input): ScoreResult is the producer the scoring test
+    asserts against; its ScoreResult MUST be scoring_engine_design''s shape {error,
+    deltaYen, pitariAwarded, pitariBonusYen, balance, currency} (not shared_domain_model''s
+    `amount`) because the test reads .deltaYen/.balance/.pitariAwarded/.pitariBonusYen.
+    Encodes 10000/error×-100/+1000 boundary and assertAnswerScore rejection.'
+  source_design_section: scoring_engine_design.md §2.3 (ScoreResult shape)
+  target_path_hint: src/scoring/apply_question_score.ts
+  inputs:
+  - src_scoring_answer_score
+  - src_scoring_yen
+  expected_outputs:
+  - src/scoring/apply_question_score.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: src_scoring_settle_question
+  kind: pure_function
+  rationale: 'settleQuestion(questionId, correct, answers): QuestionSettlement[] applies
+    applyQuestionScore per answer to build the ledger; it is imported directly by
+    rescore_question.test.ts to compute old/new settlements.'
+  source_design_section: scoring_engine_design.md §2.3
+  target_path_hint: src/scoring/settle_question.ts
+  inputs:
+  - src_scoring_apply_question_score
+  - src_scoring_settlement
+  expected_outputs:
+  - src/scoring/settle_question.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: src_scoring_aggregate_balance
+  kind: pure_function
+  rationale: 'aggregateBalance(settlements): Yen = INITIAL_GRANT + Σ(deltaYen+pitariBonusYen)
+    is the full-recompute reference; rescore_question.test.ts uses it as the audit
+    ground truth against the diff update.'
+  source_design_section: data_model_design.md §2.9 / scoring_engine_design.md §2.3
+  target_path_hint: src/scoring/aggregate_balance.ts
+  inputs:
+  - src_scoring_settlement
+  - src_scoring_yen
+  expected_outputs:
+  - src/scoring/aggregate_balance.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: src_scoring_rescore_question
+  kind: pure_function
+  rationale: 'rescoreQuestion(questionId, newCorrect, answers, oldSettlements): {settlements,
+    balanceDeltas[{participantId, deltaYen}]} recomputes settlements and yields old-vs-new
+    contribution deltas; the test''s invariant is oldBalance + delta === fullRecompute
+    (dod_rescore_matches_full_recompute).'
+  source_design_section: scoring_engine_design.md §2.7
+  target_path_hint: src/scoring/rescore_question.ts
+  inputs:
+  - src_scoring_settle_question
+  - src_scoring_settlement
+  - src_scoring_yen
+  expected_outputs:
+  - src/scoring/rescore_question.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: src_scoring_determine_winner
+  kind: pure_function
+  rationale: 'determineWinners(balances): Balance[] returns every participant equal
+    to max(amount) — a single winner in the base case and all co-leaders on a tie
+    (VB-76), inventing no tiebreaker.'
+  source_design_section: scoring_engine_design.md §2.10 (F-06)
+  target_path_hint: src/scoring/determine_winner.ts
+  inputs:
+  - src_scoring_balance
+  expected_outputs:
+  - src/scoring/determine_winner.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: src_questions_intake_validator
+  kind: pure_function
+  rationale: 'validateIntake(records, media): IntakeIssue[] plus MediaPresence and
+    IntakeIssue{questionNumber, field, reason} enforces 1..10 uniqueness, non-empty
+    text, isAnswerScore(correctValue), and media.exists for declared paths; it drives
+    load_questions.test.ts''s correct_value and video_path rejection cases.'
+  source_design_section: question_media_intake_design.md §2.2
+  target_path_hint: src/questions/intake_validator.ts
+  inputs:
+  - src_questions_intake_record
+  - src_scoring_answer_score
+  expected_outputs:
+  - src/questions/intake_validator.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: src_questions_load_questions
+  kind: pure_function
+  rationale: 'loadQuestions(records, media, repo, newId): {loaded, issues} runs all-or-nothing
+    intake — returns issues without calling bulkInsert when any validation fails,
+    else bulkInserts mapped Questions; the test asserts loaded counts and bulkInsert
+    called-once / not-called.'
+  source_design_section: question_media_intake_design.md §2.2
+  target_path_hint: src/questions/load_questions.ts
+  inputs:
+  - src_questions_intake_validator
+  - src_questions_repository
+  - src_questions_question
+  - src_questions_intake_record
+  expected_outputs:
+  - src/questions/load_questions.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: src_participants_admission
+  kind: pure_function
+  rationale: 'admitTablet({limit, connected}, {name}): {ok, reason?} is the pure admission
+    decision (participation_connection_design shape): invalid_name via isValidDisplayName,
+    over_limit when connected>=limit; admission.test.ts asserts .ok at the 8th/9th
+    and 32nd/33rd boundaries.'
+  source_design_section: participation_connection_design.md §2.5
+  target_path_hint: src/participants/admission.ts
+  inputs:
+  - src_participants_name
+  expected_outputs:
+  - src/participants/admission.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: test_scoring_apply_question_score
+  kind: unit_test
+  rationale: Vitest unit test verifying error=5→deltaYen=-500→balance=9500 with currency='円',
+    error=0 pitari +1000→11000 vs error=1 −100-only (誤差0/誤差1 discontinuity), and that
+    answer 101/50.5/-1 throw (server-side 0..100 guard). Covers VB-26/27/28/29/30/32.
+  source_design_section: test_strategy.md §1.6 (VB-26..30,32); scoring_engine_design.md
+    §2.12
+  target_path_hint: tests/scoring/apply_question_score.test.ts
+  inputs:
+  - src_scoring_apply_question_score
+  expected_outputs:
+  - tests/scoring/apply_question_score.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id021
+  id: test_scoring_rescore_question
+  kind: unit_test
+  rationale: 'Vitest unit test verifying the audit invariant: after correcting 50→40,
+    oldBalance(aggregateBalance) + balanceDeltas.deltaYen === full-recompute balance
+    per participant (VB-70/dod_rescore_matches_full_recompute).'
+  source_design_section: test_strategy.md §1.6 (VB-70); scoring_engine_design.md §2.12
+  target_path_hint: tests/scoring/rescore_question.test.ts
+  inputs:
+  - src_scoring_rescore_question
+  - src_scoring_settle_question
+  - src_scoring_aggregate_balance
+  expected_outputs:
+  - tests/scoring/rescore_question.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id022
+  id: test_scoring_determine_winner
+  kind: unit_test
+  rationale: Vitest unit test verifying the single max-balance participant is returned,
+    and (per VB-76) that a tie yields all co-leaders with no invented tiebreaker.
+  source_design_section: test_strategy.md §1.6 (VB-31,76); scoring_engine_design.md
+    §2.12
+  target_path_hint: tests/scoring/determine_winner.test.ts
+  inputs:
+  - src_scoring_determine_winner
+  expected_outputs:
+  - tests/scoring/determine_winner.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id023
+  id: test_config_connection_limit
+  kind: unit_test
+  rationale: Vitest unit test verifying resolveMaxTabletConnections({})===8 (default,
+    boundary basis for 9th-rejection) and env-object injection {MAX_TABLET_CONNECTIONS:'16'|'32'}
+    follows without code change (VB-12/13/14). Uses env-object arg form to match the
+    reconciled signature.
+  source_design_section: test_strategy.md §1.6 (VB-12..14); implementation_plan.md
+    M0
+  target_path_hint: tests/config/connection_limit.test.ts
+  inputs:
+  - src_config_connection_limit
+  - reconcile_connection_limit_signature
+  expected_outputs:
+  - tests/config/connection_limit.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id024
+  id: test_participants_admission
+  kind: unit_test
+  rationale: 'Vitest unit test using resolveMaxTabletConnections() (process.env, afterEach
+    delete) for limit and admitTablet({limit,connected},{name}).ok: default 8→7th
+    true/8th false, and MAX_TABLET_CONNECTIONS=32→31st true/32nd false (VB-10/11/13/14,
+    non-hardcoded追随).'
+  source_design_section: test_strategy.md §1.6 (VB-10..14); participation_connection_design.md
+    §2.10
+  target_path_hint: tests/participants/admission.test.ts
+  inputs:
+  - src_participants_admission
+  - src_config_connection_limit
+  - reconcile_connection_limit_signature
+  expected_outputs:
+  - tests/participants/admission.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id025
+  id: test_questions_load_questions
+  kind: unit_test
+  rationale: 'Vitest unit test with a vi.fn()-mocked QuestionsRepository: valid intake→loaded=1
+    & bulkInsert called once; correct_value=101→loaded=0 & bulkInsert not called &
+    issue field=''correct_value'' (all-or-nothing); missing media→issue {questionNumber:3,
+    field:''video_path''}. Covers VB-52/63/64/65/66.'
+  source_design_section: test_strategy.md §1.6 (VB-52,63..66); question_media_intake_design.md
+    §2.11
+  target_path_hint: tests/questions/load_questions.test.ts
+  inputs:
+  - src_questions_load_questions
+  - src_questions_repository
+  expected_outputs:
+  - tests/questions/load_questions.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id026
+  id: test_game_state_role_labels
+  kind: unit_test
+  rationale: Vitest unit test verifying ROLE_LABELS.host/answerer/audience === 司会者/解答者/観客
+    and that no visible label matches /host|answerer|audience/i (VB-80 internal-identifier
+    non-leak).
+  source_design_section: test_strategy.md §1.6 (VB-80); surface_copy_obligations.md
+    §2.11
+  target_path_hint: tests/game_state/role_labels.test.ts
+  inputs:
+  - src_game_state_role_labels
+  expected_outputs:
+  - tests/game_state/role_labels.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id027
+  id: verify_build_and_run
+  kind: verification
+  rationale: Compile under NodeNext (tsc) so any missing .js specifier surfaces as
+    TS2835, then `vitest run` the seven files, confirming all pass with sources under
+    src/ and tests under tests/; this is the end-to-end proof the declared test deliverable
+    actually works.
+  source_design_section: test_strategy.md §1.3 / §2.1 (Quality Gate); §3.2 (layout/toolchain)
+  target_path_hint: null
+  inputs:
+  - test_scoring_apply_question_score
+  - test_scoring_rescore_question
+  - test_scoring_determine_winner
+  - test_config_connection_limit
+  - test_participants_admission
+  - test_questions_load_questions
+  - test_game_state_role_labels
+  expected_outputs:
+  - clean tsc NodeNext build
+  - green vitest run of the 7 unit test files (all PASS, 0 SKIP)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T06:02:52Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+- *id021
+- *id022
+- *id023
+- *id024
+- *id025
+- *id026
+- *id027
+layer_2_steps: []

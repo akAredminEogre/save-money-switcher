@@ -1,0 +1,1803 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: e80fb73bdce55089ee6d27e90cfdea073ed55ae28ee9b15bce4ecae43a4d052d
+task_id: docs/design/system_design.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T04:21:32Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: define_answer_score_value_type
+  kind: domain_value_type
+  rationale: Establish the single-owner 0–100 integer answer type shared by questions.correctValue,
+    answers.value, and scoring; isAnswerScore/assertAnswerScore feed the UI+server+DB
+    triple defense.
+  source_design_section: shared_domain_model §4.1; system_design §2.6 (INV-6); scoring_engine_design
+    §2.2
+  target_path_hint: src/scoring/answer_score.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/answer_score.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: define_yen_value_type
+  kind: domain_value_type
+  rationale: Single-owner integer-yen type and confirmed constants (INITIAL_GRANT=10000,
+    YEN_PER_ERROR=-100, PITARI_BONUS=1000, CURRENCY="円") fixing 円-only, integer-only
+    money across every layer.
+  source_design_section: scoring_engine_design §2.2; system_design §2.6 (INV-7)
+  target_path_hint: src/scoring/yen.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/yen.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: define_progression_stage_and_predicates
+  kind: domain_type_and_predicate
+  rationale: Owns Stage enum and isDisclosed/isSettled (c-reached / d-reached), the
+    sole gates that decide auto-rescore range; no other module reimplements them.
+  source_design_section: data_model_design §2.5; state_machines §2.2; scoring_engine_design
+    §2.8
+  target_path_hint: src/game_state/progression.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/progression.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: define_game_phase
+  kind: domain_type_and_derivation
+  rationale: GamePhase (lobby/in_progress/finished), QUESTION_COUNT=10, and derivePhase
+    to drive winner determination exactly at the 10-question count boundary.
+  source_design_section: state_machines §2.1/§4.1
+  target_path_hint: src/game_state/phase.ts
+  inputs:
+  - define_progression_stage_and_predicates
+  expected_outputs:
+  - src/game_state/phase.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: define_tv_mode_and_mapping
+  kind: domain_type_and_mapping
+  rationale: TvMode a–e, GameState, and stageToTvMode single mapping; TV clients read
+    it and never redefine the stage→mode correspondence.
+  source_design_section: operational_behavior_model §2.2; data_model_design §2.5
+  target_path_hint: src/game_state/tv_mode.ts
+  inputs:
+  - define_progression_stage_and_predicates
+  expected_outputs:
+  - src/game_state/tv_mode.ts
+  - src/game_state/game_state.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: define_connection_limit_resolver
+  kind: config_resolution_point
+  rationale: Single resolution point resolveMaxTabletConnections with DEFAULT_MAX_TABLET_CONNECTIONS=8
+    as the only literal and env→config→default order; defines the threshold's source
+    measurement, persistence, and readback with no numeric 8 in decision paths.
+  source_design_section: system_design §2.7; participation_connection_design §2.5;
+    decision_records ADR-論点10
+  target_path_hint: src/config/connection_limit.ts
+  inputs: []
+  expected_outputs:
+  - src/config/connection_limit.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: define_role_labels
+  kind: copy_label_source
+  rationale: Single ROLE_LABELS map (host→司会者/answerer→解答者/audience→観客) so visible
+    copy never leaks internal role identifiers.
+  source_design_section: surface_copy_obligations §2.8; shared_domain_model §1.5
+  target_path_hint: src/game_state/role_labels.ts
+  inputs: []
+  expected_outputs:
+  - src/game_state/role_labels.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: define_currency_formatter
+  kind: copy_formatter
+  rationale: formatYen single money-formatting point that enforces 円 and rejects non-integers;
+    all TV/tablet money strings route through it and point/pt/点 are absent.
+  source_design_section: surface_copy_obligations §2.5
+  target_path_hint: src/scoring/currency.ts
+  inputs:
+  - define_yen_value_type
+  expected_outputs:
+  - src/scoring/currency.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: verify_foundation_types
+  kind: verification_unit
+  rationale: Vitest fixes 0/100 accept & -1/101/50.5 reject at the type layer, the
+    円 currency literal, default-8/16/32 resolution, and role-label absence of internal
+    identifiers — the answer-range and connection-threshold boundaries.
+  source_design_section: acceptance_criteria AC-09/AC-24/AC-25; test_strategy VB-12/VB-32/VB-35/VB-80
+  target_path_hint: tests/
+  inputs:
+  - define_answer_score_value_type
+  - define_yen_value_type
+  - define_connection_limit_resolver
+  - define_role_labels
+  - define_currency_formatter
+  - define_progression_stage_and_predicates
+  expected_outputs:
+  - tests/config/connection_limit.test.ts
+  - tests/scoring/yen.test.ts
+  - tests/game_state/progression.test.ts
+  - tests/game_state/role_labels.test.ts
+  - tests/scoring/currency.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: implement_round_stage_machine
+  kind: state_machine
+  rationale: nextStage forward transitions with illegal-transition rejection (reveal
+    before opened, settle before revealed) and previousStage topology for undo rollback
+    targets; callers apply the host-only gate.
+  source_design_section: state_machines §2.2/§4.2
+  target_path_hint: src/game_state/round_machine.ts
+  inputs:
+  - define_progression_stage_and_predicates
+  expected_outputs:
+  - src/game_state/round_machine.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: implement_tv_mode_machine
+  kind: state_machine
+  rationale: nextMode/backMode/jumpMode for the three navigation systems (次へ/戻る/個別ジャンプ)
+    over a–e with e→a wrap; display navigation that does not rewind rounds.stage.
+  source_design_section: state_machines §2.4; decision_records ADR-N-3
+  target_path_hint: src/game_state/tv_machine.ts
+  inputs:
+  - define_tv_mode_and_mapping
+  expected_outputs:
+  - src/game_state/tv_machine.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: implement_rescore_trigger_predicate
+  kind: trigger_gate
+  rationale: planRescore(stage,patch) = (patch has correctValue) ∧ isDisclosed(stage)
+    returning {rescore, syncTvDE=isSettled}; the machine-checkable 2-condition AND
+    that decides whether auto-rescore fires and whether TV d/e sync.
+  source_design_section: operational_behavior_model §2.6; state_machines §2.3
+  target_path_hint: src/game_state/rescore_trigger.ts
+  inputs:
+  - define_progression_stage_and_predicates
+  - define_answer_score_value_type
+  expected_outputs:
+  - src/game_state/rescore_trigger.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: implement_answer_server_validator
+  kind: server_validation
+  rationale: validateSubmittedAnswer is the server-side final defense (assertAnswerScore)
+    so UI-bypassed -1/101/50.5/non-numeric never reach answers; pairs with the tablet
+    clamp and DB CHECK.
+  source_design_section: scoring_engine_design §2.5; system_design §2.6 (INV-6)
+  target_path_hint: src/scoring/validate_answer.ts
+  inputs:
+  - define_answer_score_value_type
+  expected_outputs:
+  - src/scoring/validate_answer.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: implement_apply_question_score
+  kind: pure_business_logic
+  rationale: applyQuestionScore computes error=|answer-correct|, deltaYen=error×-100,
+    pitariBonusYen=(error===0?+1000:0), amount, currency="円" — the confirmed per-player
+    settlement formula (加算側 only, 拠出 0 per F-02) with the 誤差0/誤差1 discontinuity.
+  source_design_section: scoring_engine_design §2.3; decision_records ADR-B
+  target_path_hint: src/scoring/apply_question_score.ts
+  inputs:
+  - define_answer_score_value_type
+  - define_yen_value_type
+  expected_outputs:
+  - src/scoring/apply_question_score.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: implement_settle_question
+  kind: pure_business_logic
+  rationale: settleQuestion maps every answer of a question to QuestionSettlement
+    rows via applyQuestionScore; the producer of the per-question derived ledger consumed
+    by balances and TV(d).
+  source_design_section: scoring_engine_design §2.3; data_model_design §2.9
+  target_path_hint: src/scoring/settle_question.ts
+  inputs:
+  - implement_apply_question_score
+  expected_outputs:
+  - src/scoring/settle_question.ts
+  - src/scoring/settlement.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: implement_aggregate_balance
+  kind: pure_business_logic
+  rationale: aggregateBalance = 10000 + Σdelta_yen + Σpitari_bonus_yen — the full-recompute
+    audit ground truth that every differential balance update must equal.
+  source_design_section: scoring_engine_design §2.3/§2.7
+  target_path_hint: src/scoring/aggregate_balance.ts
+  inputs:
+  - define_yen_value_type
+  - implement_settle_question
+  expected_outputs:
+  - src/scoring/aggregate_balance.ts
+  - src/scoring/balance.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: implement_rescore_question
+  kind: pure_business_logic
+  rationale: rescoreQuestion recomputes settlements from an edited correct_value and
+    returns per-participant balance deltas (new-old contribution) for the differential
+    update path.
+  source_design_section: scoring_engine_design §2.7; question_media_intake_design
+    §2.6
+  target_path_hint: src/scoring/rescore_question.ts
+  inputs:
+  - implement_settle_question
+  - implement_apply_question_score
+  expected_outputs:
+  - src/scoring/rescore_question.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: implement_determine_winner
+  kind: pure_business_logic
+  rationale: determineWinners returns max(balances.amount) players with ties yielding
+    multiple co-leaders (no invented tie-break, F-06); the terminal-state ranking
+    source for TV(e).
+  source_design_section: scoring_engine_design §2.10
+  target_path_hint: src/scoring/determine_winner.ts
+  inputs:
+  - implement_aggregate_balance
+  expected_outputs:
+  - src/scoring/determine_winner.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: implement_display_name_validation
+  kind: shared_validation
+  rationale: isValidDisplayName + MAX_DISPLAY_NAME_LENGTH=20 shared by /join UI and
+    server to reject empty/whitespace/over-length names as a dual guard.
+  source_design_section: participation_connection_design §2.4.2
+  target_path_hint: src/participants/name.ts
+  inputs: []
+  expected_outputs:
+  - src/participants/name.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: implement_admission_decision
+  kind: pure_decision
+  rationale: admitTablet({limit,connected},{name}) returns over_limit/invalid_name/ok
+    using only the injected resolved limit — the threshold decision that carries no
+    literal 8 and follows the config value to 16/32.
+  source_design_section: participation_connection_design §2.5; state_machines §4.4
+  target_path_hint: src/participants/admission.ts
+  inputs:
+  - define_connection_limit_resolver
+  - implement_display_name_validation
+  expected_outputs:
+  - src/participants/admission.ts
+  - src/participants/connection_machine.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id021
+  id: verify_state_machine_and_scoring
+  kind: verification_unit
+  rationale: Vitest fixes illegal-transition rejection, planRescore boundaries, 誤差5=-500/誤差0=+1000/誤差1=-100,
+    the diff==full-recompute invariant, winner ties, and admission 8/9·16/17·32/33.
+  source_design_section: test_strategy VB-27..30/VB-37..40/VB-70/VB-76/VB-10..14
+  target_path_hint: tests/
+  inputs:
+  - implement_round_stage_machine
+  - implement_rescore_trigger_predicate
+  - implement_apply_question_score
+  - implement_rescore_question
+  - implement_determine_winner
+  - implement_admission_decision
+  expected_outputs:
+  - tests/scoring/apply_question_score.test.ts
+  - tests/scoring/rescore_question.test.ts
+  - tests/scoring/determine_winner.test.ts
+  - tests/game_state/round_machine.test.ts
+  - tests/game_state/rescore_trigger.test.ts
+  - tests/participants/admission.test.ts
+  - tests/participants/name.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id022
+  id: define_persistence_schema
+  kind: db_schema
+  rationale: 8 tables (questions/participants/answers/rounds/game_state/settlements/balances/config)
+    with CHECK 0..100, integer money, unique(question_id,participant_id), FK, and
+    no seat/ledger columns — the DB is the third defense layer.
+  source_design_section: data_model_design §2.1-§2.8; er_crud_model §2.1/§4.2
+  target_path_hint: src/persistence/schema.ts
+  inputs:
+  - define_answer_score_value_type
+  - define_yen_value_type
+  - define_progression_stage_and_predicates
+  expected_outputs:
+  - src/persistence/schema.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id023
+  id: define_question_entity_and_repo
+  kind: repository
+  rationale: Question type + QuestionsRepository (bulkInsert upsert-by-number, getByNumber,
+    listAll, updateContent) — the sole writer of questions and the runtime supply
+    source so output resolves from DB, not file re-read.
+  source_design_section: data_model_design §2.2; question_media_intake_design §2.3
+  target_path_hint: src/questions/questions_repository.ts
+  inputs:
+  - define_answer_score_value_type
+  - define_persistence_schema
+  expected_outputs:
+  - src/questions/question.ts
+  - src/questions/questions_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id024
+  id: define_answer_entity_and_repo
+  kind: repository
+  rationale: Answer type + AnswersRepository.upsertDuringAccepting (accepting-only
+    gate, unique-key upsert), getOwn, listForRevealedQuestion — durable answer_submitted
+    with the terminal-state guard rejecting post-lock writes.
+  source_design_section: data_model_design §2.4; er_crud_model §4.1
+  target_path_hint: src/game_state/answers_repository.ts
+  inputs:
+  - define_answer_score_value_type
+  - define_progression_stage_and_predicates
+  - define_persistence_schema
+  expected_outputs:
+  - src/game_state/answer.ts
+  - src/game_state/answers_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id025
+  id: define_participant_entity_and_repo
+  kind: repository
+  rationale: Participant (id/name/joined_at/connection_id unique) + repository insert/list
+    — sole writer of participants enforcing 1 person = 1 device with no seat/ledger.
+  source_design_section: participation_connection_design §2.3; data_model_design §2.3
+  target_path_hint: src/participants/participant_repository.ts
+  inputs:
+  - define_persistence_schema
+  expected_outputs:
+  - src/participants/participant.ts
+  - src/participants/participant_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id026
+  id: define_rounds_and_game_state_repo
+  kind: repository
+  rationale: rounds (question_id PK/FK, stage) and game_state singleton (current_question_number/tv_mode/phase)
+    writers owned by game_flow; rounds.stage is the sole rescore-range basis read
+    by scoring.
+  source_design_section: data_model_design §2.5; er_crud_model §3.1
+  target_path_hint: src/game_state/rounds_repository.ts
+  inputs:
+  - define_progression_stage_and_predicates
+  - define_tv_mode_and_mapping
+  - define_persistence_schema
+  expected_outputs:
+  - src/game_state/rounds_repository.ts
+  - src/game_state/game_state_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id027
+  id: define_settlements_and_balances_repo
+  kind: repository
+  rationale: SettlementsRepository (upsertForQuestion) and BalancesRepository (initialize=10000,
+    getOwn, listAll, applyDelta) — sole writers of settlements/balances holding the
+    balances==Σsettlements invariant.
+  source_design_section: scoring_engine_design §2.4; er_crud_model §3.1
+  target_path_hint: src/scoring/balances_repository.ts
+  inputs:
+  - implement_settle_question
+  - implement_aggregate_balance
+  - define_persistence_schema
+  expected_outputs:
+  - src/scoring/settlements_repository.ts
+  - src/scoring/balances_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id028
+  id: define_config_repo
+  kind: repository
+  rationale: ConfigRepository read/upsert backing the env→config→default resolution
+    of MAX_TABLET_CONNECTIONS and related keys, so limits persist and read back without
+    code change.
+  source_design_section: er_crud_model §4.1; data_model_design §2.8
+  target_path_hint: src/config/config_repository.ts
+  inputs:
+  - define_persistence_schema
+  - define_connection_limit_resolver
+  expected_outputs:
+  - src/config/config_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id029
+  id: implement_schema_bootstrap
+  kind: startup_migration
+  rationale: ensureSchema applies the 8-table schema (integer/CHECK/unique/FK) at
+    startup against DATABASE_URL so state persists across restart/redeploy for reconnect
+    recovery.
+  source_design_section: infra deployment_setup §2.7/§2.3
+  target_path_hint: src/db/schema.ts
+  inputs:
+  - define_persistence_schema
+  expected_outputs:
+  - src/db/schema.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id030
+  id: verify_persistence_contracts
+  kind: verification_api
+  rationale: Fixes DB CHECK rejecting correct_value/value outside 0..100, unique upsert
+    keeping one row, questions readback identical to load, balances init 10000, and
+    absence of any seat column.
+  source_design_section: test_strategy VB-16/VB-53/VB-61/VB-65/VB-26
+  target_path_hint: tests/e2e/
+  inputs:
+  - define_question_entity_and_repo
+  - define_answer_entity_and_repo
+  - define_settlements_and_balances_repo
+  - implement_schema_bootstrap
+  - author_e2e_helpers
+  expected_outputs:
+  - tests/e2e/question-data.spec.ts
+  - tests/e2e/game-flow.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id031
+  id: define_ws_protocol_and_events
+  kind: protocol_definition
+  rationale: ServerEvent envelope with monotonic seq, the DomainEvent union owned
+    by a single publisher, and CLOSE_OVER_LIMIT=4001; the durable event vocabulary
+    shared by all endpoints.
+  source_design_section: realtime_sync_design §2.3; shared_domain_model §3.4
+  target_path_hint: src/realtime_sync/protocol.ts
+  inputs:
+  - define_progression_stage_and_predicates
+  - define_tv_mode_and_mapping
+  expected_outputs:
+  - src/realtime_sync/protocol.ts
+  - src/realtime_sync/events.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id032
+  id: define_session_and_host_guard
+  kind: role_guard
+  rationale: Role/Session + requireHost/ForbiddenRoleError as the single decision
+    point mapping non-host commands to 401/403; every host command imports it instead
+    of re-implementing role checks.
+  source_design_section: shared_domain_model §4.1; realtime_sync_design §2.9
+  target_path_hint: src/realtime_sync/session.ts
+  inputs:
+  - define_role_labels
+  expected_outputs:
+  - src/realtime_sync/session.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id033
+  id: implement_ws_server_and_connection_accept
+  kind: ws_server
+  rationale: 'op_establish_connection: the ws listener exists only on the cloud server
+    (control-panel browser opens no listen socket); accept declares role, admits answerer
+    via admitTablet, and returns a role-projected snapshot.'
+  source_design_section: realtime_sync_design §2.1; system_design §2.1
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - define_ws_protocol_and_events
+  - define_session_and_host_guard
+  - implement_admission_decision
+  expected_outputs:
+  - src/realtime_sync/server.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id034
+  id: implement_connection_registry_hub
+  kind: connection_registry
+  rationale: hub keeps host/answerer/audience registries and is the single role-decision
+    point and broadcast origin; host/audience are separate channels not counted against
+    the tablet limit.
+  source_design_section: realtime_sync_design §2.4
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - implement_ws_server_and_connection_accept
+  expected_outputs:
+  - src/realtime_sync/hub.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id035
+  id: implement_role_projection_fanout
+  kind: projection
+  rationale: projectForRole strips out-of-scope fields so answerers never receive
+    others' answers/balances/settlements and pre-b other answers reach no role — transport-layer
+    privacy the client cannot bypass.
+  source_design_section: realtime_sync_design §2.5; surface_copy_obligations §2.8
+  target_path_hint: src/realtime_sync/fanout.ts
+  inputs:
+  - define_ws_protocol_and_events
+  - define_session_and_host_guard
+  expected_outputs:
+  - src/realtime_sync/fanout.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id036
+  id: implement_broadcast_with_seq_and_latency
+  kind: broadcast
+  rationale: On a confirmed domain event the hub emits seq-tagged role-projected events
+    to all endpoints of the role; the automatic all-endpoints reflection whose p95
+    ≤ 2000ms gate (F-04) is the reflection SLA.
+  source_design_section: realtime_sync_design §2.4; operational_behavior_model op_broadcast_state_transition
+  target_path_hint: src/realtime_sync/hub.ts
+  inputs:
+  - implement_connection_registry_hub
+  - implement_role_projection_fanout
+  expected_outputs:
+  - src/realtime_sync/hub.ts (broadcast path)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id037
+  id: implement_heartbeat_slot_release
+  kind: timer_lifecycle
+  rationale: ping 15s / pong 30s timers confirm disconnect and release the answerer
+    slot so limit accounting matches live connections; thresholds come from config,
+    not hardcoded.
+  source_design_section: realtime_sync_design §2.7; infra deployment_setup §2.4
+  target_path_hint: src/realtime_sync/heartbeat.ts
+  inputs:
+  - implement_connection_registry_hub
+  expected_outputs:
+  - src/realtime_sync/heartbeat.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id038
+  id: implement_reconnect_snapshot_recovery
+  kind: reconnect_recovery
+  rationale: 'op_recover_on_reconnect: buildSnapshot reconstructs role-projected state
+    (current question/stage/tv_mode/own balance/submitted) from server-authoritative
+    game_state/balances/answers; client values are discarded.'
+  source_design_section: realtime_sync_design §2.7; state_machines op_recover_on_reconnect
+  target_path_hint: src/realtime_sync/recovery.ts
+  inputs:
+  - define_rounds_and_game_state_repo
+  - define_settlements_and_balances_repo
+  - define_answer_entity_and_repo
+  - implement_role_projection_fanout
+  expected_outputs:
+  - src/realtime_sync/recovery.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id039
+  id: implement_resume_token_rejoin
+  kind: session_resume
+  rationale: 'op_preserve_answer_across_reconnect: rejoin issues opaque resume tokens
+    and rebinds participants; invalid/expired tokens are treated as new joins re-passing
+    the limit, and answers survive via the unique upsert without duplicates.'
+  source_design_section: realtime_sync_design §2.7
+  target_path_hint: src/realtime_sync/rejoin.ts
+  inputs:
+  - implement_connection_registry_hub
+  - define_answer_entity_and_repo
+  expected_outputs:
+  - src/realtime_sync/rejoin.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id040
+  id: verify_realtime_sync
+  kind: verification_api
+  rationale: Fixes cloud-authority (control panel non-listening, continuity when it
+    drops), all-role broadcast, role projection (no leak to answerer), reconnect restore,
+    answer preservation without duplicates, over-limit close(4001) leaving existing
+    state unchanged, and the latency gate.
+  source_design_section: test_strategy VB-01..05/VB-60..62/VB-11/VB-15/VB-03
+  target_path_hint: tests/e2e/
+  inputs:
+  - implement_broadcast_with_seq_and_latency
+  - implement_reconnect_snapshot_recovery
+  - implement_resume_token_rejoin
+  - author_e2e_helpers
+  expected_outputs:
+  - tests/e2e/realtime-sync.spec.ts
+  - tests/e2e/realtime-sync.browser.spec.ts
+  - tests/e2e/connection-limit.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id041
+  id: implement_media_root_and_face_resolution
+  kind: pure_resolution
+  rationale: resolveQuestionMediaRoot (QUESTION_MEDIA_ROOT) + resolveQuestionFace
+    resolving the a-mode face video→image→text in strict order from the three question
+    fields only; assets serve under /media with no raw path leak.
+  source_design_section: question_media_intake_design §2.4; decision_records ADR-N-2
+  target_path_hint: src/media/resolve_question_face.ts
+  inputs:
+  - define_question_entity_and_repo
+  expected_outputs:
+  - src/config/media_root.ts
+  - src/media/resolve_question_face.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id042
+  id: implement_question_intake_pipeline
+  kind: intake_pipeline
+  rationale: 'intake_reader→intake_validator→load_questions: JSON QuestionIntakeRecord[]
+    validated (1-10 unique, non-empty text, 0-100 integer correct_value, declared
+    media exists under QUESTION_MEDIA_ROOT) with all-or-nothing bulkInsert; the producer
+    of durable questions.'
+  source_design_section: question_media_intake_design §2.1/§2.2
+  target_path_hint: src/questions/load_questions.ts
+  inputs:
+  - define_question_entity_and_repo
+  - implement_media_root_and_face_resolution
+  expected_outputs:
+  - src/questions/intake_reader.ts
+  - src/questions/intake_record.ts
+  - src/questions/intake_validator.ts
+  - src/questions/load_questions.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id043
+  id: implement_load_questions_command
+  kind: server_handler
+  rationale: op_load_questions host-only handler runs intake, registers questions,
+    and initializes 10 rounds=accepting plus the game_state singleton (lobby); readback
+    resolves from DB and boundary cases (all-or-nothing, media missing, out-of-range)
+    reject without partial writes.
+  source_design_section: system_design op_load_questions; er_crud_model op_load_questions
+  target_path_hint: src/control_panel/load_questions_handler.ts
+  inputs:
+  - implement_question_intake_pipeline
+  - define_rounds_and_game_state_repo
+  - define_session_and_host_guard
+  expected_outputs:
+  - src/control_panel/load_questions_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id044
+  id: implement_live_edit_command
+  kind: server_handler
+  rationale: 'op_live_edit_correct: applyLiveEdit persists questions.updateContent
+    (text/correct_value/image/video), reads back by DB re-fetch, range-guards correct_value,
+    is host-only, and hands off to the rescore coordinator only when correctValue
+    is in the patch and isDisclosed is true.'
+  source_design_section: question_media_intake_design §2.5; scoring_engine_design
+    op_live_edit_correct
+  target_path_hint: src/questions/live_edit.ts
+  inputs:
+  - define_question_entity_and_repo
+  - implement_answer_server_validator
+  - define_session_and_host_guard
+  expected_outputs:
+  - src/questions/live_edit.ts
+  - src/control_panel/live_edit_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id045
+  id: implement_rescore_coordinator
+  kind: trigger_wiring
+  rationale: 'op_auto_rescore: an L2 coordinator (the only layer allowed to import
+    questions+game_state+scoring) reads correct_value+answers, uses planRescore/isDisclosed/isSettled
+    for range, recomputes settlements/balances by diff, and on isSettled syncs TV
+    d/e — the actual automatic trigger, not a manual lower-layer call.'
+  source_design_section: component_dependency_map §4.3; operational_behavior_model
+    op_auto_rescore
+  target_path_hint: src/realtime_sync/rescore_coordinator.ts
+  inputs:
+  - implement_rescore_trigger_predicate
+  - implement_rescore_question
+  - define_settlements_and_balances_repo
+  - define_answer_entity_and_repo
+  - implement_broadcast_with_seq_and_latency
+  expected_outputs:
+  - src/realtime_sync/rescore_coordinator.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id046
+  id: implement_lock_command
+  kind: server_handler_transition
+  rationale: op_propagate_deadline (host-only) sets rounds.stage=answers_locked and
+    broadcasts answers_locked to every tablet for synchronized lock; post-lock submit
+    is rejected server-side (terminal-state guard).
+  source_design_section: system_design op_lock_answers; realtime_sync_design op_propagate_deadline
+  target_path_hint: src/control_panel/lock_handler.ts
+  inputs:
+  - implement_round_stage_machine
+  - define_rounds_and_game_state_repo
+  - define_session_and_host_guard
+  - implement_broadcast_with_seq_and_latency
+  expected_outputs:
+  - src/control_panel/lock_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id047
+  id: implement_open_command
+  kind: server_handler_transition
+  rationale: op_propagate_disclosure (host-only) sets answers_opened; before b no
+    other answers appear in any read model, after b TV(b) shows all names+answers
+    — the cross-actor disclosure reflection.
+  source_design_section: system_design op_open_answers
+  target_path_hint: src/control_panel/open_handler.ts
+  inputs:
+  - implement_round_stage_machine
+  - define_rounds_and_game_state_repo
+  - implement_role_projection_fanout
+  - implement_broadcast_with_seq_and_latency
+  expected_outputs:
+  - src/control_panel/open_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id048
+  id: implement_reveal_command
+  kind: server_handler_transition
+  rationale: op_reveal_answer (host-only) sets answer_revealed (isDisclosed true)
+    and shows correct value on TV(c); reveal from a non-opened stage is rejected,
+    and this marks subsequent correct edits as rescore targets.
+  source_design_section: system_design op_reveal_correct; realtime_sync_design op_reveal_answer
+  target_path_hint: src/control_panel/reveal_handler.ts
+  inputs:
+  - implement_round_stage_machine
+  - define_rounds_and_game_state_repo
+  - implement_broadcast_with_seq_and_latency
+  expected_outputs:
+  - src/control_panel/reveal_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id049
+  id: implement_settlement_command
+  kind: server_handler_transition
+  rationale: op_compute_settlement (host-only) reads answers+correct_value, writes
+    settlements(error/delta_yen/pitari_bonus_yen)+balances+stage=settlement_computed,
+    and feeds TV d/e plus each own balance; boundary 誤差0=+1000 / 誤差1=-100.
+  source_design_section: system_design op_compute_settlement; scoring_engine_design
+    op_compute_settlement
+  target_path_hint: src/control_panel/settlement_handler.ts
+  inputs:
+  - implement_settle_question
+  - define_settlements_and_balances_repo
+  - implement_round_stage_machine
+  - implement_broadcast_with_seq_and_latency
+  expected_outputs:
+  - src/control_panel/settlement_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id050
+  id: implement_mode_switch_command
+  kind: server_handler_transition
+  rationale: op_propagate_mode_switch/op_switch_tv_mode (host-only) updates game_state.tv_mode
+    through the three nav systems and broadcasts tv_mode_changed; the a-mode reflects
+    the latest media edit via resolveQuestionFace.
+  source_design_section: system_design op_switch_tv_mode; realtime_sync_design op_propagate_mode_switch
+  target_path_hint: src/control_panel/mode_switch_handler.ts
+  inputs:
+  - implement_tv_mode_machine
+  - define_rounds_and_game_state_repo
+  - implement_media_root_and_face_resolution
+  - implement_broadcast_with_seq_and_latency
+  expected_outputs:
+  - src/control_panel/mode_switch_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id051
+  id: implement_undo_command
+  kind: server_handler
+  rationale: op_undo (host-only) emits trigger_undone through the single DomainEvent
+    publisher and uses the previousStage topology; durable rollback of settlements/balances
+    stays unimplemented (F-03) and its E2E is test.fixme, per no-invention.
+  source_design_section: system_design op_undo_trigger; decision_records ADR-論点7
+  target_path_hint: src/control_panel/undo_handler.ts
+  inputs:
+  - define_session_and_host_guard
+  - define_ws_protocol_and_events
+  - implement_round_stage_machine
+  expected_outputs:
+  - src/control_panel/undo_handler.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id052
+  id: implement_determine_winner_trigger
+  kind: automatic_trigger
+  rationale: When the 10th round reaches settlement_computed, the system sets game_state.phase=finished
+    and marks max(balances.amount) as winner for TV(e); the count-boundary automatic
+    terminal transition, not a host action.
+  source_design_section: system_design op_determine_winner; scoring_engine_design
+    §2.10
+  target_path_hint: src/realtime_sync/winner_coordinator.ts
+  inputs:
+  - implement_settlement_command
+  - implement_determine_winner
+  - define_rounds_and_game_state_repo
+  expected_outputs:
+  - src/realtime_sync/winner_coordinator.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id053
+  id: implement_join_qr_display
+  kind: producer_surface
+  rationale: 'op_display_join_qr: buildJoinUrl (PUBLIC_BASE_URL + branch-A token)
+    + renderJoinQrSvg shown on the control panel; the QR face carries no seat-ledger
+    or terminal-number inputs.'
+  source_design_section: participation_connection_design §2.4.1
+  target_path_hint: src/participants/join_link.ts
+  inputs:
+  - implement_access_control_config_and_guard
+  - implement_runtime_config_resolvers
+  expected_outputs:
+  - src/participants/join_link.ts
+  - src/participants/qr.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id054
+  id: verify_control_and_progression
+  kind: verification_api_browser
+  rationale: Fixes host-only 401/403 for lock/open/reveal/settle/switch/edit/load/undo,
+    disclosure hidden-before/reveal-on-tv, settlement boundaries, all-or-nothing intake
+    with media prevalidation, and the automatic rescore chain.
+  source_design_section: test_strategy VB-17..25/VB-36..40/VB-50/VB-52..54/VB-63..67/VB-73..75
+  target_path_hint: tests/e2e/
+  inputs:
+  - implement_lock_command
+  - implement_open_command
+  - implement_reveal_command
+  - implement_settlement_command
+  - implement_mode_switch_command
+  - implement_live_edit_command
+  - implement_rescore_coordinator
+  - implement_load_questions_command
+  - implement_undo_command
+  - author_e2e_helpers
+  expected_outputs:
+  - tests/e2e/control-authority.spec.ts
+  - tests/e2e/game-flow.spec.ts
+  - tests/e2e/live-edit-rescoring.spec.ts
+  - tests/e2e/question-data.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id055
+  id: implement_access_control_config_and_guard
+  kind: access_guard
+  rationale: 'op_guard_family_access: resolveAccessMode/resolveJoinAccessToken + checkJoinAccess
+    where branch A requires token match, branch B requires authentication, and an
+    unconfigured control returns granted:false so no open public join exists.'
+  source_design_section: participation_connection_design §2.6; decision_records INV-4
+  target_path_hint: src/participants/access_control.ts
+  inputs:
+  - define_config_repo
+  expected_outputs:
+  - src/config/access_control_config.ts
+  - src/participants/access_control.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id056
+  id: implement_join_registration
+  kind: server_handler
+  rationale: 'op_join_game: access→name-validation→admission order, registerParticipant
+    writes one participants row bound to connection_id, initializes balances=10000,
+    and emits participant_joined; boundary empty/over-length names rejected, same-name
+    allowed.'
+  source_design_section: participation_connection_design §2.4.2; system_design op_join_game
+  target_path_hint: src/participants/registration.ts
+  inputs:
+  - implement_access_control_config_and_guard
+  - implement_display_name_validation
+  - implement_admission_decision
+  - define_participant_entity_and_repo
+  - define_settlements_and_balances_repo
+  - implement_broadcast_with_seq_and_latency
+  expected_outputs:
+  - src/participants/registration.ts
+  - src/participants/registration_impl.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id057
+  id: implement_join_reflection_consumer
+  kind: cross_actor_reflection
+  rationale: participant_joined is role-projected to the control-panel roster (self-input
+    name) and TV(e) totals list — the durable→consumer link that reflects a join across
+    host and audience surfaces.
+  source_design_section: participation_connection_design §2.7
+  target_path_hint: src/realtime_sync/fanout.ts
+  inputs:
+  - implement_join_registration
+  - implement_role_projection_fanout
+  expected_outputs:
+  - src/realtime_sync/fanout.ts (participant_joined projection)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id058
+  id: implement_connection_limit_enforcement
+  kind: threshold_enforcement
+  rationale: 'op_enforce_connection_limit: the server rejects over-limit joins with
+    connection_rejected + WS close(4001), leaving existing connections/participants/answers/balances
+    unchanged; /join shows a plain full-copy message without config keys or counts.'
+  source_design_section: system_design op_enforce_connection_limit; realtime_sync_design
+    op_enforce_connection_limit
+  target_path_hint: src/realtime_sync/server.ts
+  inputs:
+  - implement_admission_decision
+  - implement_ws_server_and_connection_accept
+  expected_outputs:
+  - src/realtime_sync/server.ts (admission wiring)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id059
+  id: implement_join_surface
+  kind: ui_surface
+  rationale: 'op_render_join_surface: /join renders name input + 参加する with plain full/access-denied
+    copy, no seat-ledger inputs, and no protected nav when unauthenticated/unjoined.'
+  source_design_section: surface_copy_obligations op_render_join_surface
+  target_path_hint: src/participants/
+  inputs:
+  - implement_access_control_config_and_guard
+  - implement_join_registration
+  - enforce_role_label_mapping
+  expected_outputs:
+  - src/participants/join_page.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id060
+  id: implement_tablet_input_surface
+  kind: ui_surface
+  rationale: 'op_render_tablet_surface: +1/-1/+10/-10 stepper clamped to 0-100, 送信,
+    送信済み, and own balance (円) only; no lock/open/switch/other-info controls; the client-side
+    range guard of the answer chain.'
+  source_design_section: surface_copy_obligations op_render_tablet_surface; system_design
+    op_submit_answer
+  target_path_hint: src/tablet/answer_input.ts
+  inputs:
+  - define_answer_score_value_type
+  - define_progression_stage_and_predicates
+  - define_currency_formatter
+  expected_outputs:
+  - src/tablet/answer_input.ts
+  - src/tablet/tablet_surface.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id061
+  id: implement_submit_answer_handler
+  kind: server_handler
+  rationale: 'op_submit_answer: the server accepts only in accepting stage, runs validateSubmittedAnswer
+    + upsertDuringAccepting (unique upsert), and returns submit_ack unicast; post-lock
+    is rejected keeping the existing answer — the durable+ack of the answer chain.'
+  source_design_section: system_design op_submit_answer; realtime_sync_design op_submit_answer
+  target_path_hint: src/realtime_sync/commands/submit_answer.ts
+  inputs:
+  - implement_answer_server_validator
+  - define_answer_entity_and_repo
+  - implement_ws_server_and_connection_accept
+  expected_outputs:
+  - src/realtime_sync/commands/submit_answer.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id062
+  id: verify_participation_and_input
+  kind: verification_api_browser
+  rationale: Fixes QR display, self-input join & reflection, no-ledger, unconfigured-no-open-public,
+    name dual-defense, 4-button clamp, submit dual-defense/upsert/own-ack, and full-copy
+    plainness at the limit boundary.
+  source_design_section: test_strategy VB-06..09/VB-56..59/VB-16/VB-32..34/VB-41..44/VB-81..85
+  target_path_hint: tests/e2e/
+  inputs:
+  - implement_join_registration
+  - implement_connection_limit_enforcement
+  - implement_join_surface
+  - implement_tablet_input_surface
+  - implement_submit_answer_handler
+  - implement_join_qr_display
+  - author_e2e_helpers
+  expected_outputs:
+  - tests/e2e/participation.spec.ts
+  - tests/e2e/participation.browser.spec.ts
+  - tests/e2e/tablet-ui.browser.spec.ts
+  - tests/e2e/scoring.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id063
+  id: implement_tv_surface_modes
+  kind: ui_surface
+  rationale: 'op_render_tv_surface passive a–e: a resolved face (video→image→text),
+    b names+answers post-disclosure, c correct value, d 6-column table, e totals+winner;
+    no input/operation elements and no raw path or internal-word leak.'
+  source_design_section: surface_copy_obligations op_render_tv_surface; system_design
+    §2.9
+  target_path_hint: src/tv_display/
+  inputs:
+  - define_tv_mode_and_mapping
+  - implement_media_root_and_face_resolution
+  - implement_role_projection_fanout
+  expected_outputs:
+  - src/tv_display/tv_surface.ts
+  - src/tv_display/render_question_face.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id064
+  id: implement_tv_settlement_table
+  kind: read_model_consumer
+  rationale: TV(d) 6-column table (氏名/解答/誤差/増減円/ピタリ賞/残額) via formatYen consuming settlements
+    + participants.name + balances; values match scoring and are 円-only.
+  source_design_section: surface_copy_obligations §2.4; decision_records ADR-N-4
+  target_path_hint: src/tv_display/render_settlement_table.ts
+  inputs:
+  - define_currency_formatter
+  - define_settlements_and_balances_repo
+  - define_participant_entity_and_repo
+  expected_outputs:
+  - src/tv_display/render_settlement_table.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id065
+  id: implement_tv_totals_and_winner
+  kind: read_model_consumer
+  rationale: TV(e) all-question totals + winner-distinguishable display consuming
+    balances; d is current-question focus while e is cumulative, and the winner is
+    a read-only comparison never recomputed by the display.
+  source_design_section: surface_copy_obligations §2.4; scoring_engine_design op_determine_winner
+  target_path_hint: src/tv_display/render_totals.ts
+  inputs:
+  - define_settlements_and_balances_repo
+  - implement_determine_winner
+  expected_outputs:
+  - src/tv_display/render_totals.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id066
+  id: verify_tv_display
+  kind: verification_browser
+  rationale: Fixes the 5 modes, 3-system switch (URL+visible), a-mode fallback, 6-column
+    table matching scoring, totals vs winner distinction, no path/internal-word leak,
+    no input elements, and MVP minimality (no sound/countdown/anim/ranking).
+  source_design_section: test_strategy VB-45..51/VB-55/VB-73/VB-83/VB-84
+  target_path_hint: tests/e2e/
+  inputs:
+  - implement_tv_surface_modes
+  - implement_tv_settlement_table
+  - implement_tv_totals_and_winner
+  - author_e2e_helpers
+  expected_outputs:
+  - tests/e2e/tv-display.spec.ts
+  - tests/e2e/tv-display.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id067
+  id: implement_control_panel_surface
+  kind: ui_surface
+  rationale: 'op_render_control_panel_surface: the host console shows all host triggers
+    in operator language, the roster, ◯/◯台, and join QR; no answerer input face and
+    no internal identifiers/event names/config keys/point tokens.'
+  source_design_section: surface_copy_obligations op_render_control_panel_surface
+  target_path_hint: src/control_panel/
+  inputs:
+  - define_role_labels
+  - implement_join_qr_display
+  expected_outputs:
+  - src/control_panel/control_panel_surface.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id068
+  id: enforce_currency_yen_copy
+  kind: copy_enforcement
+  rationale: 'op_enforce_currency_yen_copy: all money on TV d/e, tablet balance, and
+    API responses route through formatYen; a scan asserts absence of point/pt/点 and
+    any pointization phrasing.'
+  source_design_section: surface_copy_obligations op_enforce_currency_yen_copy
+  target_path_hint: src/scoring/currency.ts
+  inputs:
+  - define_currency_formatter
+  expected_outputs:
+  - src/scoring/currency.ts (used across surfaces/API)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id069
+  id: enforce_role_label_mapping
+  kind: copy_enforcement
+  rationale: 'op_map_role_labels_in_copy: every surface renders 司会者/解答者/観客 from the
+    single ROLE_LABELS source and never leaks host/answerer/audience.'
+  source_design_section: surface_copy_obligations op_map_role_labels_in_copy
+  target_path_hint: src/game_state/role_labels.ts
+  inputs:
+  - define_role_labels
+  expected_outputs:
+  - src/game_state/role_labels.ts (used across surfaces)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id070
+  id: verify_surface_copy_obligations
+  kind: verification_browser
+  rationale: Browser scan fixes visible host triggers, the absent answerer input face
+    on the control panel, role-label mapping, and absence of internal leak/point tokens
+    on every surface.
+  source_design_section: test_strategy VB-77..80
+  target_path_hint: tests/
+  inputs:
+  - implement_control_panel_surface
+  - implement_tablet_input_surface
+  - implement_tv_surface_modes
+  - enforce_currency_yen_copy
+  - enforce_role_label_mapping
+  - author_e2e_helpers
+  expected_outputs:
+  - tests/game_state/role_labels.test.ts
+  - tests/scoring/currency.test.ts
+  - tests/e2e/control-authority.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id071
+  id: implement_runtime_config_resolvers
+  kind: config_resolvers
+  rationale: server_runtime (PORT default 8080 / DATABASE_URL required), heartbeat_config
+    (ping/pong ms), media_config (MEDIA_ROOT), and public_base_url resolvers externalize
+    every deploy parameter through single points.
+  source_design_section: infra deployment_setup §2.4
+  target_path_hint: src/config/
+  inputs: []
+  expected_outputs:
+  - src/config/server_runtime.ts
+  - src/config/heartbeat_config.ts
+  - src/config/media_config.ts
+  - src/config/public_base_url.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id072
+  id: implement_deploy_preflight_gate
+  kind: startup_gate
+  rationale: checkReleaseReadiness/assertReleaseReady rejects unconfigured access
+    control (no open public), an unresolvable limit, and a missing PUBLIC_BASE_URL
+    at startup by non-zero exit so the release cannot even boot.
+  source_design_section: infra deployment_setup §2.6
+  target_path_hint: src/config/deploy_preflight.ts
+  inputs:
+  - implement_access_control_config_and_guard
+  - define_connection_limit_resolver
+  - implement_runtime_config_resolvers
+  expected_outputs:
+  - src/config/deploy_preflight.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id073
+  id: implement_server_entrypoint
+  kind: startup
+  rationale: src/main.ts runs assertReleaseReady → ensureSchema → startRealtimeServer(port);
+    the single cloud process listening for HTTP + WS upgrade with /healthz returning
+    <500.
+  source_design_section: infra deployment_setup §2.3
+  target_path_hint: src/main.ts
+  inputs:
+  - implement_deploy_preflight_gate
+  - implement_schema_bootstrap
+  - implement_ws_server_and_connection_accept
+  expected_outputs:
+  - src/main.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id074
+  id: implement_health_and_monitoring
+  kind: observability
+  rationale: /healthz returns <500 and a metrics snapshot (tabletConnections/max/http5xx/syncLatencyP95)
+    exposes the reflection SLA and limit accounting for readiness polling and monitoring.
+  source_design_section: operations runbook §3; infra deployment_setup §2.12
+  target_path_hint: src/monitoring/metrics.ts
+  inputs:
+  - implement_connection_registry_hub
+  - define_connection_limit_resolver
+  expected_outputs:
+  - src/monitoring/metrics.ts
+  - src/realtime_sync/server.ts (/healthz route)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id075
+  id: implement_db_seed
+  kind: seed_utility
+  rationale: dist/db/seed.js applies ensureSchema and inserts sample questions/participants
+    so integration/e2e/performance jobs run against a consistent DB.
+  source_design_section: operations runbook §4.2
+  target_path_hint: src/db/seed.ts
+  inputs:
+  - implement_schema_bootstrap
+  - define_question_entity_and_repo
+  - define_participant_entity_and_repo
+  expected_outputs:
+  - src/db/seed.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id076
+  id: author_ci_and_container
+  kind: ci_pipeline
+  rationale: Root Dockerfile + .github/workflows/ci.yml run npm ci→build→vitest with
+    the build gate (TS2835 on missing .js), a postgres service, seed, server readiness
+    poll (/healthz <500 within 60s), and playwright chromium install for browser E2E.
+  source_design_section: operations runbook §4; infra deployment_setup §2.8/§2.9
+  target_path_hint: .github/workflows/ci.yml
+  inputs:
+  - implement_server_entrypoint
+  - implement_db_seed
+  expected_outputs:
+  - .github/workflows/ci.yml
+  - Dockerfile
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id077
+  id: implement_architecture_fitness_tests
+  kind: architecture_fitness
+  rationale: Vitest scans src/ imports to enforce tablet isolation (no tv_display/control_panel/participants/questions/media),
+    no literal-8 outside config, scoring/config leaf-ness, questions⇄game_state non-crossing,
+    and mandatory .js specifiers.
+  source_design_section: component_dependency_map §4.2
+  target_path_hint: tests/architecture/dependency_rules.test.ts
+  inputs: []
+  expected_outputs:
+  - tests/architecture/dependency_rules.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id078
+  id: implement_module_barrels_and_specifiers
+  kind: module_wiring
+  rationale: Re-export-only index.ts barrels per module and NodeNext .js specifiers
+    on every relative import so independently generated files can actually link (missing
+    extensions fail as TS2835).
+  source_design_section: system_design §1.3; component_dependency_map §4.1
+  target_path_hint: src/*/index.ts
+  inputs: []
+  expected_outputs:
+  - src/scoring/index.ts
+  - src/game_state/index.ts
+  - src/participants/index.ts
+  - src/realtime_sync/index.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id079
+  id: author_e2e_helpers
+  kind: test_harness
+  rationale: tests/e2e/helpers/ (server-health assertServerHealthy<500, auth host
+    session, join flow, game-setup stage reach, unique-id, 6-col/円/label assertions,
+    ws-client) are shared across every spec with .js imports and unique-id teardown.
+  source_design_section: test_strategy §4.3; acceptance_criteria §4.3
+  target_path_hint: tests/e2e/helpers/
+  inputs:
+  - implement_server_entrypoint
+  expected_outputs:
+  - tests/e2e/helpers/server-health.ts
+  - tests/e2e/helpers/auth.ts
+  - tests/e2e/helpers/join.ts
+  - tests/e2e/helpers/game-setup.ts
+  - tests/e2e/helpers/unique-id.ts
+  - tests/e2e/helpers/assertions.ts
+  - tests/e2e/helpers/ws-client.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id080
+  id: verify_nonfunctional_gates
+  kind: verification_perf
+  rationale: Gates the p95 ≤ 2000ms all-endpoint reflection (F-04 provisional), intake
+    p95 ≤ 1000ms, all HTTP <500 with business statuses (connection_rejected/close(4001)/command_denied)
+    instead of 5xx, and /healthz readiness within 60s.
+  source_design_section: system_design §2.11; realtime_sync_design §2.11; infra deployment_setup
+    §2.12
+  target_path_hint: tests/perf/
+  inputs:
+  - implement_broadcast_with_seq_and_latency
+  - implement_server_entrypoint
+  - implement_health_and_monitoring
+  - author_e2e_helpers
+  expected_outputs:
+  - tests/perf/sync_latency.perf.test.ts
+  - tests/e2e/health.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T04:21:32Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+- *id021
+- *id022
+- *id023
+- *id024
+- *id025
+- *id026
+- *id027
+- *id028
+- *id029
+- *id030
+- *id031
+- *id032
+- *id033
+- *id034
+- *id035
+- *id036
+- *id037
+- *id038
+- *id039
+- *id040
+- *id041
+- *id042
+- *id043
+- *id044
+- *id045
+- *id046
+- *id047
+- *id048
+- *id049
+- *id050
+- *id051
+- *id052
+- *id053
+- *id054
+- *id055
+- *id056
+- *id057
+- *id058
+- *id059
+- *id060
+- *id061
+- *id062
+- *id063
+- *id064
+- *id065
+- *id066
+- *id067
+- *id068
+- *id069
+- *id070
+- *id071
+- *id072
+- *id073
+- *id074
+- *id075
+- *id076
+- *id077
+- *id078
+- *id079
+- *id080
+layer_2_steps: []

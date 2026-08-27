@@ -1,0 +1,296 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 0315fe7aa8034520f5da3efacee79fc92fa67b60c621a56c8d37e0cd755b9603
+design_doc_sha: 97769d0fa704816f2092d3d3ff54710c5e472a457db3a1ce653416aa80a77308
+prompt_template_sha: 9ae5427f90a87bf34cbe761df48c41644c3a2d504b8ec9c33fe6f70114ba3992
+generated_at: '2026-08-15T20:18:47.878625Z'
+design_docs:
+- docs/detailed_design/sequence_flows.md
+tasks:
+- id: progression_stage_predicates
+  title: Implement stage disclosure/settlement predicates
+  description: Implement the `Stage` union plus the single-owner `isDisclosed`/`isSettled`
+    predicates that are the sole source of stage judgment (§3.1, §4.1). `isDisclosed`
+    is true for `answer_revealed` and `settlement_computed`; `isSettled` is true only
+    for `settlement_computed`. Scoring and realtime_sync import these rather than
+    reimplementing stage logic.
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/progression.ts
+  - tests/game_state/progression.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: stage_to_tv_mode
+  title: Implement stage-to-TV-mode mapping
+  description: Implement `stageToTvMode`, the single-owner mapping from progression
+    stage to the default TV mode a–d driven by lock/open/reveal/settle (Diagram 2.3,
+    §5.1). It imports the `Stage` type from progression.js; mode e is reached only
+    via explicit switch_mode navigation and is not driven here.
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/game_state/tv_mode.ts
+  - tests/game_state/tv_mode.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - progression_stage_predicates
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: resolve_max_tablet_connections
+  title: Implement tablet connection limit resolver
+  description: Implement `resolveMaxTabletConnections()`, the single resolution point
+    for the tablet connection limit (default 8, following config to 16/32) per Diagram
+    2.1 and `op_enforce_connection_limit`. No numeric literal 8 may appear in judgment
+    code, and changing the setting must move the limit without code changes (`dod_limit_no_hardcode`,
+    `dod_limit_config_follows`).
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/connection_limit.ts
+  - tests/config/connection_limit.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: check_join_access
+  title: Implement family-only join access check
+  description: 'Implement `checkJoinAccess`, which grants /join access via branch
+    A (secret URL token match) or branch B (authenticated session) and returns `granted:
+    false` when neither is configured (`op_guard_family_access`, F-05, `dod_access_no_open_public`).
+    Filename inferred as src/config/join_access.ts since §3.1 fixes only the `src/config`
+    module. Unconfigured open public join must never be granted.'
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/config/join_access.ts
+  - tests/config/join_access.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: admit_tablet
+  title: Implement tablet admission predicate
+  description: Implement the pure function `admitTablet(limit, connected)` returning
+    `ok` when connected is below limit and `over_limit` otherwise, the single owner
+    of the accept/reject branch in Diagram 2.1. The limit is passed in from `resolveMaxTabletConnections()`
+    at the call site, so this unit holds no literal threshold (`dod_limit_default_eight`).
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/admission.ts
+  - tests/participants/admission.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: validate_display_name
+  title: Implement display-name validator
+  description: Implement the self-entered display-name validator that rejects empty/whitespace-only
+    names and names exceeding MAX_DISPLAY_NAME_LENGTH, owned by module:participants
+    (Diagram 2.1, `dod_join_name_validation`). Filename inferred as src/participants/display_name.ts
+    since §3.1 fixes only the module. Names are not unique keys, so same-name distinct
+    people are both valid.
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/participants/display_name.ts
+  - tests/participants/display_name.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: validate_answer
+  title: Implement 0-100 answer validator
+  description: Implement `validate_answer`, the server-side guard accepting only 0–100
+    integers (0 and 100 allowed; -1/101/50.5 rejected) as the middle tier of the UI→server→DB
+    defense (Diagram 2.2, `dod_submit_range_guard`). The same 0–100 integer guard
+    is reused for host correct_value edits (`dod_edit_correct_range_guard`).
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/validate_answer.ts
+  - tests/scoring/validate_answer.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: compute_settlement
+  title: Implement per-question settlement calculation
+  description: 'Implement the per-question settlement calc: `error = |answer − correct|`,
+    `delta_yen = error × −100`, and `pitari_bonus_yen = 1000` when error is 0 else
+    0, all integer yen (Diagram 2.4, `op_compute_settlement`, `dod_settle_delta`/`dod_settle_pitari_add`).
+    Filename inferred as src/scoring/settlement.ts since §3.1 fixes only `src/scoring/`.
+    The pitari contribution/deduction side stays 0 (F-02) and no point/pt/点 wording
+    appears.'
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/settlement.ts
+  - tests/scoring/settlement.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: aggregate_balance
+  title: Implement full-recompute balance aggregator
+  description: Implement `aggregateBalance`, the full-recompute audit baseline deriving
+    a player's balance from the 10,000-yen grant plus every question's settlement
+    over answers and correct_value (Diagram 2.5, `dod_rescore_matches_full_recompute`).
+    Filename inferred as src/scoring/aggregate.ts; it invokes `computeSettlement`
+    per question rather than reimplementing the formula.
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/aggregate.ts
+  - tests/scoring/aggregate.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - compute_settlement
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: should_rescore
+  title: Implement auto-rescore gate predicate
+  description: Implement `shouldRescore(stage, patchHasCorrectValue) = patchHasCorrectValue
+    && isDisclosed(stage)`, the SEQ-2 two-condition conjunction gating auto-rescore
+    (§4.1, Diagram 2.5). It imports `isDisclosed` from progression.js and must not
+    reimplement stage judgment (`dod_rescore_after_c`, `dod_rescore_no_before_c`,
+    `dod_rescore_only_on_correct_value`).
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/rescore.ts
+  - tests/scoring/rescore.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - progression_stage_predicates
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: determine_winners
+  title: Implement winner determination
+  description: Implement `determineWinners`, selecting the player(s) with the maximum
+    `balances.amount` after 10 questions and returning ties as multiple co-leaders
+    without inventing a tiebreak (Diagram 2.4, `op_determine_winner`, `dod_winner_most_balance`,
+    F-06). Filename inferred as src/scoring/winner.ts since §3.1 fixes only `src/scoring/`.
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/scoring/winner.ts
+  - tests/scoring/winner.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: project_for_role
+  title: Implement role projection for fan-out
+  description: 'Implement `projectForRole`, the single-owner role projection that
+    every fan-out passes through, structurally excluding other players'' answers/balances/scores
+    from answerer payloads and withholding all others'' answers before disclosure
+    while preserving `currency: 円` (§3.3, `dod_broadcast_role_projection`). It transforms
+    a domain event/snapshot for a given role.'
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/realtime_sync/fanout.ts
+  - tests/realtime_sync/fanout.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: build_snapshot
+  title: Implement reconnect state snapshot builder
+  description: Implement `buildSnapshot`, which reconstructs a reconnecting endpoint's
+    state (current question number, stage, tv_mode, own balance, submitted flag) from
+    server-authoritative game_state/balances/answers and returns it role-projected
+    (Diagram 2.6, `dod_reconnect_server_authority`). It invokes `projectForRole` to
+    exclude others' information rather than trusting client-stored values.
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/realtime_sync/recovery.ts
+  - tests/realtime_sync/recovery.test.ts
+  test_kinds:
+  - unit
+  dependencies:
+  - project_for_role
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: heartbeat_disconnect_detection
+  title: Implement heartbeat disconnect detection
+  description: 'Implement the heartbeat timing unit that flags a disconnect after
+    ping 15s / pong grace 30s so the answerer slot is released in step with connection-limit
+    accounting (Diagram 2.6, §4.3). Its focused check: given last-pong time and now,
+    decide liveness versus expiry.'
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/realtime_sync/heartbeat.ts
+  - tests/realtime_sync/heartbeat.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: resume_token_rejoin
+  title: Implement resume-token rejoin
+  description: 'Implement the resume-token issue/validate/rebind unit: a valid opaque
+    token rebinds the participant, while an invalid/expired token is reported so the
+    caller treats it as a new join re-passing the limit check (Diagram 2.6). Persisted
+    in-progress answers survive across reconnect via the question_id+participant_id
+    unique upsert, so re-sends create no duplicate rows (`dod_answer_no_duplicate`).'
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/realtime_sync/rejoin.ts
+  - tests/realtime_sync/rejoin.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false
+- id: resolve_question_face
+  title: Implement a-mode question face resolver
+  description: Implement `resolveQuestionFace`, the single-owner resolution of the
+    a-mode question face by priority video_path → image_path → text (Diagram 2.5,
+    `op_switch_tv_mode`, `dod_tv_a_fallback`). Filename inferred as src/media/resolve_question_face.ts
+    from the `src/questions/`／`src/media/` ownership; raw path strings and internal
+    words like fallback must not leak to display (`dod_tv_a_no_path_leak`).
+  source_design_doc: docs/detailed_design/sequence_flows.md
+  v_model_layer: detailed
+  expected_outputs:
+  - src/media/resolve_question_face.ts
+  - tests/media/resolve_question_face.test.ts
+  test_kinds:
+  - unit
+  dependencies: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:18:47.878625Z'
+  approved: false

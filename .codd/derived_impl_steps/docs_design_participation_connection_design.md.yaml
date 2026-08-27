@@ -1,0 +1,551 @@
+provider_id: subprocess_ai_command:16a39b2aeb87
+cache_key: 22d6012874830e97c882d8d2f9b14ad453bf15e51562c95361d0b16697309a2e
+task_id: docs/design/participation_connection_design.md
+design_doc_sha: 52786a0b1b3b368b2a79ae5ab97432fb97b7a351cb2c6803462488fa9f1fce9e
+prompt_template_sha: c718c2a804a674ce0a0cedb7fc6da2e29299802ceca615cabdfde583a2521c04
+generated_at: '2026-08-15T20:43:27Z'
+design_docs:
+- docs/design/data_model_design.md
+- docs/design/operational_behavior_model.md
+- docs/design/participation_connection_design.md
+- docs/design/question_media_intake_design.md
+- docs/design/realtime_sync_design.md
+- docs/design/scoring_engine_design.md
+- docs/design/surface_copy_obligations.md
+- docs/design/system_design.md
+- docs/detailed_design/component_dependency_map.md
+- docs/detailed_design/er_crud_model.md
+- docs/detailed_design/sequence_flows.md
+- docs/detailed_design/shared_domain_model.md
+- docs/detailed_design/state_machines.md
+- docs/governance/decision_records.md
+- docs/infra/deployment_setup.md
+- docs/operations/runbook.md
+- docs/plan/implementation_plan.md
+- docs/requirements/requirements.md
+- docs/test/acceptance_criteria.md
+- docs/test/test_strategy.md
+steps:
+- &id001
+  id: resolve_connection_limit
+  kind: config_resolver
+  rationale: Provide the single resolution point resolveMaxTabletConnections() reading
+    MAX_TABLET_CONNECTIONS with DEFAULT_MAX_TABLET_CONNECTIONS=8 declared only here,
+    so admission never embeds literal 8 and 16/32 changes are non-hardcoded (dod_limit_default_eight/dod_limit_config_follows/dod_limit_no_hardcode).
+  source_design_section: participation_connection_design §2.5 / OBM op_enforce_connection_limit
+  target_path_hint: src/config/connection_limit.ts
+  inputs: []
+  expected_outputs:
+  - src/config/connection_limit.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id002
+  id: resolve_public_base_url
+  kind: config_resolver
+  rationale: Implement resolvePublicBaseUrl() reading PUBLIC_BASE_URL as the measurement
+    source for the join link base; this is the cloud public origin the QR must encode
+    (op_display_join_qr precondition).
+  source_design_section: participation_connection_design §2.2/§2.4.1/§3.1
+  target_path_hint: src/config/public_base_url.ts
+  inputs: []
+  expected_outputs:
+  - src/config/public_base_url.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id003
+  id: resolve_access_control_config
+  kind: config_resolver
+  rationale: Implement resolveAccessMode() (JOIN_ACCESS_MODE -> 'url_secret'|'authenticated'|undefined)
+    and resolveJoinAccessToken() (JOIN_ACCESS_TOKEN) as the single config source the
+    family-access gate consults; undefined mode must be representable so unconfigured
+    resolves to no-access.
+  source_design_section: participation_connection_design §2.2/§2.6/§3.1
+  target_path_hint: src/config/access_control_config.ts
+  inputs: []
+  expected_outputs:
+  - src/config/access_control_config.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id004
+  id: define_participant_type
+  kind: domain_type
+  rationale: Define the Participant entity (id/name/joinedAt ISO-8601/connectionId)
+    that is the durable identity for join and reconnect rebinding; carries no seat_number
+    or ledger column (PC-INV-1/dod_join_no_seat_fixed).
+  source_design_section: participation_connection_design §2.3
+  target_path_hint: src/participants/participant.ts
+  inputs: []
+  expected_outputs:
+  - src/participants/participant.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id005
+  id: implement_name_validation
+  kind: validation
+  rationale: Implement isValidDisplayName + MAX_DISPLAY_NAME_LENGTH=20 (codepoint-counted,
+    trimmed) as the ONE validator shared by the /join UI and the server so empty/whitespace/over-length
+    names are rejected in both layers (dod_join_name_validation, dual guard).
+  source_design_section: participation_connection_design §2.4.2/§2.8
+  target_path_hint: src/participants/name.ts
+  inputs: []
+  expected_outputs:
+  - src/participants/name.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id006
+  id: implement_admission_decision
+  kind: decision_logic
+  rationale: Implement pure admitTablet({limit,connected},{name}) returning {ok}|{ok:false,reason:'over_limit'|'invalid_name'};
+    it must compare against the injected resolved limit only (no numeric literal)
+    so the threshold follows config and rejects at connected>=limit while performing
+    no side effects (dod_limit_existing_unaffected).
+  source_design_section: participation_connection_design §2.5 / OBM op_enforce_connection_limit
+  target_path_hint: src/participants/admission.ts
+  inputs:
+  - implement_name_validation
+  - resolve_connection_limit
+  expected_outputs:
+  - src/participants/admission.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id007
+  id: implement_access_control_gate
+  kind: access_gate
+  rationale: 'Implement checkJoinAccess(ctx): url_secret grants only on presented-token===configured-token,
+    authenticated grants only when ctx.authenticated, and unconfigured mode returns
+    {granted:false} so uncontrolled public join is impossible at runtime (dod_access_no_open_public).'
+  source_design_section: participation_connection_design §2.6 / OBM op_guard_family_access
+  target_path_hint: src/participants/access_control.ts
+  inputs:
+  - resolve_access_control_config
+  expected_outputs:
+  - src/participants/access_control.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id008
+  id: build_join_url
+  kind: url_builder
+  rationale: Implement buildJoinUrl() composing '/join' onto resolvePublicBaseUrl()
+    and, in branch A, appending the secret token as query 't'; this is the producer
+    of the exact URL the QR encodes and the browser must reach (dod_qr_encodes_public_join_url).
+  source_design_section: participation_connection_design §2.4.1
+  target_path_hint: src/participants/join_link.ts
+  inputs:
+  - resolve_public_base_url
+  - resolve_access_control_config
+  expected_outputs:
+  - src/participants/join_link.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id009
+  id: render_join_qr
+  kind: qr_producer
+  rationale: Implement renderJoinQrSvg() encoding buildJoinUrl() to an SVG QR via
+    the qrcode npm dependency; this artifact is displayed by the control panel surface
+    and reading it must land on /join (op_display_join_qr producer).
+  source_design_section: participation_connection_design §2.4.1/§3.1
+  target_path_hint: src/participants/qr.ts
+  inputs:
+  - build_join_url
+  expected_outputs:
+  - src/participants/qr.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id010
+  id: define_participant_repository
+  kind: persistence
+  rationale: Define ParticipantRepository with insertParticipant (enforcing unique
+    connection_id => 1 person=1 device, dod_join_one_device) and listParticipants
+    (the roster read model consumed by control panel and TV(e)); this is the durable
+    state of op_join_game.
+  source_design_section: participation_connection_design §2.2/§2.3
+  target_path_hint: src/participants/participant_repository.ts
+  inputs:
+  - define_participant_type
+  expected_outputs:
+  - src/participants/participant_repository.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id011
+  id: implement_registration
+  kind: producer
+  rationale: Implement registerParticipant() (in registration_impl.ts, re-exported
+    by registration.ts) that re-applies isValidDisplayName server-side, generates
+    id + joined_at ISO-8601, binds the connection_id, and inserts exactly one participants
+    row — the durable producer of a confirmed join (dod_join_self_name).
+  source_design_section: participation_connection_design §2.2/§2.4.2/§2.8
+  target_path_hint: src/participants/registration_impl.ts
+  inputs:
+  - implement_name_validation
+  - define_participant_repository
+  - define_participant_type
+  expected_outputs:
+  - src/participants/registration_impl.ts
+  - src/participants/registration.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id012
+  id: wire_balances_initialization_on_join
+  kind: cross_module_trigger
+  rationale: On successful registration, trigger balances-row initialization to amount=10000
+    by calling the scoring balance repository (importing INITIAL_GRANT from scoring/yen.ts,
+    not a local literal) so op_join_game satisfies dod_settle_initial_grant; participation
+    owns the trigger, scoring owns the write.
+  source_design_section: participation_connection_design §2.3 (PC-INV-4) / component_dependency_map
+    dod_cdm_join_write_owner
+  target_path_hint: src/participants/registration.ts
+  inputs:
+  - implement_registration
+  expected_outputs:
+  - balances initialization call (scoring balance repository) wired into join success
+    path
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id013
+  id: compose_join_processing
+  kind: server_handler
+  rationale: Compose the authoritative join decision entry (processJoin) that runs,
+    in order, checkJoinAccess -> isValidDisplayName -> admitTablet(resolveMaxTabletConnections(),connected)
+    -> registerParticipant -> balances init, returning a discriminated result {ok:Participant}|{rejected:'access_denied'|'over_limit'|'invalid_name'};
+    this single path enforces dod_access_single_resolution and preserves the accept-time
+    trigger sequence.
+  source_design_section: participation_connection_design §2.1(⑥⑦)/§2.4.2/§2.8
+  target_path_hint: src/participants/registration.ts
+  inputs:
+  - implement_access_control_gate
+  - implement_admission_decision
+  - implement_registration
+  - wire_balances_initialization_on_join
+  - resolve_connection_limit
+  expected_outputs:
+  - src/participants/registration.ts (processJoin composition entry)
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id014
+  id: wire_join_admission_at_ws_accept
+  kind: integration_seam
+  rationale: Wire the realtime_sync WS accept path to supply the current answerer
+    connected count and presented access context to processJoin, drive connection_rejected
+    + WS close(4001) on {rejected:'over_limit'} leaving existing connections/participants/answers/balances
+    unchanged, and emit participant_joined on {ok} — the actual over-limit and join
+    triggers, not a lower-layer shortcut (dod_limit_existing_unaffected, dod_join_reflected).
+  source_design_section: participation_connection_design §2.1(⑧)/§2.7 (fan-out owned
+    by realtime_sync)
+  target_path_hint: null
+  inputs:
+  - compose_join_processing
+  expected_outputs:
+  - realtime_sync accept-path invocation of participants.processJoin
+  - connection_rejected+close(4001) on over_limit
+  - participant_joined producer signal on success
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id015
+  id: render_join_page_surface
+  kind: ui_input
+  rationale: Render the /join name-entry surface (name field + 「参加する」 CTA) with client-side
+    isValidDisplayName reuse (UI half of the dual guard) and submit to the server;
+    it must expose no seat-ledger/device-number inputs and no protected control-panel
+    navigation (dod_join_no_seat_fixed, dod_access_no_protected_nav).
+  source_design_section: participation_connection_design §1.4/§2.4.2 / OBM op_join_game
+    (qr_scan_then_name_input)
+  target_path_hint: src/participants/join_page.ts
+  inputs:
+  - implement_name_validation
+  - build_join_url
+  expected_outputs:
+  - src/participants/join_page.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id016
+  id: render_join_rejection_copy
+  kind: ui_feedback
+  rationale: Render /join full and access-denied states in job-to-be-done plain copy
+    (e.g. 「ただいま満席のため参加できません」) that never leak the config key name, connection-count
+    accounting, role identifiers, or the access-control method (dod_limit_join_full_copy);
+    these are the join_page consumer surfaces of over_limit and access rejection.
+  source_design_section: 'participation_connection_design §1.4/§2.5/§2.6 / OBM op_enforce_connection_limit
+    (consumer_surfaces: join_page)'
+  target_path_hint: src/participants/join_page.ts
+  inputs:
+  - render_join_page_surface
+  - implement_access_control_gate
+  - implement_admission_decision
+  expected_outputs:
+  - /join full-capacity plain copy
+  - /join access-denied plain copy
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id017
+  id: test_connection_limit_resolution
+  kind: unit_test
+  rationale: Assert resolveMaxTabletConnections() returns 8 when unset and follows
+    16/32 when MAX_TABLET_CONNECTIONS is set, fixing the non-hardcoded threshold contract
+    (dod_limit_no_hardcode/dod_limit_config_follows).
+  source_design_section: participation_connection_design §2.10
+  target_path_hint: tests/config/connection_limit.test.ts
+  inputs:
+  - resolve_connection_limit
+  expected_outputs:
+  - tests/config/connection_limit.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id018
+  id: test_admission_boundaries
+  kind: unit_test
+  rationale: Assert admitTablet at limit boundaries — 8th accepted/9th rejected, 16th/17th,
+    32nd/33rd — plus invalid_name rejection, covering the below/at/above edges of
+    the connection threshold and the pure (side-effect-free) rejection.
+  source_design_section: participation_connection_design §2.10 / OBM boundary_cases
+  target_path_hint: tests/participants/admission.test.ts
+  inputs:
+  - implement_admission_decision
+  - resolve_connection_limit
+  expected_outputs:
+  - tests/participants/admission.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id019
+  id: test_name_validation
+  kind: unit_test
+  rationale: Assert isValidDisplayName rejects empty/whitespace-only and over-MAX_DISPLAY_NAME_LENGTH
+    names and accepts a non-empty at-limit name, fixing the shared UI+server validation
+    boundary (dod_join_name_validation).
+  source_design_section: participation_connection_design §2.10
+  target_path_hint: tests/participants/name.test.ts
+  inputs:
+  - implement_name_validation
+  expected_outputs:
+  - tests/participants/name.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id020
+  id: test_access_control_gate
+  kind: unit_test
+  rationale: Assert checkJoinAccess returns granted:false when unconfigured (no open
+    public), grants only on url_secret token match and rejects mismatch, fixing dod_access_no_open_public
+    and the branch-A judgment.
+  source_design_section: participation_connection_design §2.10 / OBM op_guard_family_access
+  target_path_hint: tests/participants/access_control.test.ts
+  inputs:
+  - implement_access_control_gate
+  expected_outputs:
+  - tests/participants/access_control.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id021
+  id: test_join_link
+  kind: unit_test
+  rationale: Assert buildJoinUrl() yields origin===PUBLIC_BASE_URL and pathname==='/join'
+    (and appends token 't' in branch A), verifying the QR encodes the cloud public
+    join URL (dod_qr_encodes_public_join_url).
+  source_design_section: participation_connection_design §2.10
+  target_path_hint: tests/participants/join_link.test.ts
+  inputs:
+  - build_join_url
+  expected_outputs:
+  - tests/participants/join_link.test.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id022
+  id: create_participation_e2e_helpers
+  kind: test_helper
+  rationale: Provide shared E2E helpers — server-health (status<500 baseline), a QR/URL-driven
+    join flow, and a ws-client that can drive multiple answerer connections and observe
+    connection_rejected/close(4001) — so participation specs avoid duplication and
+    can exercise the real WS admission trigger.
+  source_design_section: participation_connection_design §2.10 / test_strategy §4.3
+  target_path_hint: tests/e2e/helpers/join.ts
+  inputs: []
+  expected_outputs:
+  - tests/e2e/helpers/join.ts
+  - tests/e2e/helpers/ws-client.ts
+  - tests/e2e/helpers/server-health.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id023
+  id: test_participation_api_e2e
+  kind: api_e2e_test
+  rationale: 'Drive real WS clients to verify end-to-end: successful join persists
+    one participant and reflects to roster/TV(e); the (limit+1)th connection is rejected
+    via connection_rejected+close(4001) while existing connections/participants/answers/balances
+    stay unchanged; server rejects invalid names; unconfigured access control denies
+    join; slot release after disconnect re-admits.'
+  source_design_section: participation_connection_design §2.10 / OBM op_join_game,
+    op_enforce_connection_limit, op_guard_family_access
+  target_path_hint: tests/e2e/participation.spec.ts
+  inputs:
+  - wire_join_admission_at_ws_accept
+  - create_participation_e2e_helpers
+  expected_outputs:
+  - tests/e2e/participation.spec.ts
+  - tests/e2e/connection-limit.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+- &id024
+  id: test_participation_browser_e2e
+  kind: browser_e2e_test
+  rationale: 'Verify in-browser: /control-panel shows the join QR with no seat-ledger
+    inputs; /join renders name input + 「参加する」 and rejects blank/over-length names
+    client-side; over-limit shows the plain full-capacity copy without leaking config
+    keys/counts/roles; unauthenticated/unjoined /join exposes no protected nav; a
+    confirmed join appears in the control-panel roster.'
+  source_design_section: participation_connection_design §1.4/§2.4/§2.10 / OBM op_display_join_qr,
+    op_join_game
+  target_path_hint: tests/e2e/participation.browser.spec.ts
+  inputs:
+  - render_join_qr
+  - render_join_page_surface
+  - render_join_rejection_copy
+  - create_participation_e2e_helpers
+  expected_outputs:
+  - tests/e2e/participation.browser.spec.ts
+  - tests/e2e/connection-limit.browser.spec.ts
+  required_axes: []
+  provider_id: subprocess_ai_command:16a39b2aeb87
+  generated_at: '2026-08-15T20:43:27Z'
+  approved: true
+  inferred: false
+  confidence: 1.0
+  best_practice_category: ''
+layer_1_steps:
+- *id001
+- *id002
+- *id003
+- *id004
+- *id005
+- *id006
+- *id007
+- *id008
+- *id009
+- *id010
+- *id011
+- *id012
+- *id013
+- *id014
+- *id015
+- *id016
+- *id017
+- *id018
+- *id019
+- *id020
+- *id021
+- *id022
+- *id023
+- *id024
+layer_2_steps: []
