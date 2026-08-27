@@ -177,6 +177,26 @@ codd:
 
 # 参加登録・接続管理設計（QR 参加・氏名自己入力・接続上限外出し）
 
+> **⚠ 2026-08-28 殿裁可「案A（事前アカウント方式）」により本書の参加方式は改定された（cmd_2553）。**
+>
+> 旧方式（QR を読み **氏名を自己入力**してその場で参加する）は**破棄**され、参加は
+> **事前に発行されたアカウントでログインする**方式へ全面移行した。本書のうち「氏名自己入力」
+> 「その場参加」「`connection_id` による 1 人 = 1 台」を前提とする記述（PC-INV-1 / PC-INV-4 /
+> §2.3 / §2.4 / `dod_join_self_name` / `dod_join_no_seat_fixed` / `dod_join_one_device`）は
+> **失効**しており、下記の取消線つき記述として履歴保存のためにのみ残す。
+>
+> 有効な参加・認証の設計は次のとおり:
+>
+> - アカウント（`accounts`）・パスワード（scrypt）・セッション Cookie・`/login` / `/logout` …
+>   `src/accounts/` / `src/auth/`（P1・実装済）
+> - エピソード・招待・エピソード参加（`episodes` / `episode_invitations` /
+>   `episode_participants`）… P2（未実装）
+> - 家族限定アクセス制御（PC-INV-3）は **`JOIN_ACCESS_MODE=authenticated`（分岐 B）で確定**し、
+>   分岐 A（URL 秘匿トークン）は用いない。PC-INV-3 自体（無認証の無制限公開を採らない）は
+>   案A でも**有効**であり、ログイン必須という形でより強く満たされる。
+> - PC-INV-2（接続上限の設定外出し）・PC-INV-5（保護ナビ非露出）・PC-INV-6（クラウド権威）は
+>   案A でも**有効**である。
+
 ## 1. Overview
 
 本書は `save-money-switcher`（クラウド WEB アプリ版『賞金先渡しクイズ SAVE MONEY』家族用操作盤）における **`module:participants` と `module:config`（接続上限外出し部分）の詳細設計**であり、上位の `design:system-design`（`docs/design/system_design.md`）を唯一の技術的親とし、兄弟の `design:realtime-sync-design`（`docs/design/realtime_sync_design.md`）と接続管理の責務を分担する。realtime_sync 設計 §1.1 が「参加登録 UI（`design:participation-connection-design`）は各兄弟設計に委ね」と明示したとおり、**QR 参加・氏名自己入力・参加者レコード生成・同時接続上限の設定外出しと受入判定・家族限定アクセス制御方式**を本書が権威をもって確定する。ここに記す 🟦 確定値・不変条件に反する成果物は**リリース不可（release-blocking）**として扱う。
@@ -195,10 +215,10 @@ codd:
 
 | # | 対象 | 不変条件 | 本書での具体化箇所 |
 |---|---|---|---|
-| PC-INV-1 | `module:participants` | 参加は制御盤の **QR（クラウド公開 URL）**を読み **氏名を自己入力**し、**1 人 = 1 台（入力専用）**で紐付ける。**端末番号固定割当は不採用**（論点9改） | §2.4・§2.3・OBM `op_join_game`／`op_display_join_qr` |
+| ~~PC-INV-1~~（**2026-08-28 殿裁可 案A により改定・失効**） | `module:participants` | ~~参加は制御盤の **QR（クラウド公開 URL）**を読み **氏名を自己入力**し、**1 人 = 1 台（入力専用）**で紐付ける。**端末番号固定割当は不採用**（論点9改）~~ → **改定後**: 参加は**事前発行アカウントでのログイン**により成立し、身元はサーバ側セッション（HttpOnly Cookie）が権威である。氏名の自己入力・`connection_id` による 1 台紐付けは行わない。端末番号固定割当を採らない点は改定後も同じ | `src/accounts/` / `src/auth/`・`docs/governance/decision_records.md`（案A ADR） |
 | PC-INV-2 | `module:config` / `module:participants` | 同時接続上限は既定 **8**・**ハードコード禁止**・設定パラメータとして外出しし、上限超過時に接続を断る挙動が**設定値を参照して機能**する（論点10） | §2.5・OBM `op_enforce_connection_limit` |
 | PC-INV-3 | `module:participants` | **家族限定アクセス制御方式**を設計責務として抱え、**無認証の無制限公開を採らない** | §2.6・§2.8・OBM `op_guard_family_access`・§3.1 |
-| PC-INV-4（継承） | `module:tablet` / privacy | タブレットは入力専用最小 UI で他者情報を保持・表示しない。収集個人データは自己入力氏名と当日の解答・残額に限り、**恒久的な事前氏名台帳を持たない** | §2.4・§2.8 |
+| PC-INV-4（継承・**2026-08-28 案A により一部改定**） | `module:tablet` / privacy | タブレットは入力専用最小 UI で他者情報を保持・表示しない（**改定後も有効**）。収集個人データは~~自己入力氏名~~ → **アカウントの表示名**と当日の解答・残額に限る。~~恒久的な事前氏名台帳を持たない~~ → **案A では恒久アカウント（`accounts`）を持つ**（殿裁可により前提が変わった） | §2.4・§2.8・`src/accounts/account.ts` |
 | PC-INV-5（継承） | `role:host` / `role:answerer` | 参加 QR 提示は司会者面（`/control-panel`）に限り、`/join` は解答者面。エントリ／事前認証面は保護ナビを露出しない | §1.4・§2.6・§2.7 |
 | PC-INV-6（継承） | `module:realtime_sync` | 参加はクラウド権威に接続して成立し、**ホスト PC をサーバにしない**（制御盤ブラウザは待受ソケットを持たない） | §2.1・§2.7 |
 
@@ -282,7 +302,12 @@ import { insertParticipant } from "./participant_repository.js";
 export { registerParticipant } from "./registration_impl.js";
 ```
 
-### 2.3 データモデル（`participants` テーブル・PC-INV-1）
+### 2.3 ~~データモデル（`participants` テーブル・PC-INV-1）~~（**2026-08-28 案A により改定**）
+
+> **改定**: 身元の権威は `participants`（当日その場参加）から `accounts`（恒久アカウント）へ移った。
+> エピソードごとの参加者は P2 で `episode_participants` として表す。既存 QC 済みドメイン
+> （scoring / game_state / realtime_sync / render_*）が鍵として用いる `participantId` には
+> `episode_participants.id` を渡し、ドメイン側は無改変で保つ。以下は履歴として残す。
 
 参加登録の永続化は `participants` テーブルが所有する（物理設計は `design:data-model-design` に委ねるが、以下のスキーマ責務は本書で確定する）。
 
@@ -296,7 +321,10 @@ export { registerParticipant } from "./registration_impl.js";
 - **PC-INV-1 準拠**: 参加確定ごとに `participants` へ **1 レコードのみ**を生成し、`connection_id` により 1 台へ紐付ける。**端末番号カラム・事前氏名台帳テーブルは持たない**（座席固定割当・事前氏名登録の UI/API を提供しない）。
 - **PC-INV-4 準拠**: 収集する個人データは `name`（自己入力）と当日の解答・残額（後者は `answers`／`balances` 側）に限る。`participants` は当日その場参加を前提とし、**恒久的な事前氏名台帳を保持しない**。ゲームセッション終了時にレコードは破棄対象とする。
 
-### 2.4 QR 参加と氏名自己入力（`op_display_join_qr` / `op_join_game`・PC-INV-1）
+### 2.4 ~~QR 参加と氏名自己入力~~（**2026-08-28 殿裁可 案A により失効**・`op_display_join_qr` / `op_join_game`・PC-INV-1）
+
+> **本節は失効した。** 案A では `/join`（氏名自己入力フォーム）は存在せず、QR が符号化するのは
+> `/login`（ログイン入口）である（QR は破棄せず**意味を付け替えた**）。以下は履歴として残す。
 
 #### 2.4.1 QR 提示（司会者面・`op_display_join_qr`）
 

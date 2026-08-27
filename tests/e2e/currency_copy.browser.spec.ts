@@ -20,7 +20,7 @@
  * dod_currency_yen_all_surfaces）。
  *
  * 四つのアクター向けサーフェス（制御盤 /control-panel・タブレット /tablet・TV /tv・
- * 参加受付 /join）を Playwright（ライブラリ import）で実ブラウザ描画し、宣言・検証は
+ * ログイン /login）を Playwright（ライブラリ import）で実ブラウザ描画し、宣言・検証は
  * Vitest（describe/it/expect）で行う（§1.2・§2.11・§3.1）。本スペックは金額文言の
  * 「円建て固定・点化禁止」という見え方の契約を、面横断の可視コピー走査で証跡化する:
  *   - VB-35: 金額が全サーフェスの可視文言で円建て（円）で表され、point/pt/点 の語が
@@ -40,63 +40,82 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type BrowserContext } from "playwright";
 import { assertServerHealthy } from "./helpers/server-health.js";
 import {
   scanForbiddenCopy,
   assertYenDenominated,
   CURRENCY_UNIT,
 } from "./helpers/assertions.js";
+import { startAppInstance, createAdminContext, type AppInstance } from "./helpers/app-instance.js";
 
-const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+/**
+ * 走査対象サーフェスの指定。`authenticated` の面は案A（2026-08-28 殿裁可）で admin セッションを
+ * 要するため、ログイン済み文脈から開く。ログイン面は未ログインの文脈で開く（ログイン済みだと
+ * ホームへ返されるため）。
+ */
+interface SurfaceTarget {
+  readonly label: string;
+  readonly path: string;
+  readonly authenticated: boolean;
+}
 
-const CONTROL_PANEL_URL = `${BASE_URL}/control-panel`;
-const TABLET_URL = `${BASE_URL}/tablet`;
-const TV_URL = `${BASE_URL}/tv`;
-const JOIN_URL = `${BASE_URL}/join`;
-const TV_MODE_D_URL = `${BASE_URL}/tv?mode=d`;
-const TV_MODE_E_URL = `${BASE_URL}/tv?mode=e`;
-
-/** 四つのアクター向けサーフェス（surface_copy_obligations §2.1 が固定したルート）。 */
-const ALL_SURFACES = [
-  { label: "制御盤", url: CONTROL_PANEL_URL },
-  { label: "タブレット", url: TABLET_URL },
-  { label: "TV", url: TV_URL },
-  { label: "参加受付", url: JOIN_URL },
-] as const;
+/** 四つのアクター向けサーフェス（案A では参加の入口はログイン面である）。 */
+const ALL_SURFACES: readonly SurfaceTarget[] = [
+  { label: "制御盤", path: "/control-panel", authenticated: true },
+  { label: "タブレット", path: "/tablet", authenticated: true },
+  { label: "TV", path: "/tv", authenticated: false },
+  { label: "ログイン", path: "/login", authenticated: false },
+];
 
 /**
  * 金額を提示する消費面（op_enforce_currency_yen_copy の consumer_surfaces＝
  * tv_mode_d / tv_mode_e / answerer_tablets）。TV はモード指定 URL で d/e へ到達する。
  */
-const MONEY_SURFACES = [
-  { label: "TV(d) 当該問精算表", url: TV_MODE_D_URL },
-  { label: "TV(e) 全問通算一覧", url: TV_MODE_E_URL },
-  { label: "タブレット残額", url: TABLET_URL },
-] as const;
+const MONEY_SURFACES: readonly SurfaceTarget[] = [
+  { label: "TV(d) 当該問精算表", path: "/tv?mode=d", authenticated: false },
+  { label: "TV(e) 全問通算一覧", path: "/tv?mode=e", authenticated: false },
+  { label: "タブレット残額", path: "/tablet", authenticated: true },
+];
 
 describe("全サーフェスの金額文言・円建て固定/点化禁止（SCO-4・dod_currency_*）", () => {
   let browser: Browser;
+  let app: AppInstance;
+  let adminContext: BrowserContext;
+  let anonContext: BrowserContext;
+  let TV_MODE_D_URL: string;
+
+  /** 当該サーフェスを開くべき文脈（ログイン済み／未ログイン）を返す。 */
+  function contextFor(surface: SurfaceTarget): BrowserContext {
+    return surface.authenticated ? adminContext : anonContext;
+  }
 
   beforeAll(async () => {
     browser = await chromium.launch({ headless: true });
-  }, 60_000);
+    app = await startAppInstance("currency");
+    TV_MODE_D_URL = `${app.baseUrl}/tv?mode=d`;
+    adminContext = await createAdminContext(browser, app);
+    anonContext = await browser.newContext();
+  }, 180_000);
 
   afterAll(async () => {
+    if (adminContext) await adminContext.close();
+    if (anonContext) await anonContext.close();
     if (browser) await browser.close();
+    if (app) await app.stop();
   });
 
   // codd: covers vb=VB-35
   it("四つの全サーフェスの可視文言に point/pt/点 が存在せず、金額提示面が円建て（円）で表示される", async () => {
-    // 制御盤・タブレット・TV・参加受付の各サーフェスを実ブラウザで描画し、SUT の観測結果
+    // 制御盤・タブレット・TV・ログインの各サーフェスを実ブラウザで描画し、SUT の観測結果
     // （応答ステータスと描画済み可視テキスト）に対してアサートする。可視コピー（innerText）は
     // 属性・マークアップ・生成 id を含まないため、dod が govern する「可視文言」そのものへ
     // スコープされる（§3.1 の走査方式）。API 応答の走査は兄弟 operational-behavior-model が
     // 所有するため本 E2E の範囲外（サーフェス面のみを駆動する）。
     for (const surface of ALL_SURFACES) {
-      const page = await browser.newPage();
+      const page = await contextFor(surface).newPage();
       try {
-        const res = await page.goto(surface.url, { waitUntil: "domcontentloaded" });
+        const res = await page.goto(`${app.baseUrl}${surface.path}`, { waitUntil: "domcontentloaded" });
         expect(res, `${surface.label} の応答が得られること`).not.toBeNull();
         // 健全性ベースライン: 5xx を業務ステータスと混同せず、まず status < 500 を担保する。
         assertServerHealthy(res!);
@@ -120,7 +139,7 @@ describe("全サーフェスの金額文言・円建て固定/点化禁止（SCO
     // 表示され点化語を含まないことを確かめる。TV(d) は 6 列精算表（増減円/残額を含む）ゆえ
     // 描画テキストへ円建て単位が現れる。金額が単位無し・点化単位へ差し替わると
     // assertYenDenominated（円の存在＋点化語の不在を同時検証）が throw して RED になる。
-    const dPage = await browser.newPage();
+    const dPage = await anonContext.newPage();
     try {
       const res = await dPage.goto(TV_MODE_D_URL, { waitUntil: "domcontentloaded" });
       expect(res, "TV(d) の応答が得られること").not.toBeNull();
@@ -142,9 +161,9 @@ describe("全サーフェスの金額文言・円建て固定/点化禁止（SCO
     // 金額提示面で得点の点数化・ポイント化が起きれば currency_token 分類の違反が返り RED になる
     // （dod_currency_no_point_token / dod_currency_no_pointization_phrase を消費面で補強）。
     for (const surface of MONEY_SURFACES) {
-      const page = await browser.newPage();
+      const page = await contextFor(surface).newPage();
       try {
-        const res = await page.goto(surface.url, { waitUntil: "domcontentloaded" });
+        const res = await page.goto(`${app.baseUrl}${surface.path}`, { waitUntil: "domcontentloaded" });
         expect(res, `${surface.label} の応答が得られること`).not.toBeNull();
         assertServerHealthy(res!);
 

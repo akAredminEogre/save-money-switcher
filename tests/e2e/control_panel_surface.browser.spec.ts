@@ -35,12 +35,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type BrowserContext } from "playwright";
 import { assertServerHealthy } from "./helpers/server-health.js";
 import { scanForbiddenCopy } from "./helpers/assertions.js";
-
-const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const CONTROL_PANEL_URL = `${BASE_URL}/control-panel`;
+import { startAppInstance, createAdminContext, type AppInstance } from "./helpers/app-instance.js";
 
 /** 司会者向け操作語（surface_copy_obligations §2.2・§2.7 が verbatim に固定した可視トリガー）。 */
 const HOST_TRIGGER_LABELS = [
@@ -86,18 +84,28 @@ const DEMO_TEST_LABELS = ["デモ", "テスト", "サンプル"];
 
 describe("制御盤サーフェスの可視トリガー・禁止要素・禁止コピー（SCO-1・dod_cp_*）", () => {
   let browser: Browser;
+  let app: AppInstance;
+  let adminContext: BrowserContext;
+  let CONTROL_PANEL_URL: string;
 
+  // 案A（2026-08-28 殿裁可）で制御盤は admin セッション必須になったため、本スペック専用の
+  // 隔離実体を起動し、使い捨ての資格情報でログインした文脈から面を開く（AC-A2）。
   beforeAll(async () => {
     browser = await chromium.launch({ headless: true });
-  }, 60_000);
+    app = await startAppInstance("control-panel");
+    CONTROL_PANEL_URL = `${app.baseUrl}/control-panel`;
+    adminContext = await createAdminContext(browser, app);
+  }, 180_000);
 
   afterAll(async () => {
+    if (adminContext) await adminContext.close();
     if (browser) await browser.close();
+    if (app) await app.stop();
   });
 
   // codd: covers vb=VB-77
   it("司会者向け操作語のトリガー（読込/締切/開示/正解発表/精算/次へ/戻る/取消/個別ジャンプ）が可視要素として存在する", async () => {
-    const page = await browser.newPage();
+    const page = await adminContext.newPage();
     try {
       const res = await page.goto(CONTROL_PANEL_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
@@ -122,7 +130,7 @@ describe("制御盤サーフェスの可視トリガー・禁止要素・禁止�
 
   // codd: covers vb=VB-78
   it("解答者用の数値入力送信面（+1/-1/+10/-10 のステッパ）が制御盤に存在しない", async () => {
-    const page = await browser.newPage();
+    const page = await adminContext.newPage();
     try {
       const res = await page.goto(CONTROL_PANEL_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
@@ -143,7 +151,7 @@ describe("制御盤サーフェスの可視トリガー・禁止要素・禁止�
 
   // codd: covers vb=VB-06
   it("参加用 QR が可視グラフィックとして表示され参加者一覧の領域を伴う", async () => {
-    const page = await browser.newPage();
+    const page = await adminContext.newPage();
     try {
       const res = await page.goto(CONTROL_PANEL_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
@@ -176,7 +184,7 @@ describe("制御盤サーフェスの可視トリガー・禁止要素・禁止�
 
   // codd: covers vb=VB-85
   it("QR 提示面に事前氏名台帳・端末番号割当の入力要素が存在しない", async () => {
-    const page = await browser.newPage();
+    const page = await adminContext.newPage();
     try {
       const res = await page.goto(CONTROL_PANEL_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
@@ -196,7 +204,7 @@ describe("制御盤サーフェスの可視トリガー・禁止要素・禁止�
 
   // codd: covers vb=VB-79
   it("可視文言に内部ロール識別子・内部イベント名・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない", async () => {
-    const page = await browser.newPage();
+    const page = await adminContext.newPage();
     try {
       const res = await page.goto(CONTROL_PANEL_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
