@@ -63,6 +63,11 @@ export async function hashPassword(plain: string): Promise<PasswordCredential> {
  * 平文パスワードが保存済み資格と一致するかを定数時間比較で判定する。
  * 資格が壊れている（16 進でない・長さ不一致）場合も例外を投げず `false` を返す
  * （認証経路を 5xx へ化けさせない・健全性ベースライン < 500）。
+ *
+ * scrypt 導出そのものが失敗した場合（異常な salt 値・crypto ランタイムのエラー・資源枯渇等）も
+ * 同じく `false` へ収束させる。ここで例外を素通しすると、壊れた資格 1 件がログイン要求を 500 へ
+ * 化けさせてしまい「照合できなかった」と「一致しなかった」の区別が呼出側に無いまま面が壊れる。
+ * 照合は常に真偽で答え、失敗理由は要求元へ漏らさない（ID の存否も同様に区別させない方針と揃う）。
  */
 export async function verifyPassword(
   plain: string,
@@ -77,6 +82,11 @@ export async function verifyPassword(
   if (expected.length !== KEY_LENGTH) {
     return false;
   }
-  const actual = await derive(plain, credential.salt);
+  let actual: Buffer;
+  try {
+    actual = await derive(plain, credential.salt);
+  } catch {
+    return false; // 導出不能は「一致しない」として扱う（認証経路を 5xx にしない）。
+  }
   return timingSafeEqual(actual, expected);
 }

@@ -36,13 +36,23 @@ interface Connection {
   readonly id: number;
   readonly res: ServerResponse;
   readonly role: Role;
+  /**
+   * 当該接続の身元。案A では**ログインセッションのアカウント ID**（`/tablet/answer` が
+   * orchestrator へ渡す鍵と同一）。未ログインでも購読できる観客面（tv）だけが `null`。
+   * エピソード参加者レコード（`episode_participants`）との突合は P2 の関心事ゆえ、P1 では
+   * この ID が `session.participants` に見つからないのが正しい状態である。
+   */
   readonly participantId: string | null;
 }
 
 const connections = new Map<number, Connection>();
 let connectionSeq = 0;
 
-/** 現在の解答者（タブレット）接続数（参加確定済みの answerer 接続のみ計上）。 */
+/**
+ * 現在の解答者（タブレット）接続数（身元の在る answerer 接続のみ計上）。案A では解答面の購読に
+ * ログインが要る（`auth/surface_access.ts`）ゆえ、これは「ログイン済みで解答面を開いている
+ * 接続の数」である。制御盤の「接続中のタブレット n / N」はこの値を出す。
+ */
 export function connectedTabletCount(): number {
   let count = 0;
   for (const conn of connections.values()) {
