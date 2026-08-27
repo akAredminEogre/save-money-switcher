@@ -29,6 +29,7 @@ import {
   type TvMode,
 } from "../realtime_sync/protocol.js";
 import type { Participant } from "../participants/participant.js";
+import { isValidDisplayName, MAX_DISPLAY_NAME_LENGTH } from "../participants/name.js";
 import {
   session,
   currentStage,
@@ -250,6 +251,9 @@ export function applyAnswer(participantId: unknown, value: unknown, s: Session =
 export function applyJoin(name: unknown, s: Session = session): CommandResult {
   if (typeof name !== "string" || name.trim() === "") {
     return { ok: false, status: 400, error: "お名前を入力してください。", events: [] };
+  }
+  if (!isValidDisplayName(name)) {
+    return { ok: false, status: 400, error: `氏名は ${MAX_DISPLAY_NAME_LENGTH} 文字以内で入力してください。`, events: [] };
   }
   const participant: Participant = {
     id: nextId("p"),

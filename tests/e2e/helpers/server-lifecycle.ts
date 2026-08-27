@@ -76,7 +76,7 @@ export async function startAppServer(options: StartAppServerOptions = {}): Promi
   const child = spawnFn(command, args, { cwd, env, stdio: "inherit" });
 
   const stop = async (): Promise<void> => {
-    if (child.killed) return;
+    if (child.killed || child.exitCode != null || child.signalCode != null) return;
     await new Promise<void>((resolve) => {
       child.once("exit", () => resolve());
       child.once("error", () => resolve());

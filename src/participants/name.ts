@@ -44,9 +44,6 @@ export function isValidDisplayName(raw: string): boolean {
   return length >= 1 && length <= MAX_DISPLAY_NAME_LENGTH;
 }
 
-/** サーバ側検証（{@link validateName}）が用いる氏名の上限長（文字数・コードポイント基準）。 */
-export const NAME_MAX_LENGTH = 50;
-
 /** 氏名が空（空文字・空白のみ）である。 */
 export class EmptyNameError extends Error {
   constructor() {
@@ -70,15 +67,15 @@ export class NameTooLongError extends Error {
  * 例外で拒否する。判別結果（真偽）のみが必要な場合は {@link isValidDisplayName} を用いる。
  *
  * @throws {EmptyNameError} 空文字・空白のみの氏名。
- * @throws {NameTooLongError} 上限長（{@link NAME_MAX_LENGTH}）を超過する氏名。
+ * @throws {NameTooLongError} 上限長（{@link MAX_DISPLAY_NAME_LENGTH}）を超過する氏名。
  */
 export function validateName(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed === "") {
     throw new EmptyNameError();
   }
-  if ([...trimmed].length > NAME_MAX_LENGTH) {
-    throw new NameTooLongError(NAME_MAX_LENGTH);
+  if ([...trimmed].length > MAX_DISPLAY_NAME_LENGTH) {
+    throw new NameTooLongError(MAX_DISPLAY_NAME_LENGTH);
   }
   return trimmed;
 }

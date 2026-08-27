@@ -69,7 +69,7 @@ export function determineWinners<TBalance extends ParticipantBalance>(
  * 再計算しないための入口。該当プレイヤーの残額が入力に無い場合は `false`。
  */
 export function isWinningParticipant(
-  participantId: number,
+  participantId: ParticipantBalance["participantId"],
   balances: readonly ParticipantBalance[],
 ): boolean {
   return determineWinners(balances).some(

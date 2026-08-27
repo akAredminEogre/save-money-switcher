@@ -74,18 +74,16 @@ function push(conn: Connection, html: string): void {
 }
 
 /**
- * 新規 SSE 接続を登録する。出題開始済み（実プレイ・`session.loaded`）の場合のみ初期描画を
- * 送り、未出題（起動直後・E2E の fresh server）では静的 GET chrome を温存する（progressive
- * enhancement で既存 E2E を壊さないための境界）。
+ * 新規 SSE 接続を登録し、現在のロール投影を即送信する。
+ * これにより参加直後の tablet が初期残額（10,000円）を正確に表示し、
+ * リロード後の host が最新の参加者ロスターを即座に受け取る。
  */
 export function addConnection(res: ServerResponse, role: Role, participantId: string | null): number {
   connectionSeq += 1;
   const id = connectionSeq;
   const conn: Connection = { id, res, role, participantId };
   connections.set(id, conn);
-  if (session.loaded) {
-    push(conn, fragmentFor(conn));
-  }
+  push(conn, fragmentFor(conn));
   return id;
 }
 
