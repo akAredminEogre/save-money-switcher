@@ -28,8 +28,6 @@ import {
   type ServerEventDraft,
   type TvMode,
 } from "../realtime_sync/protocol.js";
-import type { Participant } from "../participants/participant.js";
-import { isValidDisplayName, MAX_DISPLAY_NAME_LENGTH } from "../participants/name.js";
 import {
   session,
   currentStage,
@@ -45,8 +43,6 @@ export interface CommandResult {
   readonly status?: number;
   readonly error?: string;
   readonly events: readonly ServerEvent[];
-  /** 参加確定コマンド（join）のときのみ、生成された参加者を返す。 */
-  readonly participant?: Participant;
 }
 
 /** 制御盤が `data-command` として送るホスト操作の識別子（`control_panel/host_triggers` と一致）。 */
@@ -77,13 +73,6 @@ const HOST_COMMAND_NAMES: readonly HostCommandName[] = [
 
 function isHostCommandName(value: unknown): value is HostCommandName {
   return typeof value === "string" && (HOST_COMMAND_NAMES as readonly string[]).includes(value);
-}
-
-/** 一意な識別子を採番する（ローカル試遊の揮発 id・衝突回避に連番＋時刻を用いる）。 */
-let idCounter = 0;
-function nextId(prefix: string): string {
-  idCounter += 1;
-  return `${prefix}_${Date.now().toString(36)}_${idCounter}`;
 }
 
 /** ServerEvent を現在段階・問番号・TV モードの文脈付きで封筒化する。 */
@@ -245,54 +234,12 @@ export function applyAnswer(participantId: unknown, value: unknown, s: Session =
 }
 
 /**
- * 参加を確定する（氏名自己入力・op_join_game の Phase1 版）。氏名は非空（trim 後）を要件とし、
- * HTML 無害化は描画層（render_control_panel）が担うため本層は最小の非空検証のみ行う。
- */
-export function applyJoin(name: unknown, s: Session = session): CommandResult {
-  if (typeof name !== "string" || name.trim() === "") {
-    return { ok: false, status: 400, error: "お名前を入力してください。", events: [] };
-  }
-  if (!isValidDisplayName(name)) {
-    return { ok: false, status: 400, error: `氏名は ${MAX_DISPLAY_NAME_LENGTH} 文字以内で入力してください。`, events: [] };
-  }
-  const participant: Participant = {
-    id: nextId("p"),
-    name: name.trim(),
-    joinedAt: new Date().toISOString(),
-    connectionId: nextId("c"),
-  };
-  s.participants.push(participant);
-  const event = stamp({ type: "participant_joined", payload: { participantId: participant.id } }, s);
-  return { ok: true, events: [event], participant };
-}
-
-/**
- * 参加者の氏名のみを更新する（メンバー設定面 `/me` の改名コマンド・cmd_2159 機能追加）。
+ * 参加確定（氏名自己入力の `applyJoin`）と参加者改名（`applyRenameParticipant`）は
+ * **2026-08-28 の殿裁可・案A により撤去した**。案A では身元は事前発行のアカウントとログイン
+ * セッションが権威であり、氏名を自己入力してその場で参加する経路そのものを持たない
+ * （旧 PC-INV-1「connection_id の一意性が 1 人 = 1 台を担保する」は案A の accounts へ移る）。
+ * 表示名の変更は自分のアカウント設定（`accounts/account_service.changeDisplayName`）が担う。
  *
- * `id` / `connectionId` / `joinedAt` は一切変えない。参加は `connectionId` の一意性のみが
- * 1 人 = 1 台を担保する不変（PC-INV-1）ゆえ、改名で識別子が動けば同一人物の同一性が壊れる。
- * 氏名の受理境界は {@link isValidDisplayName}（UI とサーバが共有する単一バリデータ）だけを
- * 用い、拒否文言は {@link applyJoin} と同一に保つ（同じ入力に別の言い方をしない）。
+ * エピソードへの参加（`episode_participants` の生成）は P2 の関心事ゆえ、まだ在らぬ経路を
+ * ここへ先取りして作らない。
  */
-export function applyRenameParticipant(
-  participantId: unknown,
-  name: unknown,
-  s: Session = session,
-): CommandResult {
-  if (typeof participantId !== "string") {
-    return { ok: false, status: 404, error: "未知の参加者です。", events: [] };
-  }
-  const participant = s.participants.find((p) => p.id === participantId);
-  if (participant === undefined) {
-    return { ok: false, status: 404, error: "未知の参加者です。", events: [] };
-  }
-  if (typeof name !== "string" || name.trim() === "") {
-    return { ok: false, status: 400, error: "お名前を入力してください。", events: [] };
-  }
-  if (!isValidDisplayName(name)) {
-    return { ok: false, status: 400, error: `氏名は ${MAX_DISPLAY_NAME_LENGTH} 文字以内で入力してください。`, events: [] };
-  }
-  participant.name = name.trim();
-  const event = stamp({ type: "participant_renamed", payload: { participantId: participant.id } }, s);
-  return { ok: true, events: [event], participant };
-}

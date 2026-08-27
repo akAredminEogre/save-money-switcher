@@ -355,6 +355,14 @@ CRUD の各行を担うアクターと、可視コピーで用いる**業務ラ�
 
 ## 2. Mermaid Diagrams
 
+> **⚠ 2026-08-28 殿裁可「案A（事前アカウント方式）」により改定（cmd_2553）。**
+> 身元の権威は `participants`（当日その場参加）から `accounts`（恒久アカウント）へ移った。
+> 本節以下の `participants` を前提とする ER・CRUD・権限記述は失効しており、履歴として残す。
+> 有効な表定義は `docs/design/data_model_design.md` §2.3a（`accounts`・P1 実装済）および
+> §2.3b（エピソード系 4 表・P2 実装予定）を正とする。
+> アクター（`role:host` / `role:answerer`）と表の権限境界そのものは案A でも有効であり、
+> 「誰がそのロールか」をアカウントとセッションが与えるようになった点だけが変わる。
+
 ### 2.1 ER 図（8 テーブル・Mermaid erDiagram）
 
 ```mermaid
