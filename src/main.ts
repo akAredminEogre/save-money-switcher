@@ -529,7 +529,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   // よいか・どのロールの投影を流すかはサーバがセッションから決める（申告値で権限が上がらない）。
   if (path === "/events" && req.method === "GET") {
     const surface = toLiveSurface(url.searchParams.get("surface"));
-    const subscription = authorizeLiveSurface(surface, currentSession(req));
+    const session = currentSession(req);
+    const subscription = authorizeLiveSurface(surface, session);
     if (subscription.kind === "denied") {
       return sendJson(res, subscription.status, { ok: false, error: "この面を購読する権限がありません。" });
     }
@@ -540,7 +541,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       Connection: "keep-alive",
     });
     res.write(": connected\n\n");
-    const id = addConnection(res, role, null);
+    // 接続に載せる身元はセッションのアカウント ID（案A の身元キー・`/tablet/answer` と同一）。
+    // 観客面（tv）は未ログインでも購読できるゆえ身元を持たない（null）。
+    const id = addConnection(res, role, session?.accountId ?? null);
     req.on("close", () => removeConnection(id));
     return;
   }
