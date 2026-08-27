@@ -1,0 +1,39 @@
+# gitleaks configuration for save-money-switcher
+#
+# Purpose: suppress ONLY the false-positive matches produced by the .codd
+# code-generation tooling, while preserving the full default gitleaks ruleset
+# (generic-api-key etc.) for the rest of the repository.
+#
+# Background (cmd_2159 gate scan): gitleaks flagged 20 `generic-api-key`
+# findings, all on the `cache_key:` field (line 2) of
+# `.codd/derived_*/*.md.yaml`. These values are deterministic SHA-256 content
+# hashes (same family as design_doc_sha / prompt_template_sha) emitted by the
+# .codd generator, NOT credentials. The generic-api-key rule reacts to their
+# high entropy plus the substring "key" in the field name `cache_key`.
+#
+# The allowlist below is deliberately narrow:
+#   * scoped to files under .codd/**  (paths)
+#   * AND only to `cache_key:` / `*_sha:` fields holding a 64-hex SHA-256 value
+#   * AND only applied to the generic-api-key rule
+# so a real credential appearing anywhere else — or even inside .codd on a
+# non-hash field — is still detected.
+
+[extend]
+# Keep the built-in gitleaks default ruleset active repo-wide.
+useDefault = true
+
+[[allowlists]]
+description = "codd derived SHA-256 content hashes (cache_key / *_sha) are not secrets"
+# All conditions below must hold for a finding to be allowlisted.
+condition = "AND"
+# Only apply this allowlist to the generic-api-key rule (preserve every other rule).
+targetRules = ["generic-api-key"]
+# Only within .codd generated YAML files.
+paths = [
+  '''\.codd/.*\.ya?ml$''',
+]
+# Only when the matched line is a cache_key / *_sha field with a 64-hex SHA-256 value.
+regexTarget = "match"
+regexes = [
+  '''(?:cache_key|[a-z0-9_]*_sha):\s*[0-9a-f]{64}''',
+]
