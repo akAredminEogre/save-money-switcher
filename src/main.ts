@@ -38,7 +38,13 @@ import { renderTabletSurface } from "./tablet/render_tablet_surface.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Role } from "./realtime_sync/protocol.js";
-import { applyHostCommand, applyAnswer, applyJoin } from "./server/orchestrator.js";
+import {
+  applyHostCommand,
+  applyAnswer,
+  applyJoin,
+  applyRenameParticipant,
+} from "./server/orchestrator.js";
+import { buildMeFragment } from "./server/view_builders.js";
 import {
   addConnection,
   removeConnection,
@@ -162,6 +168,25 @@ function readJsonBody(req: IncomingMessage): Promise<unknown> {
 function sendJson(res: ServerResponse, status: number, payload: unknown): void {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload));
+}
+
+/**
+ * ホーム面（`GET /`）を描画する。アプリの入口としてメンバー（参加・自分の設定）と
+ * 運営（制御盤・TV）の各面への導線だけを置く受動面であり、状態も操作も持たない。
+ * これが無いと参加者はアプリの入口を持てず、制御盤の QR 経由でしか /join へ辿れない。
+ */
+function renderHomeHtml(): string {
+  return (
+    `<main data-surface="home">` +
+    `<h1>${escapeHtml(TV_TITLE)}</h1>` +
+    `<ul>` +
+    `<li><a href="/join">参加する</a></li>` +
+    `<li><a href="/me">メンバー設定</a></li>` +
+    `<li><a href="/control-panel">進行制御盤</a></li>` +
+    `<li><a href="/tv">TV表示</a></li>` +
+    `</ul>` +
+    `</main>`
+  );
 }
 
 /**
@@ -334,6 +359,31 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return sendJson(res, result.status ?? 400, { ok: false, error: result.error });
     }
     return sendJson(res, 200, { ok: true, participantId: result.participant.id });
+  }
+
+  // 氏名変更（メンバー設定面 /me）→ orchestrator → broadcast。id/connectionId は変えない。
+  if (path === "/participant/name" && req.method === "POST") {
+    const body = (await readJsonBody(req)) as { participantId?: unknown; name?: unknown } | null;
+    if (body === null) return sendJson(res, 400, { ok: false, error: "不正な JSON です。" });
+    const result = applyRenameParticipant(body.participantId, body.name);
+    if (result.ok) broadcast();
+    if (!result.ok || result.participant === undefined) {
+      return sendJson(res, result.status ?? 400, { ok: false, error: result.error });
+    }
+    return sendJson(res, 200, { ok: true, name: result.participant.name });
+  }
+
+  // ホーム（アプリの入口）: 参加・メンバー設定・制御盤・TV への導線のみを置く受動面。
+  if (path === "/") {
+    // ホームは状態も live 更新も持たない静的面ゆえ client 資産を読まない（無用な 404 を作らない）。
+    sendHtml(res, 200, htmlDocument(TV_TITLE, renderHomeHtml()));
+    return;
+  }
+
+  // メンバー設定（自分の表示名の参照・変更）: 未参加でも 500 を出さず参加導線つきの平易文を返す。
+  if (path === "/me") {
+    sendHtml(res, 200, page("メンバー設定", buildMeFragment(url.searchParams.get("participantId")), "me"));
+    return;
   }
 
   if (path === "/join") {

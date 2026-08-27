@@ -59,6 +59,7 @@ describe("realtime_sync/protocol の語彙を確定値に固定する", () => {
       "trigger_undone",
       "tv_mode_changed",
       "participant_joined",
+      "participant_renamed",
       "balance_updated",
     ]);
     expect([...CONTROL_EVENT_TYPES]).toEqual([

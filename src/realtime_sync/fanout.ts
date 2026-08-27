@@ -59,6 +59,7 @@ const ANSWERER_WITHHELD_EVENT_TYPES: readonly ServerEventType[] = [
   "answer_revealed",
   "settlement_computed",
   "participant_joined",
+  "participant_renamed",
 ];
 
 /** 他者の解答を露出するイベント種別（開示前は観客へ配信しない・VB-19）。 */

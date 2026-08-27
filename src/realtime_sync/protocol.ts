@@ -59,6 +59,7 @@ export const DOMAIN_EVENT_TYPES = [
   "trigger_undone",
   "tv_mode_changed",
   "participant_joined",
+  "participant_renamed",
   "balance_updated",
 ] as const;
 export type DomainEventType = (typeof DOMAIN_EVENT_TYPES)[number];

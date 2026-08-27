@@ -1,7 +1,9 @@
 // 参加受付 client — cmd_2159 Phase1 progressive enhancement。
 // 氏名フォーム送信を横取りして POST /join し、返却された participantId を付けて /tablet へ遷移する。
+// participantId はこの端末の localStorage にも残す（リロード・別タブで匿名化しないため）。
 (function () {
   "use strict";
+  var STORAGE_KEY = "smsw.participantId";
   var app = document.getElementById("app");
   if (!app) return;
   var form = app.querySelector("form");
@@ -21,6 +23,9 @@
       })
       .then(function (data) {
         if (data && data.participantId) {
+          try {
+            localStorage.setItem(STORAGE_KEY, data.participantId);
+          } catch (_) {}
           location.href = "/tablet?participantId=" + encodeURIComponent(data.participantId);
         }
       })

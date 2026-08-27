@@ -54,6 +54,12 @@ export interface TabletSurfaceState {
   ownBalanceYen: number;
   /** 受付中／締切の入力受付状態。 */
   status: TabletInputStatus;
+  /**
+   * 自分の表示名（任意）。参加者を突合できた接続にのみ供給される自分自身の情報であり、
+   * 他者情報ではない（`dod_tablet_no_others_info` を侵さない）。未指定のときは面に一切
+   * 描画しない（未参加・匿名接続の見え方を従来どおりに保つ）。
+   */
+  displayName?: string;
 }
 
 /** 数値入力ステッパ 1 ボタンの表示記述子（−10/−1/+1/+10）。 */
@@ -90,6 +96,8 @@ export interface TabletSurfaceViewModel {
   readonly submittedLabel: string | null;
   /** 自分の残額の可視文言（円建て・formatYen 経由）。 */
   readonly ownBalanceText: string;
+  /** 自分の表示名（未供給なら undefined・描画しない）。 */
+  readonly displayName?: string;
 }
 
 const ANSWERER_ROLE: Role = "answerer";
@@ -130,6 +138,7 @@ export function buildTabletSurfaceViewModel(state: TabletSurfaceState): TabletSu
     submitLabel: SUBMIT_LABEL,
     submittedLabel: state.submitted ? SUBMITTED_LABEL : null,
     ownBalanceText: `あなたの残額 ${formatYen(state.ownBalanceYen)}`,
+    displayName: state.displayName,
   };
 }
 
@@ -139,6 +148,11 @@ export function buildTabletSurfaceViewModel(state: TabletSurfaceState): TabletSu
  * 禁止コピー走査（内部ロール識別子・内部イベント名・設定キー名・デモ/テスト表記・
  * point/pt/点 の不在検証）は、この可視文言集合に対してのみ行う（マークアップの付随語で
  * 偽陽性を出さない）。
+ *
+ * {@link TabletSurfaceViewModel.displayName}（参加者の自己入力氏名）は**意図的に含めない**。
+ * 本集合はサーフェスの文言義務（面が供給するコピー）の走査対象であり、利用者が入力した
+ * 氏名を混ぜると、氏名の綴り次第で禁止コピー走査が偽陽性を出す（面のコピー義務は氏名の
+ * 内容に依らない）。
  */
 export function collectTabletVisibleText(vm: TabletSurfaceViewModel): string[] {
   const texts = [

@@ -56,9 +56,16 @@ function renderFromViewModel(vm: TabletSurfaceViewModel): string {
       ? `<p class="tablet-surface__submitted" data-field="submitted">${escapeHtml(vm.submittedLabel)}</p>`
       : "";
   const submitDisabled = vm.inputLocked;
+  // 自分の表示名は供給されたときだけ描く（未供給＝未参加/匿名接続では要素ごと出さない）。
+  const displayName =
+    vm.displayName !== undefined
+      ? `<p class="tablet-surface__display-name" data-field="display-name">` +
+        `${escapeHtml(vm.displayName)}</p>`
+      : "";
   return [
     `<main class="tablet-surface" role="main" aria-label="${escapeHtml(vm.roleLabel)}"` +
       ` data-surface="tablet" data-locked="${vm.inputLocked}">`,
+    displayName,
     `<p class="tablet-surface__status" data-field="status">${escapeHtml(vm.statusLabel)}</p>`,
     `<p class="tablet-surface__question-number" data-field="question-number">` +
       `${escapeHtml(vm.questionNumberLabel)}</p>`,

@@ -265,3 +265,34 @@ export function applyJoin(name: unknown, s: Session = session): CommandResult {
   const event = stamp({ type: "participant_joined", payload: { participantId: participant.id } }, s);
   return { ok: true, events: [event], participant };
 }
+
+/**
+ * 参加者の氏名のみを更新する（メンバー設定面 `/me` の改名コマンド・cmd_2159 機能追加）。
+ *
+ * `id` / `connectionId` / `joinedAt` は一切変えない。参加は `connectionId` の一意性のみが
+ * 1 人 = 1 台を担保する不変（PC-INV-1）ゆえ、改名で識別子が動けば同一人物の同一性が壊れる。
+ * 氏名の受理境界は {@link isValidDisplayName}（UI とサーバが共有する単一バリデータ）だけを
+ * 用い、拒否文言は {@link applyJoin} と同一に保つ（同じ入力に別の言い方をしない）。
+ */
+export function applyRenameParticipant(
+  participantId: unknown,
+  name: unknown,
+  s: Session = session,
+): CommandResult {
+  if (typeof participantId !== "string") {
+    return { ok: false, status: 404, error: "未知の参加者です。", events: [] };
+  }
+  const participant = s.participants.find((p) => p.id === participantId);
+  if (participant === undefined) {
+    return { ok: false, status: 404, error: "未知の参加者です。", events: [] };
+  }
+  if (typeof name !== "string" || name.trim() === "") {
+    return { ok: false, status: 400, error: "お名前を入力してください。", events: [] };
+  }
+  if (!isValidDisplayName(name)) {
+    return { ok: false, status: 400, error: `氏名は ${MAX_DISPLAY_NAME_LENGTH} 文字以内で入力してください。`, events: [] };
+  }
+  participant.name = name.trim();
+  const event = stamp({ type: "participant_renamed", payload: { participantId: participant.id } }, s);
+  return { ok: true, events: [event], participant };
+}

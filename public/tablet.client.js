@@ -3,10 +3,24 @@
 // EventSource で受け取ったサーフェス HTML を #app へ swap し、局所ステッパ値を復元する。
 (function () {
   "use strict";
+  var STORAGE_KEY = "smsw.participantId";
   var app = document.getElementById("app");
   if (!app) return;
   var params = new URLSearchParams(location.search);
+  // 身元はクエリ→この端末の localStorage の順で解決する。クエリ由来なら端末側へも残し、
+  // 以後クエリ無しでリロードしても同じ参加者のまま（匿名化して残額 0 に落ちない）。
   var pid = params.get("participantId");
+  if (pid) {
+    try {
+      localStorage.setItem(STORAGE_KEY, pid);
+    } catch (_) {}
+  } else {
+    try {
+      pid = localStorage.getItem(STORAGE_KEY);
+    } catch (_) {
+      pid = null;
+    }
+  }
   var localValue = 0;
 
   function restore() {

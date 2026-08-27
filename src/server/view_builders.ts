@@ -20,6 +20,8 @@ import { renderTabletSurface } from "../tablet/render_tablet_surface.js";
 import type { TabletSurfaceState } from "../tablet/tablet_surface_view_model.js";
 import type { TabletInputStatus } from "../tablet/tablet_status.js";
 import { renderTvSurface, serializeTvSurface } from "../tv_display/render_tv_surface.js";
+import type { Participant } from "../participants/participant.js";
+import { MAX_DISPLAY_NAME_LENGTH } from "../participants/name.js";
 import type { SettlementTableEntry } from "../tv_display/render_settlement_table.js";
 import { acceptsSubmissions, isDisclosed, isSettled, stageRank, type Stage } from "../game_state/progression.js";
 import {
@@ -84,14 +86,58 @@ export function buildTabletFragment(participantId: string | null, s: Session = s
   const submitted =
     participantId !== null && answersForQuestion(s.game.currentQuestionNumber, s).has(participantId);
   const ownBalanceYen = participantId !== null ? balanceFor(participantId, s) : 0;
+  // 突合できた参加者にのみ自分の表示名を供給する（未参加・匿名接続は従来どおり氏名を出さない）。
+  const self = participantId !== null ? findParticipant(participantId, s) : undefined;
   const state: TabletSurfaceState = {
     questionNumber: s.game.currentQuestionNumber,
     answerValue: 0,
     submitted,
     ownBalanceYen,
     status,
+    ...(self !== undefined ? { displayName: self.name } : {}),
   };
   return renderTabletSurface(state);
+}
+
+/** セッション内の参加者を id で引く（見つからねば undefined）。 */
+function findParticipant(participantId: string, s: Session): Participant | undefined {
+  return s.participants.find((p) => p.id === participantId);
+}
+
+/**
+ * メンバー設定面（`/me`）の断片を組み立てる。自分の表示名の**参照**と**変更フォーム**のみを
+ * 置き、解答面（入力専用最小 UI）へ設定操作を混ぜない（面の責務分離）。
+ *
+ * 未参加（`participantId` が null／セッションに不在）でも 500 を出さず、参加への導線を伴う
+ * 平易文を 200 で返す（健全性ベースライン < 500 を面の状態で崩さない）。氏名入力欄の
+ * `maxlength` は {@link MAX_DISPLAY_NAME_LENGTH} を単一の出所として供給する（UI とサーバで
+ * 受理境界を二重定義しない）。
+ */
+export function buildMeFragment(participantId: string | null, s: Session = session): string {
+  const self = participantId !== null ? findParticipant(participantId, s) : undefined;
+  if (self === undefined) {
+    return (
+      `<main data-surface="me">` +
+      `<h1>メンバー設定</h1>` +
+      `<p>まだ参加しておりません。まずは参加してください。</p>` +
+      `<a href="/join">参加する</a>` +
+      `</main>`
+    );
+  }
+  return (
+    `<main data-surface="me">` +
+    `<h1>メンバー設定</h1>` +
+    `<p class="me-surface__display-name" data-field="display-name">${escapeHtml(self.name)}</p>` +
+    `<form data-form="rename">` +
+    `<input type="text" name="display_name" maxlength="${MAX_DISPLAY_NAME_LENGTH}" ` +
+    `aria-label="お名前" value="${escapeHtml(self.name)}">` +
+    `<button type="submit" data-op="rename">名前を変更する</button>` +
+    `</form>` +
+    `<p class="me-surface__message" data-field="message"></p>` +
+    `<p>この端末での参加です。別の端末では改めて参加してください。</p>` +
+    `<a href="/tablet">解答画面へ戻る</a>` +
+    `</main>`
+  );
 }
 
 /** 開示段階（answers_opened 以降）に到達済みか。 */
