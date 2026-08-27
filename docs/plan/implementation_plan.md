@@ -200,7 +200,7 @@ describe("自動再採点の起動分界（SM-2 / IMPL 未満での非誘発）"
 
 **受入 DoD**: `dod_load_persist`・`dod_load_runtime_from_db`・`dod_load_media_paths_optional`・`dod_load_correct_value_integer`（DB CHECK 含む）／`dod_submit_persist`・`dod_submit_one_row_per_player`（upsert 単一行）／`dod_edit_persist`／`dod_join_no_seat_fixed`（台帳/座席列不在）／`dod_settle_initial_grant`（10000 初期化）。解決順は **環境変数 → `config` テーブル → 既定 8** を `resolveMaxTabletConnections` が担い、`admission` は R のみ。
 
-**MVP 境界**: 確定 8 テーブルのみ。**削除(D)を設けない**（取消は `rounds.stage` の巻き戻し U であって行削除ではない）。DB は integer/CHECK/unique/FK を強制でき、ローカルサーバ常時稼働と整合し **ホスト PC を DB/サーバにしない** ものを選定する。
+**MVP 境界**: 確定 8 テーブルのみ。**削除(D)を設けない**（取消は `rounds.stage` の巻き戻し U であって行削除ではない）。DB は integer/CHECK/unique/FK を強制でき、クラウドサーバ常時稼働と整合し **ホスト PC を DB/サーバにしない** ものを選定する。
 
 ### M3 — リアルタイム同期核（クラウド WS 権威・ロール投影・再接続）
 
@@ -306,7 +306,7 @@ describe("自動再採点の起動分界（SM-2 / IMPL 未満での非誘発）"
 | 項目 | 決定/既定 | 制約・選定軸 |
 |---|---|---|
 | ビルド順 | 純粋層(M0)→機械/採点(M1)→永続(M2)→同期(M3)→サーフェス(M4/M5/M6)→統合(M7)→E2E(M8) | 単一所有を先に確定し再実装ドリフトを排除（§1.5） |
-| DB 永続化技術 | 8 テーブルを integer/CHECK/unique/FK で強制できる DB を選定 | ローカルサーバ常時稼働と整合・ホスト PC を DB/サーバにしない |
+| DB 永続化技術 | 8 テーブルを integer/CHECK/unique/FK で強制できる DB を選定 | クラウドサーバ常時稼働と整合・ホスト PC を DB/サーバにしない |
 | host 判定点 | 接続確立時の `role` を全 host コマンドの単一判定点として参照 | 副司会を発明せず非 host は 403／未認証 401 |
 | 再採点の実行方式 | 実行時は差分更新、正しさの基準は `aggregateBalance` の全再計算 | 差分後 `balances` が全再計算と一致（`dod_rescore_matches_full_recompute`） |
 | 上限の持ち方 | 環境変数 `MAX_TABLET_CONNECTIONS`→`config`→既定 8、`src/config` が唯一の解決点 | 判定経路に `8` を置かない（IMPL-10・`dod_limit_no_hardcode`） |

@@ -6,6 +6,7 @@
 
 本プロジェクトのプロダクトは **家族クイズ操作盤**（SAVE MONEY 方式）。
 **クラウド上で実行する WEB アプリ**である（クラウド上のサーバで制御盤・TV・各解答者タブレットをリアルタイム同期。ホストPCはサーバにしない。本番当日のインターネット接続を前提とする）。※旧記述「ホストPCをローカルサーバとするオフライン完結」は 2026-08-08 の殿御下命により撤回済。
+本番は各端末が**クラウド公開 URL** へブラウザ接続する（形態の詳細: `docs/design/system_design.md`）。
 要件は `docs/requirements/requirements.md` に集約し、現在は**残論点の確定段階**である。
 
 ## CoDD とは（30秒版）
@@ -58,7 +59,9 @@ AI 呼び出しは既定で `claude --print`（Opus）を使う（`codd.yaml` �
 - `codd version` → 3.37.0
 - `codd greenfield --dry-run` が実行計画を表示すること（証跡: MAS リポ `tmp/cmd_2159_verify/`）
 
-## ローカル試遊（Phase1・家族クイズを手元で遊ぶ）
+## 開発環境での起動（開発者向け）
+
+本アプリの稼働形態はクラウド実行の WEB アプリである。以下は**開発時に手元で動作確認するための開発環境の手順**であり、本番の稼働形態ではない。
 
 前提: **Node 20** ／ npm。リポジトリのルート（本 README のある場所）で実行する。
 
@@ -67,8 +70,8 @@ npm install          # 依存の取得（qrcode 等）
 npm run dev          # tsc で dist へビルドし node dist/main.js を起動（= npm run start と同等）
 ```
 
-起動すると `http://localhost:3000` で待受する（WSL2 の localhost forwarding で Windows ブラウザからも到達可）。
-`.env` は任意（`.env.example` を複製して調整可。未設定でも既定値で動く）。
+開発サーバは `http://localhost:3000` で待受する（WSL2 の localhost forwarding で Windows ブラウザからも到達可）。本番では同じ画面群をクラウド公開 URL 上で提供する。
+`.env` は任意（`.env.example` を複製して調整可。未設定でも既定値で動く）。`.env` が存在する場合、`npm run dev` / `npm run start` は `node --env-file=.env` で自動読込する（Node 20.6+ の組込機能）。
 
 ### 画面（URL）
 
@@ -78,9 +81,9 @@ npm run dev          # tsc で dist へビルドし node dist/main.js を起動�
 | TV（観客） | `/tv` | 出題・解答オープン・正解・精算・総合一覧を live 表示（司会者操作に追従） |
 | 解答者（タブレット） | `/join` → `/tablet` | 氏名を入力して参加 → −10/−1/+1/+10 で 0〜100 を作り送信 |
 
-同一 PC の複数タブ（制御盤・TV・タブレット×人数分）で 1 卓を試遊できる（QR による実機参加は Phase2）。
+開発環境では同一 PC の複数タブ（制御盤・TV・タブレット×人数分）で 1 卓分の動作確認ができる。本番では各端末がそれぞれクラウド公開 URL へ接続する。
 
-### 遊び方（最小ループ）
+### 操作の最小ループ
 
 1. `/join` を人数分のタブレットで開き、氏名を入れて「参加する」（`/tablet` へ遷移する）。
 2. 制御盤 `/control-panel` で **「問題を読み込む」** → 第1問を出題（TV が出題面 a に切替）。
@@ -93,7 +96,8 @@ npm run dev          # tsc で dist へビルドし node dist/main.js を起動�
 live 反映は **SSE**（Server-Sent Events）で行う（`/events?role=host|answerer|audience`・ws 依存なし）。
 各画面は progressive enhancement で、初期 chrome は静的に返し `client.js` が SSE 購読・操作を担う。
 
-### スマホ実機で試す場合（任意）
+### 開発環境へ別端末（スマホ）から接続する場合（任意）
 
-同一 PC 複数タブなら不要。別端末（スマホ）で参加するなら、`0.0.0.0` bind＋WSL2 IP（`ip addr`）＋
+本番は各端末がクラウド公開 URL へ接続するため以下の設定は不要である。**開発環境でのみ**別端末から
+開発サーバへ到達させたい場合は、`0.0.0.0` bind＋WSL2 IP（`ip addr`）＋
 Windows 側 `netsh interface portproxy` の転送設定を併用し、`PUBLIC_BASE_URL` に到達可能な URL を設定する。

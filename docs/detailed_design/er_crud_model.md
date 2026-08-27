@@ -313,7 +313,7 @@ codd:
 
 ## 1. Overview
 
-本書は `save-money-switcher`（フジテレビ『賞金先渡しクイズ SAVE MONEY』方式を家族で遊ぶオフライン完結クイズ操作盤）の **ER 図（Mermaid erDiagram）と CRUD マトリクス** を確定する詳細設計書である。上位の `design:data-model-design`（データモデル設計）を技術的真実源とし、そこで定義された **8 テーブル**（`questions`／`participants`／`answers`／`rounds`／`game_state`／`settlements`／`balances`／`config`）の実体・関係・キー制約を ER 図として固定し、各テーブルに対する **アクター別 CRUD**・**モジュール別 書込み所有権**・**操作別 CRUD** を一意に定める。目的は、独立生成される実装ファイル間で「どの表を・誰が・どの操作で・どのモジュールから」変更してよいかの境界を先に確定し、再実装ドリフトと権限逸脱を排除することにある。
+本書は `save-money-switcher`（フジテレビ『賞金先渡しクイズ SAVE MONEY』方式を家族で遊ぶ、クラウド上で実行する WEB アプリ形式のクイズ操作盤）の **ER 図（Mermaid erDiagram）と CRUD マトリクス** を確定する詳細設計書である。上位の `design:data-model-design`（データモデル設計）を技術的真実源とし、そこで定義された **8 テーブル**（`questions`／`participants`／`answers`／`rounds`／`game_state`／`settlements`／`balances`／`config`）の実体・関係・キー制約を ER 図として固定し、各テーブルに対する **アクター別 CRUD**・**モジュール別 書込み所有権**・**操作別 CRUD** を一意に定める。目的は、独立生成される実装ファイル間で「どの表を・誰が・どの操作で・どのモジュールから」変更してよいかの境界を先に確定し、再実装ドリフトと権限逸脱を排除することにある。
 
 ### 1.1 本書の位置づけとスコープ
 
@@ -329,7 +329,7 @@ codd:
 | ER-2 | `db:rounds` / `module:game_flow` | 各問がどのモードまで進んだか（b/c/d）を永続化し、再採点判定の根拠にする（E-3残） | 状態遷移図 §2.2、CRUD §2.4、所有権 §3.1 |
 | ER-3 | `db:config` / `module:config` | 接続上限等の可変値を設定として保持し、コードに定数リテラルを埋め込まない（論点10） | ER §2.1、CRUD（op_enforce_connection_limit=R）§2.4、所有権 §3.1・§4.2 |
 
-上位から継承する不変条件も本 CRUD 境界で担保する: **円建て固定**（`point`/`pt`/`点` を格納・派生・表示のどこにも持たない）、**0〜100 整数の三層防衛**（UI＋サーバ＋DB CHECK）、**ロール境界**（`role: host` のみが進行段階を前進させる書込みを起こす）、**ホスト PC をサーバ/DB にしない**（永続化はローカルサーバ側 DB、CRUD の実行点はコード内モジュール）。
+上位から継承する不変条件も本 CRUD 境界で担保する: **円建て固定**（`point`/`pt`/`点` を格納・派生・表示のどこにも持たない）、**0〜100 整数の三層防衛**（UI＋サーバ＋DB CHECK）、**ロール境界**（`role: host` のみが進行段階を前進させる書込みを起こす）、**ホスト PC をサーバ/DB にしない**（永続化はクラウドサーバ側 DB、CRUD の実行点はコード内モジュール）。
 
 ### 1.3 実装・ツールチェーン前提（scaffold 固定・釈義不可・本書の遵守宣言）
 
@@ -630,7 +630,7 @@ export function resolveMaxTabletConnections(source: ConfigSource): number {
 }
 ```
 
-- **マイグレーション配置**: スキーマ/マイグレーション定義は `src/`（例 `src/persistence/`）配下に置き、`tests/`・runner 設定ファイル（`package.json`/`vitest.config.ts` 等）には置かない（output-path fence 遵守）。選定 DB は integer/CHECK/unique/FK を強制できることを要件とし、ローカルサーバ常時稼働と整合し、ホスト PC を DB/サーバにしない（INV-1 継承）。
+- **マイグレーション配置**: スキーマ/マイグレーション定義は `src/`（例 `src/persistence/`）配下に置き、`tests/`・runner 設定ファイル（`package.json`/`vitest.config.ts` 等）には置かない（output-path fence 遵守）。選定 DB は integer/CHECK/unique/FK を強制できることを要件とし、クラウドサーバ常時稼働と整合し、ホスト PC を DB/サーバにしない（INV-1 継承）。
 
 ### 4.3 CRUD 不変条件の受け入れ（Vitest・`tests/` 配下・`.js` 指定子）
 
@@ -956,7 +956,7 @@ operation_flow:
 
 | 項目 | 決定/既定 | 制約・選定軸 |
 |---|---|---|
-| DB 永続化技術 | 8 テーブルを保持できる DB を選定 | ローカルサーバ常時稼働と整合。`integer`・範囲 `CHECK`・`unique`・FK を defense-in-depth で強制できること。ホスト PC を DB/サーバにしない（INV-1 継承）。 |
+| DB 永続化技術 | 8 テーブルを保持できる DB を選定 | クラウドサーバ常時稼働と整合。`integer`・範囲 `CHECK`・`unique`・FK を defense-in-depth で強制できること。ホスト PC を DB/サーバにしない（INV-1 継承）。 |
 | `rounds`/`game_state` 初期化タイミング | op_load_questions で 10 `rounds`(accepting) と `game_state`(lobby) を C | 「各問の到達段階を永続」（ER-2）を満たすための配置。要件外の状態を発明しない。 |
 | 削除(D)の有無 | 確定スコープに D なし。取消は `rounds.stage` の巻戻し U（行削除ではない） | soft-no-delete。監査可能性を保つ。 |
 | 上限設定の持ち方 | 環境変数 `MAX_TABLET_CONNECTIONS` を既定機構、`config` テーブルも保持可能 | 解決順 環境変数→`config`→既定 8。`src/config/` が唯一の解決点（ER-3）。 |
