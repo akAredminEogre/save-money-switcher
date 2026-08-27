@@ -431,7 +431,13 @@ export interface QuestionsRepository {
 }
 ```
 
-### 2.3 `participants` テーブル
+### 2.3 ~~`participants` テーブル~~（**2026-08-28 殿裁可 案A により改定**・§2.3a を参照）
+
+> **改定**: 身元の権威は `accounts`（恒久アカウント・§2.3a）へ移り、`participants`（当日その場参加）は
+> 用いない。エピソードごとの参加者は P2 で `episode_participants` として表し、既存 QC 済みドメイン
+> （scoring / game_state / realtime_sync / render_*）が鍵とする `participantId` には
+> `episode_participants.id` を渡す（ドメイン側は無改変）。以下は履歴として残す。
+
 
 | カラム | 型 | 制約・責務 |
 |---|---|---|
@@ -451,6 +457,59 @@ export interface Participant {
   connectionId: string; // 1 人 = 1 台
 }
 ```
+
+### 2.3a `accounts` テーブル（**2026-08-28 殿裁可 案A・P1 実装済**）
+
+| カラム | 型 | 制約・責務 |
+|---|---|---|
+| `id` | text (PK) | 内部識別子（画面へ表示しない） |
+| `login_id` | text | ログイン ID（`unique`・空白を含まない 64 文字以内） |
+| `password_hash` | text | scrypt 導出鍵（16 進 128 文字）。**平文は保存しない** |
+| `password_salt` | text | scrypt ソルト（16 進） |
+| `role` | text | `admin` \| `contestant` |
+| `display_name` | text | 画面表示名（既存 `isValidDisplayName` / 上限 20 を再利用） |
+| `created_at` | text | ISO-8601 |
+| `updated_at` | text | ISO-8601 |
+
+- パスワードは **`node:crypto` の scrypt** のみで扱う（外部依存を増やさない）。平文は保存・記録・表示の
+  いずれもしない（AC-A8）。
+- 一意性（`login_id`）は永続境界 `AccountStore.insertIfLoginIdAbsent` の原子的 insert-if-absent が担保する。
+- 認可ロールへの写像は `toSessionRole`（`admin → host` / `contestant → answerer`）が唯一の変換点である。
+
+```typescript
+// src/accounts/account.ts
+export interface Account {
+  readonly id: string;
+  readonly loginId: string;
+  readonly passwordHash: string;   // scrypt（平文は持たない）
+  readonly passwordSalt: string;
+  readonly role: "admin" | "contestant";
+  readonly displayName: string;
+  readonly createdAt: string;      // ISO-8601
+  readonly updatedAt: string;      // ISO-8601
+}
+```
+
+### 2.3b エピソード系テーブル（**案A・P2 で実装予定・現時点は未実装**）
+
+案A の全体像として次の 4 表を置くが、**P1 の実装範囲外**であり本リポジトリにはまだ存在しない
+（在らぬものを在るかのように書かないため、実装状況をここに明記する）。
+
+| テーブル | 主なカラム | 役割 |
+|---|---|---|
+| `episodes` | `id` / `title` / `status`(`draft`\|`live`\|`finished`) / `created_by` / 時刻 | 1 回の収録・開催 |
+| `episode_invitations` | `episode_id` / `account_id` / `invited_at`（PK は 2 列） | 回への参加権（招待） |
+| `episode_participants` | `id` / `episode_id` / `account_id` / `joined_at`（`unique(episode_id, account_id)`） | 実際に参加した解答者。**`id` を既存ドメインの `participantId` として渡す** |
+| `episode_questions` | `id` / `episode_id` / `question_number` / `text` / `correct_value` / `image_path` / `video_path` | 回ごとの問題・正解 |
+
+### 2.3c 永続方式（**案A・設計 D7**）
+
+- 実行環境は Node **v20.20.0** ゆえ `node:sqlite`（Node 22+）は使えない。家族規模（アカウント数〜十数）
+  では **JSON ファイル ＋ アトミック書込**（一時ファイルへ書いて rename）で足りるため、初手は
+  zero-dependency の JSON 永続とする（`src/persistence/json_file.ts` / `src/accounts/json_account_store.ts`）。
+- 置き場は `DATA_DIR`（既定 `./data`）が単一の解決点である（`src/config/data_dir.ts`）。
+- 境界（`AccountStore`）と実装を分けてあるため、規模が増えたら Store 実装の差し替えだけで
+  SQLite 等へ移せる。
 
 ### 2.4 `answers` テーブル（規約 DM-3・0〜100 整数）
 

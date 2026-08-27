@@ -21,7 +21,8 @@
     }).catch(function () {});
   });
 
-  var es = new EventSource("/events?role=host");
+  // 申告するのは「今開いている面」だけ。購読可否と投影ロールはサーバがセッションから決める。
+  var es = new EventSource("/events?surface=control_panel");
   es.onmessage = function (ev) {
     try {
       var msg = JSON.parse(ev.data);
