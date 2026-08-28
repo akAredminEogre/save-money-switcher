@@ -43,11 +43,16 @@ codd:
 >    非 admin は 403。ホスト操作コマンド（`POST /host/command`）も同じ門番を通る。
 > 4. **家族限定アクセス制御（PC-INV-3）**: `JOIN_ACCESS_MODE=authenticated`（分岐 B）で確定。
 >    分岐 A（`JOIN_ACCESS_TOKEN`）は用いない。
-> 5. **データ退避**: アカウントは `DATA_DIR`（既定 `./data`）配下の `accounts.json`。破壊的変更・
->    再デプロイの前に**このファイルを退避**する（消えると全員ログインできなくなる）。
+> 5. **データ退避**: アカウントは `DATA_DIR`（既定 `./data`）配下の `accounts.json`、エピソード
+>    （回・招待・参加者・問題）は同じ置き場の `episodes.json`。破壊的変更・
+>    再デプロイの前に**この 2 ファイルを退避**する（消えると全員ログインできなくなり、
+>    作った回・招待・問題も失われる）。
+> 6. **エピソード運用（P2 実装済）**: 司会者は `/admin/episodes` で回を作り、詳細
+>    （`/admin/episodes/<id>`）で問題と正解を登録し、解答者アカウントを作って招待する。
+>    解答者は `/episodes` の一覧から**招待された回**を選んで参加する。1 卓が同時に進められる
+>    回は 1 つで、別の回が進行中のときは載せ替えを拒む（進行中のゲームを消さない）。
 >
-> エピソード・招待・エピソード参加（P2）と Lightsail デプロイ（P3）は未実装であり、本書へは
-> 実装後に追記する。
+> Lightsail デプロイ（P3）は未実装であり、本書へは実装後に追記する。
 
 ## 1. Overview
 
@@ -269,7 +274,7 @@ describe("接続上限のコード無改修な変更（8→16→32）", () => {
 |---|---|---|---|---|
 | `MAX_TABLET_CONNECTIONS` | `connection_limit.ts` : `resolveMaxTabletConnections()` | 8 | 非機密 | タブレット同時接続上限（§2.7 で 16/32 へ変更） |
 | `PUBLIC_BASE_URL` | `public_base_url.ts` : `resolvePublicBaseUrl()` | 必須（未設定は起動拒否） | 非機密 | 参加 QR／~~`/join`~~ **`/login`** の基底クラウド公開 URL。**https ならセッション Cookie に `Secure` が付く** |
-| `DATA_DIR` | `data_dir.ts` : `resolveDataDir()` | `./data`（CWD 相対） | 非機密 | 永続データ（`accounts.json`）の置き場。**デプロイで消えぬ場所を指すこと** |
+| `DATA_DIR` | `data_dir.ts` : `resolveDataDir()` | `./data`（CWD 相対） | 非機密 | 永続データ（`accounts.json` / `episodes.json`）の置き場。**デプロイで消えぬ場所を指すこと** |
 | `ADMIN_LOGIN_ID` | `seed_admin.ts` : `resolveInitialAdminCredentials()` | undefined（→投入せず起動） | **機密** | 初期管理者のログイン ID（初回投入時のみ与える） |
 | `ADMIN_INITIAL_PASSWORD` | `seed_admin.ts` : `resolveInitialAdminCredentials()` | undefined（→投入せず起動） | **機密** | 初期管理者の初期パスワード。**保存も記録もされず scrypt ハッシュだけが残る** |
 | `ADMIN_DISPLAY_NAME` | `seed_admin.ts` : `resolveInitialAdminCredentials()` | 「司会者」 | 非機密 | 初期管理者の画面表示名 |

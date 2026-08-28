@@ -33,7 +33,7 @@ import {
   currentStage,
   currentQuestion,
   answersForQuestion,
-  QUESTIONS_PER_GAME,
+  questionCount,
   type Session,
 } from "./session.js";
 
@@ -147,6 +147,10 @@ export function applyHostCommand(
  * 進行中の問で押された場合は無操作（再読込で状態を壊さない）。
  */
 function loadOrAdvance(s: Session): CommandResult {
+  if (questionCount(s) === 0) {
+    // 問題が 1 問も登録されていない回は出題を始められない（在らぬ問を捏造しない）。
+    return { ok: false, status: 409, error: "この回にはまだ問題が登録されていません。", events: [] };
+  }
   if (!s.loaded) {
     s.loaded = true;
     s.game.phase = "in_progress";
@@ -159,14 +163,14 @@ function loadOrAdvance(s: Session): CommandResult {
     // 進行中の問での再読込は無操作（出題面を壊さない）。
     return { ok: true, events: [] };
   }
-  if (s.game.currentQuestionNumber < QUESTIONS_PER_GAME) {
+  if (s.game.currentQuestionNumber < questionCount(s)) {
     s.game.currentQuestionNumber += 1;
     s.stages.set(s.game.currentQuestionNumber, INITIAL_STAGE);
     s.game.phase = "in_progress";
     s.game.tvMode = stageToTvMode(INITIAL_STAGE);
     return { ok: true, events: [stamp({ type: "tv_mode_changed", payload: { mode: s.game.tvMode } }, s)] };
   }
-  // 全問精算済み: 通算一覧（e）へ。
+  // 登録された全問が精算済み: 通算一覧（e）へ。
   s.game.phase = "finished";
   s.game.tvMode = "e";
   return { ok: true, events: [stamp({ type: "tv_mode_changed", payload: { mode: "e" } }, s)] };
