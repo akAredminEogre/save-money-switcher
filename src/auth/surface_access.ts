@@ -42,7 +42,7 @@ export type LiveSubscription =
  * 当該セッションが当該面を live 購読してよいかを判定する。
  *
  *   - `control_panel`: admin セッションのみ（未認証 401 / 非 admin 403）。host 投影を流す。
- *   - `tablet`: ログイン済みなら誰でも（未認証 401）。**ロールに関わらず answerer 投影**を流す
+ *   - `tablet`: ログイン済みなら誰でも（未認証 401）。**ロールに関わらず contestant 投影**を流す
  *     （司会者が解答面を開いても、その面には解答面の投影が要る）。
  *   - `tv`: 観客向け受動面ゆえ誰でも購読でき、audience 投影を流す。
  */
@@ -60,7 +60,7 @@ export function authorizeLiveSurface(
     case "tablet":
       return session === undefined
         ? { kind: "denied", status: 401 }
-        : { kind: "granted", role: "answerer" };
+        : { kind: "granted", role: "contestant" };
     case "tv":
       return { kind: "granted", role: "audience" };
   }

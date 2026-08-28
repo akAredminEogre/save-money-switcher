@@ -16,7 +16,7 @@
 /**
  * 制御盤サーフェスの可視トリガー・禁止要素・禁止コピー走査（E2E・SCO-1 /
  * surface_copy_obligations §2.2・§2.7 / op_render_control_panel_surface の
- * dod_cp_visible_host_triggers / dod_cp_no_answerer_input_face /
+ * dod_cp_visible_host_triggers / dod_cp_no_contestant_input_face /
  * dod_cp_shows_join_qr_and_roster / dod_cp_no_internal_leak）。
  *
  * /control-panel を Playwright（ライブラリ import）で実ブラウザ描画し、宣言・検証は
@@ -53,7 +53,7 @@ const HOST_TRIGGER_LABELS = [
 ] as const;
 
 /** 解答者ステッパのボタン名（+/− の ASCII・全角・数学マイナスの各表記）。制御盤には不在であること。 */
-const ANSWERER_STEPPER_LABELS = Array.from(
+const CONTESTANT_STEPPER_LABELS = Array.from(
   new Set(["+1", "+10", "-1", "-10", "−1", "−10", "＋1", "＋10"]),
 );
 
@@ -136,11 +136,11 @@ describe("制御盤サーフェスの可視トリガー・禁止要素・禁止�
       expect(res).not.toBeNull();
       assertServerHealthy(res!);
 
-      // dod_cp_no_answerer_input_face: 解答者タブレット固有の 4 ボタンステッパ（+1/-1/+10/-10）が
+      // dod_cp_no_contestant_input_face: 解答者タブレット固有の 4 ボタンステッパ（+1/-1/+10/-10）が
       // 制御盤に露出しないこと。ステッパ名を持つボタンが 1 つでもあれば司会者面へ入力送信面が
       // 漏れており RED。各表記（ASCII/全角/数学マイナス）を総当りして総数 0 を確かめる。
       let stepperButtonCount = 0;
-      for (const label of ANSWERER_STEPPER_LABELS) {
+      for (const label of CONTESTANT_STEPPER_LABELS) {
         stepperButtonCount += await page.getByRole("button", { name: label, exact: true }).count();
       }
       expect(stepperButtonCount).toBe(0);
@@ -213,7 +213,7 @@ describe("制御盤サーフェスの可視トリガー・禁止要素・禁止�
       // 可視コピー（innerText）へスコープした禁止コピー走査（§3.1）。
       const visibleText = await page.locator("body").innerText();
 
-      // dod_cp_no_internal_leak: 内部ロール識別子（host/answerer/audience）の非露出。
+      // dod_cp_no_internal_leak: 内部ロール識別子（host/contestant/audience）の非露出。
       expect(scanForbiddenCopy(visibleText, { categories: ["internal_role_identifier"] })).toHaveLength(0);
 
       // 点化文言（point/pt/点）の非露出（円建て固定・現金感を薄めない）。

@@ -879,7 +879,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const identity =
       session === undefined
         ? null
-        : role === "answerer"
+        : role === "contestant"
           ? ((await resolveSessionParticipantId(episodeDeps, session.accountId)) ?? null)
           : session.accountId;
     const id = addConnection(res, role, identity);

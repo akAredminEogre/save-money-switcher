@@ -170,8 +170,8 @@ steps:
   id: implement_connection_lifecycle_admission
   kind: state_machine_admission
   rationale: Define ConnectionState (handshaking/admitted/connected/disconnected/rejected),
-    AdmitResult, and admitTablet(connectedAnswerers, env) returning over_limit when
-    connectedAnswerers >= resolveMaxTabletConnections(env) else ok — the pure over-limit
+    AdmitResult, and admitTablet(connectedContestants, env) returning over_limit when
+    connectedContestants >= resolveMaxTabletConnections(env) else ok — the pure over-limit
     rejection trigger with boundaries 8/9, 16/17, 32/33. The connection_rejected +
     WS close(4001) and existing-connection immutability are realtime_sync's; admission
     itself is a pure decision.

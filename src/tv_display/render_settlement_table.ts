@@ -22,7 +22,7 @@
  * から結合して当該問フォーカスで提示する。氏名は `participants.name`（自己入力）、増減円・
  * 残額・ピタリ賞加算額は単一の整形点 {@link formatYen} を経由して **円建て固定**で表す
  * （点数化・ポイント化しない）。ロール可視ラベルは単一供給点 {@link ROLE_LABELS} から取り、
- * 内部識別子（host/answerer）を露出させない。氏名・残額の突合が取れない不整合な行は
+ * 内部識別子（host/contestant）を露出させない。氏名・残額の突合が取れない不整合な行は
  * 描画対象から外し、内部識別子（participant_id 等）を可視値に出さない。
  */
 
@@ -90,7 +90,7 @@ export function renderTvModeD(
 
   return {
     mode: "d",
-    caption: `${ROLE_LABELS.answerer}の結果`,
+    caption: `${ROLE_LABELS.contestant}の結果`,
     headers: SETTLEMENT_TABLE_HEADERS,
     rows,
   };

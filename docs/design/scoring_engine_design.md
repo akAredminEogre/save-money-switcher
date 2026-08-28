@@ -42,7 +42,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -52,7 +52,7 @@ codd:
       label: クラウドサーバ（realtime_sync）
     operations:
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -78,7 +78,7 @@ codd:
       trigger: 制御盤で得点精算を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answer_revealed
       to_state: settlement_computed
       measurement_source: answers.value と questions.correct_value
@@ -105,7 +105,7 @@ codd:
       - id: dod_settle_integer_only
         text: error / delta_yen / pitari_bonus_yen / amount がすべて整数で小数値を持たない
       - id: dod_settle_host_only
-        text: 得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される
+        text: 得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される
     - id: op_live_edit_correct
       actor: host
       verb: edit
@@ -113,7 +113,7 @@ codd:
       trigger: 制御盤のライブ編集 UI で正解を更新
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       durable_state: questions.correct_value 更新
       readback: DB 再取得で編集後の正解値を返す
       expected_outcomes:
@@ -214,7 +214,7 @@ codd:
 
 ### 1.4 採点結果を表示するサーフェスへのコピー義務
 
-採点エンジンが値を供給するサーフェスとロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: answerer` → **解答者**、観客（TV 視聴者）。可視コピーには **可視ラベル** を用い、内部識別子（host/answerer）・実装根拠・環境前提を露出させない。全サーフェス共通で `point`／`pt`／`点` を **禁止パターン** とし、金額は「円」で表す（SC-2）。
+採点エンジンが値を供給するサーフェスとロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: contestant` → **解答者**、観客（TV 視聴者）。可視コピーには **可視ラベル** を用い、内部識別子（host/contestant）・実装根拠・環境前提を露出させない。全サーフェス共通で `point`／`pt`／`点` を **禁止パターン** とし、金額は「円」で表す（SC-2）。
 
 | サーフェス | ルート | 主対象アクター | 目的 | 許可表示 | 禁止表示 | 必須の可視コピー意図 | 禁止コピー |
 |---|---|---|---|---|---|---|---|
@@ -529,7 +529,7 @@ export function determineWinners(balances: readonly Balance[]): readonly Balance
 }
 ```
 
-- **権限境界（INV-5 継承・release-blocking）**: 得点精算（`op_compute_settlement`）・正解ライブ編集による再採点（`op_auto_rescore` の起点 `op_live_edit_correct`）・取消を起こすトリガー発火は **`role: host` セッションのみ**。`role: answerer` からの当該コマンドはサーバ側で **401/403 拒否** する。採点エンジン自体は計算純関数であり、呼出し側（`src/game_state/` / `src/control_panel/`）がロール判定の単一判定点を通した後に呼び出す。
+- **権限境界（INV-5 継承・release-blocking）**: 得点精算（`op_compute_settlement`）・正解ライブ編集による再採点（`op_auto_rescore` の起点 `op_live_edit_correct`）・取消を起こすトリガー発火は **`role: host` セッションのみ**。`role: contestant` からの当該コマンドはサーバ側で **401/403 拒否** する。採点エンジン自体は計算純関数であり、呼出し側（`src/game_state/` / `src/control_panel/`）がロール判定の単一判定点を通した後に呼び出す。
 - 採点はクラウド権威サーバ側で行い、ホスト PC をサーバ／計算主体にしない（INV-1 継承）。
 
 ### 2.11 ピタリ賞の拠出配分（F-02・確定部分と保留部分の分離）
@@ -670,7 +670,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -680,7 +680,7 @@ operation_flow:
       label: クラウドサーバ（realtime_sync）
   operations:
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -703,7 +703,7 @@ operation_flow:
       target: balances
       trigger: 制御盤で得点精算を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answer_revealed
       to_state: settlement_computed
       measurement_source: answers.value と questions.correct_value
@@ -726,14 +726,14 @@ operation_flow:
         - id: dod_settle_integer_only
           text: error / delta_yen / pitari_bonus_yen / amount がすべて整数で小数値を持たない
         - id: dod_settle_host_only
-          text: 得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される
+          text: 得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される
     - id: op_live_edit_correct
       actor: host
       verb: edit
       target: question_or_correct_value
       trigger: 制御盤のライブ編集 UI で正解を更新
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       durable_state: questions.correct_value 更新
       readback: DB 再取得で編集後の正解値を返す
       expected_outcomes:

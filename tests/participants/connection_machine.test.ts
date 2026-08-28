@@ -21,7 +21,7 @@ import {
 
 // Connection Lifecycle Machine（src/participants/connection_machine.ts の admitTablet）の
 // 同時接続上限の境界を in-process で検証する（SM-3・detailed_design:state-machines
-// §2.5 / §3.3 / §4.4 / §4.5）。admitTablet は「現在の answerer 接続数」と config が解決した
+// §2.5 / §3.3 / §4.4 / §4.5）。admitTablet は「現在の contestant 接続数」と config が解決した
 // 上限だけを参照して受入可否（{ kind: "ok" } / { kind: "over_limit" }）を返す純関数で、
 // 上限値そのものは src/config/connection_limit.ts が単一解決する（既定 8 はそこの単一定数）。
 // 本テストは env を明示注入して process.env に依存せず駆動し、

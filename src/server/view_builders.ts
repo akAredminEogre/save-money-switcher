@@ -1,12 +1,12 @@
 /**
  * ロール別サーフェス断片ビルダ（`module:server`・cmd_2159 Phase1・要確認C）。
  *
- * {@link session} の権威状態から、各ロール（host=制御盤 / answerer=タブレット /
+ * {@link session} の権威状態から、各ロール（host=制御盤 / contestant=タブレット /
  * audience=TV）の描画済み HTML 断片を組み立てる。描画は既存 render モジュール
  * （`renderControlPanelHtml` / `renderTabletSurface` / `renderTvSurface`＋`serializeTvSurface`）を
  * **import 合成のみ**で用い、session state → 各 render モジュールの入力型（`ControlPanelInput` /
  * `TabletSurfaceState` / `TvSurfaceRequest`）への写像だけを新規に担う。ロール可視境界
- * （answerer=自分の残額のみ / audience=TV のみ / 開示前は他者解答を伏せる）は、ロールごとに
+ * （contestant=自分の残額のみ / audience=TV のみ / 開示前は他者解答を伏せる）は、ロールごとに
  * 対応する面だけを組むこと自体で担保される（`fanout.projectForRole` と同じ可視規約）。
  *
  * 起動直後（lobby・未出題）の TV a は、出題内容を出さず受動シェルのみを提示する。これにより
@@ -75,7 +75,7 @@ export function buildControlPanelFragment(ctx: ControlPanelContext, s: Session =
 }
 
 /**
- * タブレット（answerer）サーフェス断片を組み立てる。`participantId` が無い（未参加・匿名）
+ * タブレット（contestant）サーフェス断片を組み立てる。`participantId` が無い（未参加・匿名）
  * 接続は残額 0・未送信で描画し、静的 GET /tablet と一致させる。数値ステッパの作成中値は
  * クライアント局所状態ゆえサーバは 0 を返し（クライアントが swap 後に自分の値を復元する）。
  */

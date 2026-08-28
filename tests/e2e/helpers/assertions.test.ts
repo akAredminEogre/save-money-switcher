@@ -161,7 +161,7 @@ describe("assertions（円建て・6列表・可視ロールラベル）", () =>
 
   it("可視ロールラベルは司会者/解答者/観客であり内部識別子露出を拒否する", () => {
     expect(visibleRoleLabel("host")).toBe("司会者");
-    expect(visibleRoleLabel("answerer")).toBe("解答者");
+    expect(visibleRoleLabel("contestant")).toBe("解答者");
     expect(visibleRoleLabel("audience")).toBe("観客");
     expect(isVisibleRoleLabel("司会者")).toBe(true);
     expect(isVisibleRoleLabel("host")).toBe(false);

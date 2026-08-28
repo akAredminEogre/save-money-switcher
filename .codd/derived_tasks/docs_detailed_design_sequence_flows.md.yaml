@@ -208,7 +208,7 @@ tasks:
   title: Implement role projection for fan-out
   description: 'Implement `projectForRole`, the single-owner role projection that
     every fan-out passes through, structurally excluding other players'' answers/balances/scores
-    from answerer payloads and withholding all others'' answers before disclosure
+    from contestant payloads and withholding all others'' answers before disclosure
     while preserving `currency: 円` (§3.3, `dod_broadcast_role_projection`). It transforms
     a domain event/snapshot for a given role.'
   source_design_doc: docs/detailed_design/sequence_flows.md
@@ -244,7 +244,7 @@ tasks:
 - id: heartbeat_disconnect_detection
   title: Implement heartbeat disconnect detection
   description: 'Implement the heartbeat timing unit that flags a disconnect after
-    ping 15s / pong grace 30s so the answerer slot is released in step with connection-limit
+    ping 15s / pong grace 30s so the contestant slot is released in step with connection-limit
     accounting (Diagram 2.6, §4.3). Its focused check: given last-pong time and now,
     decide liveness versus expiry.'
   source_design_doc: docs/detailed_design/sequence_flows.md

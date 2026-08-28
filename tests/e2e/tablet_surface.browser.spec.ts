@@ -17,7 +17,7 @@
  * タブレット面の可視要素・禁止コピー・禁止導線の走査（E2E・SCO-2 /
  * surface_copy_obligations §2.3・§2.8・§2.11 / op_render_tablet_surface の
  * dod_tablet_minimal_elements_only / dod_tablet_no_others_info /
- * dod_tablet_no_control_actions / dod_tablet_answerer_copy_only）。
+ * dod_tablet_no_control_actions / dod_tablet_contestant_copy_only）。
  *
  * /tablet を Playwright（ライブラリ import）で実ブラウザ描画し、宣言・検証は Vitest
  * （describe/it/expect）で行う（§1.2・§2.11・§3.1）。本スペックは解答者タブレットの
@@ -133,17 +133,17 @@ describe("タブレット面の可視要素・禁止コピー・禁止導線（S
 
       // 可視コピー（描画済みテキスト）を取得する。innerText は属性/マークアップ/生成 id を
       // 含まず、dod が govern する「可視コピー」そのものへスコープされる（§3.1 の走査方式）。
-      // タブレットは入力専用最小 UI ゆえ innerText 全体が dod_tablet_answerer_copy_only の対象。
+      // タブレットは入力専用最小 UI ゆえ innerText 全体が dod_tablet_contestant_copy_only の対象。
       const visibleText = await page.locator("body").innerText();
 
-      // dod_tablet_answerer_copy_only: 司会者向け操作語が可視文言に一切現れない。いずれかが
+      // dod_tablet_contestant_copy_only: 司会者向け操作語が可視文言に一切現れない。いずれかが
       // 漏れると当該 not.toContain が RED になり、入力専用面へ司会者面の文言が混入したことを
       // 捕捉する（「入力専用に限られる」の上界を可視コピー側で押さえる）。
       for (const word of HOST_OPERATIONAL_WORDS) {
         expect(visibleText).not.toContain(word);
       }
 
-      // 内部ロール識別子（host/answerer/audience）の非露出（VB-79/VB-80 をタブレット面で補強）。
+      // 内部ロール識別子（host/contestant/audience）の非露出（VB-79/VB-80 をタブレット面で補強）。
       expect(scanForbiddenCopy(visibleText, { categories: ["internal_role_identifier"] })).toHaveLength(0);
 
       // 点化文言（point/pt/点）の非露出（円建て固定・現金感を薄めない・VB-35 をタブレット面で補強）。

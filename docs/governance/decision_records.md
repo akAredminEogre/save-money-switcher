@@ -139,7 +139,7 @@ codd:
 
 #### ADR-論点1 — 同期方式 = クラウド WEB アプリ（2026-07-25 確定／2026-08-08 改定）
 
-- **決定**: プロダクトは WEB アプリとして構築する。**クラウド上のサーバ**へ制御盤（`role: host` のホスト画面 `/control-panel`）・TV 表示（`/tv`）・各解答者端末（`role: answerer` のタブレット `/tablet`）を接続し、インターネット経由の WebSocket でリアルタイム同期する。ホスト PC はサーバにしない。
+- **決定**: プロダクトは WEB アプリとして構築する。**クラウド上のサーバ**へ制御盤（`role: host` のホスト画面 `/control-panel`）・TV 表示（`/tv`）・各解答者端末（`role: contestant` のタブレット `/tablet`）を接続し、インターネット経由の WebSocket でリアルタイム同期する。ホスト PC はサーバにしない。
 - **却下（🟦・単独では第二要件を満たせない）**: (a) 同一 PC 2ウィンドウ＋`localStorage`/`BroadcastChannel`、(b) Presentation API 単独。いずれも別端末（解答者タブレット）を同一同期網に載せられない。
 - **改定履歴**: 当初は「ローカルサーバ＋WebSocket（ホスト PC がサーバ）」として整理していたが、2026-08-08 の殿御下命でクラウドサーバ構成へ改めた。
 - **影響モジュール**: `src/realtime_sync/`（クラウド WebSocket）・`src/control_panel/`・`src/tv_display/`・`src/tablet/`。
@@ -301,7 +301,7 @@ describe("scoring", () => {
 - **取消**: 押し間違いの**取り消しも司会者（制御盤）のみが発動できる操作として初版から含める**（`trigger_undone`）。★軍師の当初推奨「取り消し・再回答は初版で作らない」から一点変更＝殿仰せ優先。
 - **未確定の扱い**: 取り消しの具体挙動（直近操作のみ戻せるか／任意問題を再開示できるか等）に曖昧が残れば、**推測実装せず F028 で選択肢を添えて殿判断**を仰ぐ（→ §3.2）。
 - **影響モジュール**: `src/control_panel/`・`src/game_state/`・`src/realtime_sync/`。TV 5モード切替も「操作盤側から」で論点7 と整合。
-- **アクセス制御（具体）**: `answers_locked`/`answers_opened`/`answer_revealed`/`trigger_undone` を発火できるのは `role: host` セッションに限定し、`role: answerer` からの当該コマンドはサーバ側で拒否する。
+- **アクセス制御（具体）**: `answers_locked`/`answers_opened`/`answer_revealed`/`trigger_undone` を発火できるのは `role: host` セッションに限定し、`role: contestant` からの当該コマンドはサーバ側で拒否する。
 
 ### 2.7 参加登録・接続上限（`module:participants` / `module:config`）
 
@@ -317,7 +317,7 @@ describe("scoring", () => {
   - パスワードは **`node:crypto` の scrypt**（外部依存を増やさない）。平文は保存・記録・表示のいずれもしない。
   - 身元は **サーバ側セッション ＋ HttpOnly Cookie**。localStorage の participantId は廃止する。
   - 認可判定は既存の単一決定点 `src/participants/authorize.ts`（`requireHost` / 401 / 403）を再利用し、
-    `admin → host` / `contestant → answerer` の写像だけを新設する（判定核を作り直さない）。
+    `admin → host` / `contestant → contestant` の写像だけを新設する（判定核を作り直さない）。
   - 家族限定アクセス制御（PC-INV-3）は `JOIN_ACCESS_MODE=authenticated`（分岐 B）で満たす。
     分岐 A（URL 秘匿トークン）は用いない。
   - QR は**破棄せず意味を付け替える**：符号化先を `/join` から `/login` へ変更する。

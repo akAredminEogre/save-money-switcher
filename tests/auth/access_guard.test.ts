@@ -34,7 +34,7 @@ describe("auth/access_guard admin 専用サーフェスの門番", () => {
 
   it("認証済みだが admin でないロールは 403（ログインへ誘導しない）", () => {
     const registry = createSessionRegistry();
-    for (const role of ["answerer", "audience"] as const) {
+    for (const role of ["contestant", "audience"] as const) {
       const outcome = guardAdminSurface(registry.issue("account-1", role));
       expect(outcome.kind).toBe("forbidden");
       if (outcome.kind === "forbidden") expect(outcome.status).toBe(HTTP_FORBIDDEN);

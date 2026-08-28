@@ -20,7 +20,7 @@ codd:
     reason: 制御盤サーフェスの目的・対象（司会者）・許可導線（締切/開示/正解発表/精算/次へ・戻る・個別ジャンプ/問題・正解ライブ編集/取消）・禁止導線を定義し、文言は司会者の運用言語で表すこと（N-3・論点7）。違反時リリース不可。
   - targets:
     - module:tablet
-    - role:answerer
+    - role:contestant
     reason: タブレットは入力専用最小 UI（問題番号・数値入力・送信済み表示・自分の残額のみ）に限定し、出題内容・他者情報・全体一覧の提示を禁止する。文言は解答者向けで、内部処理・権限境界の説明やデモ/テスト用ラベルを載せないこと（N-1・第三要件）。違反時リリース不可。
   - targets:
     - module:tv_display
@@ -39,7 +39,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -58,7 +58,7 @@ codd:
       visible_to:
       - host
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       preconditions:
       - セッションのロールが host に確定している
@@ -75,28 +75,28 @@ codd:
       dod_obligations:
       - id: dod_cp_visible_host_triggers
         text: 制御盤に「問題を読み込む」「そこまで」「解答オープン！」「正解発表」「精算」「次へ」「戻る」「取消」および各モード個別ジャンプの操作要素が司会者向け操作語で存在する
-      - id: dod_cp_no_answerer_input_face
+      - id: dod_cp_no_contestant_input_face
         text: 制御盤に解答者用の数値入力送信面（+1/-1/+10/-10 と送信）が存在しない
       - id: dod_cp_shows_join_qr_and_roster
         text: 制御盤に参加用 QR と参加者一覧（自己入力氏名）が表示される
       - id: dod_cp_no_internal_leak
-        text: 制御盤の可視文言に内部ロール識別子（host/answerer）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない
+        text: 制御盤の可視文言に内部ロール識別子（host/contestant）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない
     - id: op_render_tablet_surface
-      actor: answerer
+      actor: contestant
       verb: render
       target: tablet_surface
       trigger: 参加確定後の解答者が /tablet を開く
       route: /tablet
       ui_pattern: input_only_minimal
       visible_to:
-      - answerer
+      - contestant
       forbidden_actors:
       - host
       - audience
       preconditions:
       - 参加確定済み（participants に自分のレコードが存在）
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - /tablet の可視要素が問題番号・数値入力・送信・送信済み表示・自分の残額（円）に限られる
       - /tablet に他者情報・出題本文・全体一覧・司会者操作要素が存在しない
@@ -110,18 +110,18 @@ codd:
         text: /tablet に他者の氏名・解答・残額・得点、出題本文、全体一覧が表示されない
       - id: dod_tablet_no_control_actions
         text: /tablet に締切・開示・正解発表・精算・モード切替・取消の操作要素が存在しない
-      - id: dod_tablet_answerer_copy_only
+      - id: dod_tablet_contestant_copy_only
         text: /tablet の可視文言が解答者向け（問題番号/送信/送信済み/あなたの残額◯◯円/受付中/締切）で、内部処理説明・権限境界説明・デモ/テスト用ラベル・内部イベント名・point/pt/点
           が存在しない
     - id: op_render_join_surface
-      actor: answerer
+      actor: contestant
       verb: render
       target: join_surface
       trigger: 解答者が QR 経由で /join を開く
       route: /join
       ui_pattern: name_input_then_join
       visible_to:
-      - answerer
+      - contestant
       preconditions:
       - 家族限定アクセス制御の判定結果が描画分岐に反映される
       consumer_surfaces:
@@ -190,7 +190,7 @@ codd:
       consumer_surfaces:
       - tv_mode_d
       - tv_mode_e
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - 金額はすべて円建てで表示され point/pt/点 の語が存在しない
       - 得点を点数化・ポイント化する文言が存在しない
@@ -213,14 +213,14 @@ codd:
       consumer_surfaces:
       - control_panel
       - tv_display
-      - answerer_tablets
+      - contestant_tablets
       - join_page
       expected_outcomes:
       - ロールは司会者/解答者/観客の可視ラベルで表示される
-      - 内部識別子 host/answerer/audience が可視文言に露出しない
+      - 内部識別子 host/contestant/audience が可視文言に露出しない
       dod_obligations:
       - id: dod_labels_business_facing
-        text: 全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/answerer/audience が露出しない
+        text: 全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/contestant/audience が露出しない
       - id: dod_labels_single_source
         text: 可視ロールラベルが単一のラベル定義（src/game_state/role_labels.ts）から供給される
 ---
@@ -238,7 +238,7 @@ codd:
 | # | 対象 | 義務（要旨） | 本書での具体化箇所 |
 |---|---|---|---|
 | SCO-1 | `module:control_panel` / `role:host` | 制御盤サーフェスの目的・対象（司会者）・許可導線（締切／開示／正解発表／精算／次へ・戻る・個別ジャンプ／問題・正解ライブ編集／取消）・禁止導線を定義し、文言は司会者の運用言語で表す（N-3・論点7） | §2.2・§2.7・OBM `op_render_control_panel_surface` |
-| SCO-2 | `module:tablet` / `role:answerer` | タブレットは入力専用最小 UI（問題番号・数値入力・送信済み表示・自分の残額のみ）に限定し、出題内容・他者情報・全体一覧の提示を禁止。文言は解答者向けで、内部処理・権限境界の説明やデモ/テスト用ラベルを載せない（N-1・第三要件） | §2.3・§2.8・OBM `op_render_tablet_surface` |
+| SCO-2 | `module:tablet` / `role:contestant` | タブレットは入力専用最小 UI（問題番号・数値入力・送信済み表示・自分の残額のみ）に限定し、出題内容・他者情報・全体一覧の提示を禁止。文言は解答者向けで、内部処理・権限境界の説明やデモ/テスト用ラベルを載せない（N-1・第三要件） | §2.3・§2.8・OBM `op_render_tablet_surface` |
 | SCO-3 | `module:tv_display` | TV は MC 切替の 5 モード（a 出題[動画/画像/テキスト]／b 解答オープン／c 正解発表／d 当該問全員表[氏名/解答/誤差/増減円/ピタリ賞/残額]／e 全問通算一覧）を観客向け文言で提示し、開示前は他者解答を伏せる（第三要件・N-2・N-4） | §2.4・§2.8・OBM `op_render_tv_surface` |
 | SCO-4 | `module:tv_display` / `module:scoring` | 金額表示は円建てで現金感を薄めず、ポイント等への置換や点化文言を禁止する（論点B） | §2.5・OBM `op_enforce_currency_yen_copy` |
 
@@ -258,7 +258,7 @@ codd:
 | 内部識別子 | 可視ラベル | 主サーフェス | サーフェスの役割 |
 |---|---|---|---|
 | `role: host` | **司会者** | `/control-panel` | 進行制御・入稿・ライブ編集・QR 提示（当該境界の管理者。運用言語で操作語を可視化してよい唯一の面） |
-| `role: answerer` | **解答者** | `/join`→`/tablet` | 参加・数値入力・送信（入力専用最小面） |
+| `role: contestant` | **解答者** | `/join`→`/tablet` | 参加・数値入力・送信（入力専用最小面） |
 | （TV 視聴者） | **観客** | `/tv` | 5 モードの受動表示のみ |
 | `system` | （非可視） | クラウド権威 | 配信・投影・整合復帰（可視化しない） |
 
@@ -274,7 +274,7 @@ codd:
 
 | サーフェス | ルート | 主対象 | 目的 | 許可アクション／ナビ | 禁止アクション／ナビ | 必須の可視コピー意図 | 禁止コピー |
 |---|---|---|---|---|---|---|---|
-| 制御盤 | `/control-panel` | 司会者 | 進行制御・入稿・ライブ編集・MC 切替・QR 提示・接続把握 | §2.7 の全トリガー／参加者一覧／参加 QR 提示／「◯/◯台」把握 | 解答者の数値入力送信面の露出 | 「問題を読み込む」「そこまで」「解答オープン！」「正解発表」「精算」「次へ／戻る／個別ジャンプ」「取消」「問題・正解を編集」等の司会者向け操作語 | 内部ロール識別子（host/answerer）・内部イベント名（`answers_locked` 等）・設定キー名・`point`/`pt`/`点`・デモ/テスト/サンプル表記 |
+| 制御盤 | `/control-panel` | 司会者 | 進行制御・入稿・ライブ編集・MC 切替・QR 提示・接続把握 | §2.7 の全トリガー／参加者一覧／参加 QR 提示／「◯/◯台」把握 | 解答者の数値入力送信面の露出 | 「問題を読み込む」「そこまで」「解答オープン！」「正解発表」「精算」「次へ／戻る／個別ジャンプ」「取消」「問題・正解を編集」等の司会者向け操作語 | 内部ロール識別子（host/contestant）・内部イベント名（`answers_locked` 等）・設定キー名・`point`/`pt`/`点`・デモ/テスト/サンプル表記 |
 | タブレット | `/tablet` | 解答者 | 数値入力・送信・自分の残額確認 | `−10/−1/+1/+10` で 0〜100 を作る／「送信」／送信済み確認／自分の残額（円）閲覧／受付中・締切表示 | 締切・開示・正解発表・精算・モード切替・取消の各操作、他者の氏名/解答/残額/得点、出題本文、全体一覧 | 問題番号・数値入力・「送信」「送信済み」「あなたの残額 ◯◯円」「受付中」「締切」 | 他者情報・司会者操作語・内部処理説明・権限境界の説明・内部イベント名・デモ/テスト用ラベル・`point`/`pt`/`点` |
 | TV | `/tv` | 観客 | 5 モード（a〜e）の受動提示 | 表示のみ | いかなる入力・操作要素、生ファイルパス表示、内部語表示 | a 出題面／b 氏名＋解答／c 正解値／d 6 列表（氏名/解答/誤差/増減円/ピタリ賞/残額・**円**）／e 全問通算＋勝者判別 | 内部語（`fallback`/`video_path`/`image_path` 値）・生ファイルパス・内部イベント名・接続/復帰デバッグ・司会者操作語・`point`/`pt`/`点` |
 | 参加受付 | `/join` | 解答者 | QR 経由の参加・氏名自己入力 | 氏名入力／「参加する」 | 事前氏名台帳／端末番号割当の入力、保護された制御盤ナビの露出、他者情報閲覧 | 「お名前を入力してください」「参加する」。満席時「ただいま満席のため参加できません」。アクセス不可時は平易文 | 保護ナビの露出・設定キー名・接続数会計・ロール識別子・アクセス制御方式（トークン/認証）の説明・`point`/`pt`/`点` |
@@ -285,7 +285,7 @@ codd:
 - **許可導線（可視トリガー）**: 「問題を読み込む」（`op_load_questions`）／参加用 QR 提示（`op_display_join_qr`）／「そこまで」（`op_propagate_deadline`）／「解答オープン！」（`op_propagate_disclosure`）／「正解発表」（`op_reveal_answer`）／「精算」（`op_compute_settlement`）／「次へ」「戻る」「個別ジャンプ」（`op_propagate_mode_switch`／`op_switch_tv_mode`）／各問インライン編集（`op_live_edit_correct`）／「取消」（`op_undo`）／参加者一覧（自己入力氏名）と「◯/◯台」の接続把握。
 - **禁止導線**: 解答者の数値入力送信面（`−10/−1/+1/+10` と「送信」）を制御盤に露出しない。副司会という別ロール導線を発明しない。
 - **必須の可視コピー意図**: 上記トリガーは **司会者の運用言語**（操作語）で表す。内部イベント名（`answers_locked`／`answers_opened` 等）を **ボタン・ラベル・状態表示に露出しない**（「締切」「解答オープン」のように運用語で表す）。
-- **禁止コピー**: 内部ロール識別子（host/answerer）・内部イベント名・設定キー名（`MAX_TABLET_CONNECTIONS`／`JOIN_ACCESS_TOKEN`）・`point`/`pt`/`点`・デモ/テスト/サンプル表記。
+- **禁止コピー**: 内部ロール識別子（host/contestant）・内部イベント名・設定キー名（`MAX_TABLET_CONNECTIONS`／`JOIN_ACCESS_TOKEN`）・`point`/`pt`/`点`・デモ/テスト/サンプル表記。
 - **配置**: `src/control_panel/`。SCO-1 遵守は OBM `op_render_control_panel_surface` の `dod_cp_*` で機械可検化する。
 
 ### 2.3 タブレットサーフェス（SCO-2・N-1・第三要件）
@@ -374,20 +374,20 @@ QR 読取り → /join（家族限定アクセス通過）→「お名前を入�
 
 ### 2.8 文言ガバナンス・可視ラベル・プライバシー投影
 
-- **可視ラベルの単一供給**: ロールは全サーフェスで **司会者／解答者／観客** の可視ラベルで表し、内部識別子（host/answerer/audience）を露出しない。ラベルは単一定義から供給する。
+- **可視ラベルの単一供給**: ロールは全サーフェスで **司会者／解答者／観客** の可視ラベルで表し、内部識別子（host/contestant/audience）を露出しない。ラベルは単一定義から供給する。
 
 ```typescript
 // src/game_state/role_labels.ts
-export type Role = "host" | "answerer" | "audience";
+export type Role = "host" | "contestant" | "audience";
 
 export const ROLE_LABELS: Readonly<Record<Role, string>> = {
   host: "司会者",
-  answerer: "解答者",
+  contestant: "解答者",
   audience: "観客",
 };
 ```
 
-- **禁止コピーパターン（全サーフェス共通）**: ①内部ロール識別子（host/answerer/audience）②内部イベント名（`accepting`／`answers_locked`／`answers_opened`／`answer_revealed`／`settlement_computed`／`tv_mode_changed` 等）③設定キー名（`MAX_TABLET_CONNECTIONS`／`JOIN_ACCESS_TOKEN`／`PUBLIC_BASE_URL`）④実装根拠・内部処理注記・環境前提⑤**権限境界の説明**（監査対象アクターの task が当該境界の管理でない面では露出しない。管理者は司会者のみ）⑥デモ/テスト/サンプル表記⑦生ファイルパス・`fallback` 等の内部語⑧接続数会計⑨`point`/`pt`/`点`。
+- **禁止コピーパターン（全サーフェス共通）**: ①内部ロール識別子（host/contestant/audience）②内部イベント名（`accepting`／`answers_locked`／`answers_opened`／`answer_revealed`／`settlement_computed`／`tv_mode_changed` 等）③設定キー名（`MAX_TABLET_CONNECTIONS`／`JOIN_ACCESS_TOKEN`／`PUBLIC_BASE_URL`）④実装根拠・内部処理注記・環境前提⑤**権限境界の説明**（監査対象アクターの task が当該境界の管理でない面では露出しない。管理者は司会者のみ）⑥デモ/テスト/サンプル表記⑦生ファイルパス・`fallback` 等の内部語⑧接続数会計⑨`point`/`pt`/`点`。
 - **プライバシー投影（クロスアクター可視性・サーフェス層強制）**: 解答者端末（`/tablet`）へ **他者の解答・残額・得点、出題本文、全体一覧を投影しない**（自分の残額と自分の送信済み状態のみ）。開示前（b 未配信）は他者解答をどのロールの端末にも表示しない。収集・表示する個人データは自己入力氏名と当日の解答・残額に限り、恒久的な事前氏名台帳を持たない。
 
 | ロール | サーフェスで見える情報 | サーフェスで見せない情報 |
@@ -427,7 +427,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -444,7 +444,7 @@ operation_flow:
       route: /control-panel
       ui_pattern: host_operational_console
       visible_to: [host]
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       preconditions:
         - セッションのロールが host に確定している
       consumer_surfaces: [control_panel]
@@ -459,24 +459,24 @@ operation_flow:
       dod_obligations:
         - id: dod_cp_visible_host_triggers
           text: 制御盤に「問題を読み込む」「そこまで」「解答オープン！」「正解発表」「精算」「次へ」「戻る」「取消」および各モード個別ジャンプの操作要素が司会者向け操作語で存在する
-        - id: dod_cp_no_answerer_input_face
+        - id: dod_cp_no_contestant_input_face
           text: 制御盤に解答者用の数値入力送信面（+1/-1/+10/-10 と送信）が存在しない
         - id: dod_cp_shows_join_qr_and_roster
           text: 制御盤に参加用 QR と参加者一覧（自己入力氏名）が表示される
         - id: dod_cp_no_internal_leak
-          text: 制御盤の可視文言に内部ロール識別子（host/answerer）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない
+          text: 制御盤の可視文言に内部ロール識別子（host/contestant）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない
     - id: op_render_tablet_surface
-      actor: answerer
+      actor: contestant
       verb: render
       target: tablet_surface
       trigger: 参加確定後の解答者が /tablet を開く
       route: /tablet
       ui_pattern: input_only_minimal
-      visible_to: [answerer]
+      visible_to: [contestant]
       forbidden_actors: [host, audience]
       preconditions:
         - 参加確定済み（participants に自分のレコードが存在）
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - /tablet の可視要素が問題番号・数値入力・送信・送信済み表示・自分の残額（円）に限られる
         - /tablet に他者情報・出題本文・全体一覧・司会者操作要素が存在しない
@@ -490,16 +490,16 @@ operation_flow:
           text: /tablet に他者の氏名・解答・残額・得点、出題本文、全体一覧が表示されない
         - id: dod_tablet_no_control_actions
           text: /tablet に締切・開示・正解発表・精算・モード切替・取消の操作要素が存在しない
-        - id: dod_tablet_answerer_copy_only
+        - id: dod_tablet_contestant_copy_only
           text: /tablet の可視文言が解答者向け（問題番号/送信/送信済み/あなたの残額◯◯円/受付中/締切）で、内部処理説明・権限境界説明・デモ/テスト用ラベル・内部イベント名・point/pt/点 が存在しない
     - id: op_render_join_surface
-      actor: answerer
+      actor: contestant
       verb: render
       target: join_surface
       trigger: 解答者が QR 経由で /join を開く
       route: /join
       ui_pattern: name_input_then_join
-      visible_to: [answerer]
+      visible_to: [contestant]
       preconditions:
         - 家族限定アクセス制御の判定結果が描画分岐に反映される
       consumer_surfaces: [join_page]
@@ -558,7 +558,7 @@ operation_flow:
       target: currency_copy
       trigger: 金額を含む面・応答（TV d/e・タブレット残額・API）を描画/生成する
       measurement_source: formatYen() と settlements/balances の整数円値
-      consumer_surfaces: [tv_mode_d, tv_mode_e, answerer_tablets]
+      consumer_surfaces: [tv_mode_d, tv_mode_e, contestant_tablets]
       expected_outcomes:
         - 金額はすべて円建てで表示され point/pt/点 の語が存在しない
         - 得点を点数化・ポイント化する文言が存在しない
@@ -578,13 +578,13 @@ operation_flow:
       target: role_labels
       trigger: 可視文言にロール名を表示する
       measurement_source: src/game_state/role_labels.ts の ROLE_LABELS
-      consumer_surfaces: [control_panel, tv_display, answerer_tablets, join_page]
+      consumer_surfaces: [control_panel, tv_display, contestant_tablets, join_page]
       expected_outcomes:
         - ロールは司会者/解答者/観客の可視ラベルで表示される
-        - 内部識別子 host/answerer/audience が可視文言に露出しない
+        - 内部識別子 host/contestant/audience が可視文言に露出しない
       dod_obligations:
         - id: dod_labels_business_facing
-          text: 全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/answerer/audience が露出しない
+          text: 全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/contestant/audience が露出しない
         - id: dod_labels_single_source
           text: 可視ロールラベルが単一のラベル定義（src/game_state/role_labels.ts）から供給される
 ```
@@ -601,12 +601,12 @@ import { ROLE_LABELS } from "../../src/game_state/role_labels.js";
 describe("可視ロールラベル（SCO・内部識別子非露出）", () => {
   it("内部識別子を司会者/解答者/観客の可視ラベルへ写す", () => {
     expect(ROLE_LABELS.host).toBe("司会者");
-    expect(ROLE_LABELS.answerer).toBe("解答者");
+    expect(ROLE_LABELS.contestant).toBe("解答者");
     expect(ROLE_LABELS.audience).toBe("観客");
   });
-  it("可視ラベルに内部識別子 host/answerer/audience を含まない", () => {
+  it("可視ラベルに内部識別子 host/contestant/audience を含まない", () => {
     for (const label of Object.values(ROLE_LABELS)) {
-      expect(label).not.toMatch(/host|answerer|audience/i);
+      expect(label).not.toMatch(/host|contestant|audience/i);
     }
   });
 });
@@ -669,7 +669,7 @@ describe("タブレット面の禁止要素・禁止コピー（SCO-2）", () =>
 | 可視ラベルの単一供給 | ロールラベルは `src/game_state/role_labels.ts` の `ROLE_LABELS` から全サーフェスへ供給 | 内部識別子非露出（`dod_labels_single_source`）。司会者/解答者/観客の 3 語で固定。 |
 | 金額整形の単一点 | `src/scoring/currency.ts` の `formatYen` を TV(d/e)・タブレット残額の唯一の整形点とする | 円建て固定・点化禁止（`dod_currency_*`）。整数円のみ受理。 |
 | 禁止コピー走査の実装方式 | ブラウザ描画テキストを Playwright で取得し Vitest で正規表現走査（`point|pt|点`／内部イベント名／設定キー名） | UI 実装に依らず面ごとに走査。宣言/検証は Vitest（`node:test` 不使用）。 |
-| 状態表示の運用語化 | 制御盤・タブレットの状態表示は運用語（受付中/締切/解答オープン/正解発表/精算）で表し内部イベント名を出さない | `dod_cp_no_internal_leak`／`dod_tablet_answerer_copy_only`。 |
+| 状態表示の運用語化 | 制御盤・タブレットの状態表示は運用語（受付中/締切/解答オープン/正解発表/精算）で表し内部イベント名を出さない | `dod_cp_no_internal_leak`／`dod_tablet_contestant_copy_only`。 |
 | TV a の出題面描画 | `resolveQuestionFace`（`src/questions/`・`src/media/`）が解決した値のみ TV 面へ渡し生パスを描画しない | `dod_tv_no_path_or_internal_leak`。動画優先→画像→テキスト。 |
 
 ### 3.2 F028 エスカレーション（推測実装しない）

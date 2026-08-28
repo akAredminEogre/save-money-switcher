@@ -140,7 +140,7 @@ steps:
 - &id007
   id: define_role_labels
   kind: copy_label_source
-  rationale: Single ROLE_LABELS map (host→司会者/answerer→解答者/audience→観客) so visible
+  rationale: Single ROLE_LABELS map (host→司会者/contestant→解答者/audience→観客) so visible
     copy never leaks internal role identifiers.
   source_design_section: surface_copy_obligations §2.8; shared_domain_model §1.5
   target_path_hint: src/game_state/role_labels.ts
@@ -677,7 +677,7 @@ steps:
   id: implement_ws_server_and_connection_accept
   kind: ws_server
   rationale: 'op_establish_connection: the ws listener exists only on the cloud server
-    (control-panel browser opens no listen socket); accept declares role, admits answerer
+    (control-panel browser opens no listen socket); accept declares role, admits contestant
     via admitTablet, and returns a role-projected snapshot.'
   source_design_section: realtime_sync_design §2.1; system_design §2.1
   target_path_hint: src/realtime_sync/server.ts
@@ -697,7 +697,7 @@ steps:
 - &id034
   id: implement_connection_registry_hub
   kind: connection_registry
-  rationale: hub keeps host/answerer/audience registries and is the single role-decision
+  rationale: hub keeps host/contestant/audience registries and is the single role-decision
     point and broadcast origin; host/audience are separate channels not counted against
     the tablet limit.
   source_design_section: realtime_sync_design §2.4
@@ -716,7 +716,7 @@ steps:
 - &id035
   id: implement_role_projection_fanout
   kind: projection
-  rationale: projectForRole strips out-of-scope fields so answerers never receive
+  rationale: projectForRole strips out-of-scope fields so contestants never receive
     others' answers/balances/settlements and pre-b other answers reach no role — transport-layer
     privacy the client cannot bypass.
   source_design_section: realtime_sync_design §2.5; surface_copy_obligations §2.8
@@ -756,7 +756,7 @@ steps:
 - &id037
   id: implement_heartbeat_slot_release
   kind: timer_lifecycle
-  rationale: ping 15s / pong 30s timers confirm disconnect and release the answerer
+  rationale: ping 15s / pong 30s timers confirm disconnect and release the contestant
     slot so limit accounting matches live connections; thresholds come from config,
     not hardcoded.
   source_design_section: realtime_sync_design §2.7; infra deployment_setup §2.4
@@ -818,7 +818,7 @@ steps:
   id: verify_realtime_sync
   kind: verification_api
   rationale: Fixes cloud-authority (control panel non-listening, continuity when it
-    drops), all-role broadcast, role projection (no leak to answerer), reconnect restore,
+    drops), all-role broadcast, role projection (no leak to contestant), reconnect restore,
     answer preservation without duplicates, over-limit close(4001) leaving existing
     state unchanged, and the latency gate.
   source_design_section: test_strategy VB-01..05/VB-60..62/VB-11/VB-15/VB-03
@@ -1428,7 +1428,7 @@ steps:
   id: implement_control_panel_surface
   kind: ui_surface
   rationale: 'op_render_control_panel_surface: the host console shows all host triggers
-    in operator language, the roster, ◯/◯台, and join QR; no answerer input face and
+    in operator language, the roster, ◯/◯台, and join QR; no contestant input face and
     no internal identifiers/event names/config keys/point tokens.'
   source_design_section: surface_copy_obligations op_render_control_panel_surface
   target_path_hint: src/control_panel/
@@ -1467,7 +1467,7 @@ steps:
   id: enforce_role_label_mapping
   kind: copy_enforcement
   rationale: 'op_map_role_labels_in_copy: every surface renders 司会者/解答者/観客 from the
-    single ROLE_LABELS source and never leaks host/answerer/audience.'
+    single ROLE_LABELS source and never leaks host/contestant/audience.'
   source_design_section: surface_copy_obligations op_map_role_labels_in_copy
   target_path_hint: src/game_state/role_labels.ts
   inputs:
@@ -1484,7 +1484,7 @@ steps:
 - &id070
   id: verify_surface_copy_obligations
   kind: verification_browser
-  rationale: Browser scan fixes visible host triggers, the absent answerer input face
+  rationale: Browser scan fixes visible host triggers, the absent contestant input face
     on the control panel, role-label mapping, and absence of internal leak/point tokens
     on every surface.
   source_design_section: test_strategy VB-77..80

@@ -5,7 +5,7 @@
  * event モデルと 1:1 で地続きであり、ws 依存を導入せず plain HTTP で WSL2 越えも素直に届く
  * （設計 c_live_update）。各コマンド適用後、レジストリの全接続に対し「そのロールのサーフェスを
  * 現在の session state から再構築 → HTML 断片を `data:` で push」する。ロール可視境界は
- * {@link fragmentFor}（host=制御盤 / answerer=自分のタブレット / audience=TV）で担保する。
+ * {@link fragmentFor}（host=制御盤 / contestant=自分のタブレット / audience=TV）で担保する。
  *
  * push は HTML をそのまま生データに載せず `data: <JSON>\n\n` で JSON 封筒化する（HTML 内の改行が
  * SSE のレコード境界と衝突しないため・QR SVG 等の複数行も安全）。クライアントは `JSON.parse` して
@@ -49,14 +49,14 @@ const connections = new Map<number, Connection>();
 let connectionSeq = 0;
 
 /**
- * 現在の解答者（タブレット）接続数（身元の在る answerer 接続のみ計上）。案A では解答面の購読に
+ * 現在の解答者（タブレット）接続数（身元の在る contestant 接続のみ計上）。案A では解答面の購読に
  * ログインが要る（`auth/surface_access.ts`）ゆえ、これは「ログイン済みで解答面を開いている
  * 接続の数」である。制御盤の「接続中のタブレット n / N」はこの値を出す。
  */
 export function connectedTabletCount(): number {
   let count = 0;
   for (const conn of connections.values()) {
-    if (conn.role === "answerer" && conn.participantId !== null) count += 1;
+    if (conn.role === "contestant" && conn.participantId !== null) count += 1;
   }
   return count;
 }
@@ -71,7 +71,7 @@ function fragmentFor(conn: Connection): string {
           : { joinUrl: "", joinQrSvg: "", maxTabletConnections: 0, connectedTablets: 0 };
       return buildControlPanelFragment(ctx);
     }
-    case "answerer":
+    case "contestant":
       return buildTabletFragment(conn.participantId);
     case "audience":
       return buildTvFragment();

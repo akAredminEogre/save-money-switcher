@@ -159,7 +159,7 @@ codd:
 
 ### 2.4 手順 R-4: 本番進行オペレーション（司会者操作・INV-5/INV-6）
 
-本番中に司会者（制御盤）が行う操作系列を確定順で示す。すべて `role: host` セッションからのみ発火でき、`role: answerer`・副司会からの当該コマンドはサーバ側で **401/403** 拒否される。
+本番中に司会者（制御盤）が行う操作系列を確定順で示す。すべて `role: host` セッションからのみ発火でき、`role: contestant`・副司会からの当該コマンドはサーバ側で **401/403** 拒否される。
 
 1. **問題読込（`op_load_questions`）**: ゲーム未開始またはライブ編集フェーズで、制御盤から事前問題ファイルを読み込み `questions`（`text`／`image_path`／`video_path`／`correct_value`〈0〜100 整数〉）へ登録する。ランタイム出題は DB から供給し、ファイル再読込に依存しない（INV-2）。
 2. **参加受付（`op_join_game`）**: 参加 QR を提示し、各解答者がタブレットで読み取り `/join` で**氏名を自己入力**して参加確定する（1 人 = 1 台）。参加は `participants` に登録され、制御盤の参加者一覧と TV(e) に反映される。端末番号の固定割当・事前氏名台帳は用いない。
@@ -325,7 +325,7 @@ export function buildHealthSnapshot(): HealthSnapshot {
   const counts = getConnectionCounts();
   return {
     status: "ok",
-    tabletConnections: counts.answerer,
+    tabletConnections: counts.contestant,
     maxTabletConnections: resolveMaxTabletConnections(),
     http5xxTotal: counts.http5xxTotal,
     syncLatencyP95Ms: counts.syncLatencyP95Ms,
@@ -360,7 +360,7 @@ export function buildHealthSnapshot(): HealthSnapshot {
 
 ### 3.5 権限境界・アクセス監視（INV-5）
 
-- 締切・開示・正解発表・得点精算・取消・モード切替の発火が `role: host` セッションのみであることを、非 host からの当該コマンドに対する **401/403** 応答率で監視する。想定外の許可（`role: answerer` からの発火成立）は重大アラート。
+- 締切・開示・正解発表・得点精算・取消・モード切替の発火が `role: host` セッションのみであることを、非 host からの当該コマンドに対する **401/403** 応答率で監視する。想定外の許可（`role: contestant` からの発火成立）は重大アラート。
 - `/join`（未認証／事前認証サーフェス）が、アクセス状態に整合しない保護ナビ（制御盤操作等）を露出していないことを監視する。
 
 ### 3.6 切断検知・ハートビート監視（RUN-C1）

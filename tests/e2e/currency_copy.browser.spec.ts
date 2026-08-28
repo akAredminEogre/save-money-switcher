@@ -33,7 +33,7 @@
  * （point/pt/点・◯◯点/◯◯pt）の非露出は正準ヘルパ scanForbiddenCopy（currency_token 分類・
  * dod_currency_no_point_token と dod_currency_no_pointization_phrase の双方を担う）を経由し、
  * 金額を提示する消費面（op_enforce_currency_yen_copy の consumer_surfaces＝tv_mode_d /
- * tv_mode_e / answerer_tablets）が円建て単位「円」で表示されることを assertYenDenominated で
+ * tv_mode_e / contestant_tablets）が円建て単位「円」で表示されることを assertYenDenominated で
  * 押さえる。個々の金額値（例 -100円/-500円/+1000円）は稼働ゲートを進めた game_state・
  * balances を要するため、単一の整形点 formatYen の境界は tests/scoring/currency.test.ts の
  * 単体が担い、本 E2E は面横断の可視コピー走査を担う。
@@ -70,7 +70,7 @@ const ALL_SURFACES: readonly SurfaceTarget[] = [
 
 /**
  * 金額を提示する消費面（op_enforce_currency_yen_copy の consumer_surfaces＝
- * tv_mode_d / tv_mode_e / answerer_tablets）。TV はモード指定 URL で d/e へ到達する。
+ * tv_mode_d / tv_mode_e / contestant_tablets）。TV はモード指定 URL で d/e へ到達する。
  */
 const MONEY_SURFACES: readonly SurfaceTarget[] = [
   { label: "TV(d) 当該問精算表", path: "/tv?mode=d", authenticated: false },
@@ -156,7 +156,7 @@ describe("全サーフェスの金額文言・円建て固定/点化禁止（SCO
   }, 120_000);
 
   it("金額を提示する消費面（TV d/e・タブレット残額）の可視文言に点化文言が存在しない", async () => {
-    // op_enforce_currency_yen_copy の consumer_surfaces（tv_mode_d / tv_mode_e / answerer_tablets）を
+    // op_enforce_currency_yen_copy の consumer_surfaces（tv_mode_d / tv_mode_e / contestant_tablets）を
     // 各々描画し、金額を扱う面の可視コピーに point/pt/点・◯◯点/◯◯pt が現れないことを確かめる。
     // 金額提示面で得点の点数化・ポイント化が起きれば currency_token 分類の違反が返り RED になる
     // （dod_currency_no_point_token / dod_currency_no_pointization_phrase を消費面で補強）。

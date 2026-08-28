@@ -39,7 +39,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -62,7 +62,7 @@ codd:
       visible_to:
       - host
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       expected_outcomes:
       - 制御盤に /join 公開 URL を符号化した QR が表示される
@@ -101,7 +101,7 @@ codd:
       - id: dod_access_no_protected_nav
         text: 未認証・未参加の /join に制御盤操作等の保護ナビが露出しない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -109,7 +109,7 @@ codd:
       ui_pattern: qr_scan_then_name_input
       preconditions:
       - 家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）
-      - answerer 接続数が MAX_TABLET_CONNECTIONS 未満
+      - contestant 接続数が MAX_TABLET_CONNECTIONS 未満
       - 氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下
       measurement_source: 解答者の自己入力氏名
       durable_state: participants テーブル（id / name / joined_at / connection_id）
@@ -142,12 +142,12 @@ codd:
       actor: system
       verb: reject
       target: tablet_connection
-      trigger: answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
+      trigger: contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
       route: /join
-      measurement_source: 現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
+      measurement_source: 現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
       threshold: MAX_TABLET_CONNECTIONS（既定 8）
       preconditions:
-      - connected_answerers >= MAX_TABLET_CONNECTIONS
+      - connected_contestants >= MAX_TABLET_CONNECTIONS
       durable_state: 既存接続・participants・answers・balances は不変
       consumer_surfaces:
       - join_page
@@ -219,7 +219,7 @@ codd:
 | PC-INV-2 | `module:config` / `module:participants` | 同時接続上限は既定 **8**・**ハードコード禁止**・設定パラメータとして外出しし、上限超過時に接続を断る挙動が**設定値を参照して機能**する（論点10） | §2.5・OBM `op_enforce_connection_limit` |
 | PC-INV-3 | `module:participants` | **家族限定アクセス制御方式**を設計責務として抱え、**無認証の無制限公開を採らない** | §2.6・§2.8・OBM `op_guard_family_access`・§3.1 |
 | PC-INV-4（継承・**2026-08-28 案A により一部改定**） | `module:tablet` / privacy | タブレットは入力専用最小 UI で他者情報を保持・表示しない（**改定後も有効**）。収集個人データは~~自己入力氏名~~ → **アカウントの表示名**と当日の解答・残額に限る。~~恒久的な事前氏名台帳を持たない~~ → **案A では恒久アカウント（`accounts`）を持つ**（殿裁可により前提が変わった） | §2.4・§2.8・`src/accounts/account.ts` |
-| PC-INV-5（継承） | `role:host` / `role:answerer` | 参加 QR 提示は司会者面（`/control-panel`）に限り、`/join` は解答者面。エントリ／事前認証面は保護ナビを露出しない | §1.4・§2.6・§2.7 |
+| PC-INV-5（継承） | `role:host` / `role:contestant` | 参加 QR 提示は司会者面（`/control-panel`）に限り、`/join` は解答者面。エントリ／事前認証面は保護ナビを露出しない | §1.4・§2.6・§2.7 |
 | PC-INV-6（継承） | `module:realtime_sync` | 参加はクラウド権威に接続して成立し、**ホスト PC をサーバにしない**（制御盤ブラウザは待受ソケットを持たない） | §2.1・§2.7 |
 
 **各不変条件は該当節で「本書がどう遵守するか」を明示する（下記本文の『遵守の言明』）。**
@@ -233,7 +233,7 @@ codd:
 
 ### 1.4 アクター向けサーフェス／コピー義務
 
-要件が定めるロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: answerer` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**を用い、内部識別子（host/answerer）・設定キー名（`MAX_TABLET_CONNECTIONS`／`PUBLIC_BASE_URL`）・内部会計（接続数）・アクセス制御の内部方式・実装根拠・環境前提を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止し、金額は「円」で表す。
+要件が定めるロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: contestant` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**を用い、内部識別子（host/contestant）・設定キー名（`MAX_TABLET_CONNECTIONS`／`PUBLIC_BASE_URL`）・内部会計（接続数）・アクセス制御の内部方式・実装根拠・環境前提を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止し、金額は「円」で表す。
 
 | サーフェス | ルート | 主対象アクター | 目的 | 許可アクション／ナビゲーション | 禁止アクション／ナビゲーション | 必須の可視コピー意図 | 禁止コピー |
 |---|---|---|---|---|---|---|---|
@@ -400,7 +400,7 @@ export function admitTablet(state: AdmissionInput, req: JoinRequest): AdmissionR
 ```
 
 - **設定追随（改修不要・`dod_limit_config_follows`）**: `server.ts` は接続受理時に `limit` を毎回 `resolveMaxTabletConnections()` から取り直して `admitTablet` に渡すため、`MAX_TABLET_CONNECTIONS=16/32` へ変えると判定が即追随する。
-- **上限の対象**: 上限は **answerer（タブレット）接続**に課す。`host`（制御盤）・`audience`（TV）は別チャネルとして受け、タブレット上限に数えない（realtime_sync 設計と整合）。
+- **上限の対象**: 上限は **contestant（タブレット）接続**に課す。`host`（制御盤）・`audience`（TV）は別チャネルとして受け、タブレット上限に数えない（realtime_sync 設計と整合）。
 - **既存不変（`dod_limit_existing_unaffected`）**: `ok=false` の拒否時、realtime_sync が `connection_rejected` ＋ `WS close(4001)` で断り、既存接続・`participants`・`answers`・`balances` は変化しない。切断でスロット解放後は同数まで再受入可（realtime_sync の heartbeat がスロットを解放）。
 - **満席コピー（`dod_limit_join_full_copy`）**: `/join` の拒否表示は「ただいま満席のため参加できません」等の job-to-be-done 平易文に限り、設定キー名（`MAX_TABLET_CONNECTIONS`）・接続数会計・ロール識別子を露出しない（§1.4）。
 
@@ -573,7 +573,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -594,7 +594,7 @@ operation_flow:
       measurement_source: resolvePublicBaseUrl() と（分岐A時）JOIN_ACCESS_TOKEN
       readback: QR 読取りでクラウド公開の /join へ到達する
       visible_to: [host]
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       expected_outcomes:
         - 制御盤に /join 公開 URL を符号化した QR が表示される
         - QR 提示面に事前氏名台帳・端末番号割当の入力要素が存在しない
@@ -631,7 +631,7 @@ operation_flow:
         - id: dod_access_no_protected_nav
           text: 未認証・未参加の /join に制御盤操作等の保護ナビが露出しない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -639,7 +639,7 @@ operation_flow:
       ui_pattern: qr_scan_then_name_input
       preconditions:
         - 家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）
-        - answerer 接続数が MAX_TABLET_CONNECTIONS 未満
+        - contestant 接続数が MAX_TABLET_CONNECTIONS 未満
         - 氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下
       measurement_source: 解答者の自己入力氏名
       durable_state: participants テーブル（id / name / joined_at / connection_id）
@@ -670,12 +670,12 @@ operation_flow:
       actor: system
       verb: reject
       target: tablet_connection
-      trigger: answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
+      trigger: contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
       route: /join
-      measurement_source: 現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
+      measurement_source: 現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
       threshold: MAX_TABLET_CONNECTIONS（既定 8）
       preconditions:
-        - connected_answerers >= MAX_TABLET_CONNECTIONS
+        - connected_contestants >= MAX_TABLET_CONNECTIONS
       durable_state: 既存接続・participants・answers・balances は不変
       consumer_surfaces: [join_page]
       expected_outcomes:

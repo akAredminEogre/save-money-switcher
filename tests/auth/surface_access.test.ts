@@ -19,7 +19,7 @@ import { createSessionRegistry } from "../../src/auth/session_registry.js";
 
 const registry = createSessionRegistry();
 const adminSession = registry.issue("admin-1", "host");
-const contestantSession = registry.issue("contestant-1", "answerer");
+const contestantSession = registry.issue("contestant-1", "contestant");
 
 describe("auth/surface_access 面の申告と投影ロールの決定", () => {
   it("未知・未指定の面の申告は観客面へ収束する（申告値で権限が上がらない）", () => {
@@ -50,11 +50,11 @@ describe("auth/surface_access 面の申告と投影ロールの決定", () => {
     // 司会者が解答面を開いても、その面には解答面の投影が要る（制御盤の投影を流さない）。
     expect(authorizeLiveSurface("tablet", adminSession)).toEqual({
       kind: "granted",
-      role: "answerer",
+      role: "contestant",
     });
     expect(authorizeLiveSurface("tablet", contestantSession)).toEqual({
       kind: "granted",
-      role: "answerer",
+      role: "contestant",
     });
     expect(authorizeLiveSurface("tablet", undefined)).toEqual({ kind: "denied", status: 401 });
   });

@@ -162,7 +162,7 @@ steps:
   id: define_role_labels_single_source
   kind: copy_source
   rationale: Single ROLE_LABELS definition (司会者/解答者/観客) that every surface reads so
-    no internal identifier host/answerer/audience leaks into visible copy.
+    no internal identifier host/contestant/audience leaks into visible copy.
   source_design_section: op_map_role_labels_in_copy (measurement_source src/game_state/role_labels.ts)
   target_path_hint: src/game_state/role_labels.ts
   inputs: []
@@ -903,7 +903,7 @@ steps:
   id: implement_ws_server_cloud_authority
   kind: ws_server
   rationale: ws listen exists only on the cloud server, accepts upgrades on /control-panel|/tv|/tablet|/join,
-    fixes the session role on connect, and calls admission for answerer connections
+    fixes the session role on connect, and calls admission for contestant connections
     — proving the host PC is not a server.
   source_design_section: op_establish_connection / §2.8 (クラウド WS 権威)
   target_path_hint: src/realtime_sync/server.ts
@@ -925,7 +925,7 @@ steps:
   kind: ws_hub
   rationale: Role-partitioned connection registry that is the single role decision
     point for host commands and the origin of fan-out; also the connection counter
-    for the answerer limit and별 channel for host/audience.
+    for the contestant limit and별 channel for host/audience.
   source_design_section: op_establish_connection / op_broadcast_state_transition
   target_path_hint: src/realtime_sync/hub.ts
   inputs:
@@ -944,7 +944,7 @@ steps:
   id: implement_fanout_role_projection
   kind: role_projection
   rationale: projectForRole strips out-of-scope fields per role at the transport layer
-    so answerer endpoints never receive others' answers/balances/scores and audience
+    so contestant endpoints never receive others' answers/balances/scores and audience
     never sees pre-disclosure answers.
   source_design_section: op_broadcast_state_transition (dod_broadcast_role_projection)
     / §2.7
@@ -986,7 +986,7 @@ steps:
 - &id051
   id: implement_heartbeat_slot_release
   kind: timer_lifecycle
-  rationale: ping every 15s, confirm disconnect on 30s pong timeout, release the answerer
+  rationale: ping every 15s, confirm disconnect on 30s pong timeout, release the contestant
     slot so the limit accounting matches live connections and freed slots re-admit
     up to the same count.
   source_design_section: op_recover_on_reconnect boundary / realtime-sync §2.7
@@ -1106,7 +1106,7 @@ steps:
   kind: command_handler
   rationale: Host-only load command gated by phase lobby/live-edit that runs loadQuestions
     and initializes 10 rounds (accepting) + the game_state singleton (lobby); rejects
-    answerer with 401/403.
+    contestant with 401/403.
   source_design_section: op_load_questions (host only, phase precondition)
   target_path_hint: src/control_panel/load_questions_command.ts
   inputs:
@@ -1386,7 +1386,7 @@ steps:
 - &id070
   id: implement_op_enforce_connection_limit_wiring
   kind: threshold_enforcement
-  rationale: On answerer connect, measure current answerer count and compare to resolveMaxTabletConnections;
+  rationale: On contestant connect, measure current contestant count and compare to resolveMaxTabletConnections;
     over-limit returns connection_rejected + WS close(4001) leaving existing connections/participants/answers/balances
     unchanged, and follows config to 16/32 without code change.
   source_design_section: op_enforce_connection_limit (threshold, boundary 8/9,16/17,32/33)
@@ -1451,7 +1451,7 @@ steps:
 - &id073
   id: implement_op_recover_on_reconnect
   kind: integration_wiring
-  rationale: Reconnect (answerer with resume token) rebuilds current question/stage/tv_mode
+  rationale: Reconnect (contestant with resume token) rebuilds current question/stage/tv_mode
     + own balance/submitted from server authority and re-joins live broadcast; control-panel
     drop does not stop TV/tablet sync.
   source_design_section: op_recover_on_reconnect (dod_reconnect_*)
@@ -1473,7 +1473,7 @@ steps:
   id: implement_control_panel_surface
   kind: client_ui
   rationale: Renders all host triggers (問題を読み込む/そこまで/解答オープン！/正解発表/精算/次へ/戻る/取消/個別ジャンプ/inline
-    edit), roster of self-entered names, ◯/◯台, and QR — with no answerer input face
+    edit), roster of self-entered names, ◯/◯台, and QR — with no contestant input face
     and no internal identifier/event-name/config-key/point leak.
   source_design_section: op_render_control_panel_surface (dod_cp_*)
   target_path_hint: src/control_panel/
@@ -1589,7 +1589,7 @@ steps:
   id: implement_role_label_copy_mapping
   kind: copy_enforcement
   rationale: All surfaces resolve role display strings from the single ROLE_LABELS
-    source so host/answerer/audience internal identifiers never appear in visible
+    source so host/contestant/audience internal identifiers never appear in visible
     copy.
   source_design_section: op_map_role_labels_in_copy (dod_labels_*)
   target_path_hint: src/game_state/role_labels.ts

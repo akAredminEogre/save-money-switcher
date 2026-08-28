@@ -155,7 +155,7 @@ describe("TV 5モードサーフェスの可視要素・禁止要素・禁止コ
         const visibleText = await page.locator("body").innerText();
         expect(visibleText.trim().length, `mode=${mode} が可視コンテンツを描画すること`).toBeGreaterThan(0);
 
-        // 点化文言（point/pt/点）・内部ロール識別子（host/answerer/audience）の非露出。
+        // 点化文言（point/pt/点）・内部ロール識別子（host/contestant/audience）の非露出。
         expect(
           scanForbiddenCopy(visibleText, { categories: ["currency_token"] }),
           `mode=${mode} に点化文言が無いこと`,

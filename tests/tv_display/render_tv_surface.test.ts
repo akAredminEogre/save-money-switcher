@@ -132,7 +132,7 @@ describe("tv_display/render_tv_surface 5 モード受動表示", () => {
       for (const word of HOST_OPERATION_WORDS) {
         expect(visible).not.toContain(word);
       }
-      expect(visible).not.toMatch(/\bhost\b|\banswerer\b|\baudience\b/i);
+      expect(visible).not.toMatch(/\bhost\b|\bcontestant\b|\baudience\b/i);
     }
   });
 

@@ -85,7 +85,7 @@ export function renderTvSurface(request: TvSurfaceRequest): TvSurfaceViewModel {
 
 /**
  * ビューモデルから観客可視文言の配列を取り出す（相互作用要素・司会者操作語・内部ロール
- * 識別子 host/answerer/audience を含めない）。correctValue の数値は表示時に String 化するが
+ * 識別子 host/contestant/audience を含めない）。correctValue の数値は表示時に String 化するが
  * 型自体は number で保持される。
  */
 export function collectVisibleText(view: TvSurfaceViewModel): string[] {

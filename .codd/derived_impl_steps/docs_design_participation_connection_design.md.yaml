@@ -289,7 +289,7 @@ steps:
 - &id014
   id: wire_join_admission_at_ws_accept
   kind: integration_seam
-  rationale: Wire the realtime_sync WS accept path to supply the current answerer
+  rationale: Wire the realtime_sync WS accept path to supply the current contestant
     connected count and presented access context to processJoin, drive connection_rejected
     + WS close(4001) on {rejected:'over_limit'} leaving existing connections/participants/answers/balances
     unchanged, and emit participant_joined on {ok} — the actual over-limit and join
@@ -456,7 +456,7 @@ steps:
   id: create_participation_e2e_helpers
   kind: test_helper
   rationale: Provide shared E2E helpers — server-health (status<500 baseline), a QR/URL-driven
-    join flow, and a ws-client that can drive multiple answerer connections and observe
+    join flow, and a ws-client that can drive multiple contestant connections and observe
     connection_rejected/close(4001) — so participation specs avoid duplication and
     can exercise the real WS admission trigger.
   source_design_section: participation_connection_design §2.10 / test_strategy §4.3

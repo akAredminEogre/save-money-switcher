@@ -48,8 +48,8 @@ steps:
 - &id002
   id: role_connection_registry
   kind: connection_registry
-  rationale: Keep per-role (host/answerer/audience) registries with connect/disconnect
-    accounting; this hub is the single broadcast origin and the authoritative answerer-slot
+  rationale: Keep per-role (host/contestant/audience) registries with connect/disconnect
+    accounting; this hub is the single broadcast origin and the authoritative contestant-slot
     counter for limit judgment.
   source_design_section: §2.2/§2.4 hub.ts
   target_path_hint: src/realtime_sync/hub.ts
@@ -68,7 +68,7 @@ steps:
   id: role_projection_filter
   kind: role_projection
   rationale: projectForRole strips out-of-visibility fields at the transport layer
-    so answerers never receive others' answers/balances/scores and audience never
+    so contestants never receive others' answers/balances/scores and audience never
     sees pre-disclosure answers; host receives full payloads.
   source_design_section: §2.5 fanout.ts (dod_broadcast_role_projection/dod_disclosure_hidden_before)
   target_path_hint: src/realtime_sync/fanout.ts
@@ -107,7 +107,7 @@ steps:
   id: admit_and_reject_over_limit
   kind: connection_admission
   rationale: 'On each accept, re-read resolveMaxTabletConnections() (config single
-    point) and call admitTablet with the live answerer count; on over_limit unicast
+    point) and call admitTablet with the live contestant count; on over_limit unicast
     connection_rejected then WS close(4001), leaving existing connections/participants/answers/balances
     unchanged. Boundaries: default 8 admits ≤8 and rejects the 9th; setting 16 → ≤16/reject
     17; 32 → ≤32/reject 33; host/audience are a separate channel not counted; a freed
@@ -130,7 +130,7 @@ steps:
   id: recovery_snapshot_builder
   kind: state_recovery_builder
   rationale: buildSnapshot reconstructs current_question_number/stage/tv_mode from
-    authoritative game_state plus balances and answers, then role-projects it (answerer
+    authoritative game_state plus balances and answers, then role-projects it (contestant
     → own balance and submitted flag only). Server authority is the sole source; client-stored
     values are never trusted.
   source_design_section: §2.7 recovery.ts (op_recover_on_reconnect, dod_reconnect_server_authority/own_balance)
@@ -171,7 +171,7 @@ steps:
   kind: heartbeat_timer
   rationale: Ping every 15s and confirm disconnect after 30s of no pong (timer trigger
     with the 30s boundary), removing the connection from the hub and releasing the
-    answerer slot so limit accounting matches live connections and re-admit is possible.
+    contestant slot so limit accounting matches live connections and re-admit is possible.
   source_design_section: §2.7/§2.11 heartbeat.ts (ping 15s / pong 30s)
   target_path_hint: src/realtime_sync/heartbeat.ts
   inputs:
@@ -232,7 +232,7 @@ steps:
   rationale: 'A single command dispatcher checks the connection''s fixed role as the
     sole judgment point: host-only commands (lock/open/reveal/settle/undo/switch_mode/live_edit)
     proceed only for role host, while non-host attempts return command_denied (403;
-    401 unauthenticated) without closing the socket; answerer commands (submit_answer/join/resume)
+    401 unauthenticated) without closing the socket; contestant commands (submit_answer/join/resume)
     route to their handlers.'
   source_design_section: §2.3/§2.9 (RS-INV-4, dod_*_host_only)
   target_path_hint: src/realtime_sync/server.ts
@@ -252,7 +252,7 @@ steps:
   id: propagate_deadline_lock
   kind: deadline_propagation
   rationale: host lock applies stage=answers_locked and broadcasts answers_locked
-    to all connected answerer tablets, synchronously locking input; the terminal-state
+    to all connected contestant tablets, synchronously locking input; the terminal-state
     guard then rejects any subsequent submit_answer server-side.
   source_design_section: §2.8 op_propagate_deadline (dod_deadline_sync_lock)
   target_path_hint: src/realtime_sync/hub.ts
@@ -313,7 +313,7 @@ steps:
   id: propagate_settlement_and_balance
   kind: settlement_propagation
   rationale: 'host settle broadcasts settlement_computed plus balance_updated: TV(d/e)
-    receive the yen table (currency "円") while each answerer is projected only its
+    receive the yen table (currency "円") while each contestant is projected only its
     own balance; auto_rescore of a disclosed round emits balance_updated diffs and
     updates TV d/e together, and no rescore event is emitted for a c-unreached edit
     (boundary case).'
@@ -379,7 +379,7 @@ steps:
     (scoring/validate_answer); accepted only while stage=accepting, it upserts the
     answers row on unique(question_id, participant_id) before returning submit_ack
     unicast; range-out values get no ack and are rejected, and the ack is never fanned
-    out to other answerers/audience.
+    out to other contestants/audience.
   source_design_section: §2.3/§2.5/§2.7 op_submit_answer (dod_answer_no_duplicate,
     submit_ack own-only)
   target_path_hint: src/realtime_sync/server.ts
@@ -523,7 +523,7 @@ steps:
   id: test_fanout_role_projection
   kind: unit_test
   rationale: Assert projectForRole returns null (no others' answers) for audience
-    before disclosure and projects only own balance for answerer with other participant
+    before disclosure and projects only own balance for contestant with other participant
     ids absent from the payload.
   source_design_section: §2.10 tests/realtime_sync/fanout.test.ts
   target_path_hint: tests/realtime_sync/fanout.test.ts
@@ -541,7 +541,7 @@ steps:
 - &id026
   id: test_recovery_reconnect
   kind: unit_test
-  rationale: Assert the answerer snapshot restores current question number/stage/tv_mode
+  rationale: Assert the contestant snapshot restores current question number/stage/tv_mode
     and own balance/submitted while excluding other participants (server-authoritative
     recovery).
   source_design_section: §2.10 tests/realtime_sync/recovery.test.ts

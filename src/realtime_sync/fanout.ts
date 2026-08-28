@@ -16,7 +16,7 @@
  *
  * release-blocking 不変条件（設計 RS-INV-4/5/6）:
  *   - 司会者（host）は全量を受け取る（投影なし）。
- *   - 解答者（answerer）は自分に関する情報のみ。他者の解答・残額・得点・全体一覧は一切
+ *   - 解答者（contestant）は自分に関する情報のみ。他者の解答・残額・得点・全体一覧は一切
  *     投影しない。全員分の残額更新からは自分の 1 件だけを円建てで投影する（VB-62）。
  *   - 観客（audience）は開示（b・answers_opened）未実行の間、他者の解答を露出する
  *     イベントを受け取らない（VB-19・`dod_disclosure_hidden_before`）。開示後は受け取る。
@@ -54,7 +54,7 @@ export interface OwnBalancePayload {
  * （他者の解答・正解開示・全員精算表・参加者一覧）を運ぶ。解答者の可視面は自分の残額・
  * 進行段階・自分宛の ack に限る（設計 §2.5・VB-62）。
  */
-const ANSWERER_WITHHELD_EVENT_TYPES: readonly ServerEventType[] = [
+const CONTESTANT_WITHHELD_EVENT_TYPES: readonly ServerEventType[] = [
   "answers_opened",
   "answer_revealed",
   "settlement_computed",
@@ -80,8 +80,8 @@ export function projectForRole(
     case "host":
       // 司会者（制御盤）は全進行状態・全員の解答/残額/得点を受け取る（投影なし）。
       return event;
-    case "answerer":
-      return projectForAnswerer(event, ctx);
+    case "contestant":
+      return projectForContestant(event, ctx);
     case "audience":
       return projectForAudience(event, ctx);
     default:
@@ -89,7 +89,7 @@ export function projectForRole(
   }
 }
 
-function projectForAnswerer(
+function projectForContestant(
   event: ServerEvent,
   ctx: ProjectionContext,
 ): ServerEvent | null {
@@ -98,7 +98,7 @@ function projectForAnswerer(
     // 全員分の残額から自分の残額 1 件のみを投影する。
     return projectOwnBalance(event, ctx.participantId);
   }
-  if (ANSWERER_WITHHELD_EVENT_TYPES.includes(event.type)) {
+  if (CONTESTANT_WITHHELD_EVENT_TYPES.includes(event.type)) {
     return null;
   }
   // 進行段階・TV モード・取消・自分宛の制御イベント等、他者情報を含まないものは通す。

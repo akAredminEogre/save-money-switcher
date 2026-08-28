@@ -37,7 +37,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -72,7 +72,7 @@ codd:
       - id: dod_load_correct_value_integer
         text: correct_value が 0〜100 の整数以外では登録が拒否される（DB CHECK を含む）
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -97,7 +97,7 @@ codd:
       - id: dod_join_one_device
         text: connection_id は一意で 1 人 1 台が担保される
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -132,18 +132,18 @@ codd:
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - 全解答者タブレットの入力がロックされる
       - 締切後の answers への書込みは拒否される
       dod_obligations:
       - id: dod_lock_host_only
-        text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+        text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
       - id: dod_lock_blocks_submit
         text: rounds.stage が answers_locked 以降のとき answers への挿入/更新が拒否される
     - id: op_open_answers
@@ -153,7 +153,7 @@ codd:
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -176,7 +176,7 @@ codd:
       trigger: 制御盤で正解発表を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed
@@ -345,11 +345,11 @@ CRUD の各行を担うアクターと、可視コピーで用いる**業務ラ�
 | 内部識別子 | 可視ラベル | サーフェス | 主な役割 |
 |---|---|---|---|
 | `host` | **司会者（制御盤）** | `/control-panel` | 問題読込・進行段階前進・ライブ編集・精算・上限設定 |
-| `answerer` | **解答者（タブレット）** | `/tablet`・`/join` | QR 参加・氏名自己入力・0〜100 整数の解答送信 |
+| `contestant` | **解答者（タブレット）** | `/tablet`・`/join` | QR 参加・氏名自己入力・0〜100 整数の解答送信 |
 | `audience` | **観客（TV 視聴者）** | `/tv` | a〜e モードの表示閲覧（書込み権なし） |
 | `system` | サーバ（realtime_sync） | ― | 自動再採点・接続上限拒否・勝者判定 |
 
-可視コピーには**可視ラベル**を用い、内部識別子（host/answerer）・実装根拠・環境前提・デモ/テスト用語を露出させない。金額は必ず**「円」**で表す。参加者名は自己入力名をそのまま提示し、「端末 1」「席番号」等の内部割当ラベルへ置換しない（座席固定を持たない）。
+可視コピーには**可視ラベル**を用い、内部識別子（host/contestant）・実装根拠・環境前提・デモ/テスト用語を露出させない。金額は必ず**「円」**で表す。参加者名は自己入力名をそのまま提示し、「端末 1」「席番号」等の内部割当ラベルへ置換しない（座席固定を持たない）。
 
 ---
 
@@ -360,7 +360,7 @@ CRUD の各行を担うアクターと、可視コピーで用いる**業務ラ�
 > 本節以下の `participants` を前提とする ER・CRUD・権限記述は失効しており、履歴として残す。
 > 有効な表定義は `docs/design/data_model_design.md` §2.3a（`accounts`・P1 実装済）および
 > §2.3b（エピソード系 4 表・**P2 実装済**）を正とする。
-> アクター（`role:host` / `role:answerer`）と表の権限境界そのものは案A でも有効であり、
+> アクター（`role:host` / `role:contestant`）と表の権限境界そのものは案A でも有効であり、
 > 「誰がそのロールか」をアカウントとセッションが与えるようになった点だけが変わる。
 
 ### 2.1 ER 図（8 テーブル・Mermaid erDiagram）
@@ -442,13 +442,13 @@ stateDiagram-v2
     settlement_computed --> [*] : 次問へ / 10問目完了で op_determine_winner→game_finished
 ```
 
-**状態遷移の所有・境界（プロセ）**: `stage` を前進させる **U（更新）** は `module:game_flow`（`src/game_state/`）が単一所有し、発動アクターは `role: host` のみ（`role: answerer` の当該コマンドは 401/403 拒否）。モード対応は `answers_opened`＝b／`answer_revealed`＝c／`settlement_computed`＝d。**再採点範囲判定の唯一の前提**は `isDisclosed(stage)`（`stage ∈ {answer_revealed, settlement_computed}`）と `isSettled(stage)`（`stage = settlement_computed`）であり、これらは `src/game_state/progression.ts` が単一所有する述語である（`module:scoring` はこれを import して再採点可否を決め、独自再定義しない）。自己ループ（`answer_revealed`→`answer_revealed`、`settlement_computed`→`settlement_computed`）は正解ライブ編集に伴う自動再採点で、`stage` は変えず `settlements`/`balances` のみを更新する。この段階列（ER-2）なしに再採点範囲は決定できない。
+**状態遷移の所有・境界（プロセ）**: `stage` を前進させる **U（更新）** は `module:game_flow`（`src/game_state/`）が単一所有し、発動アクターは `role: host` のみ（`role: contestant` の当該コマンドは 401/403 拒否）。モード対応は `answers_opened`＝b／`answer_revealed`＝c／`settlement_computed`＝d。**再採点範囲判定の唯一の前提**は `isDisclosed(stage)`（`stage ∈ {answer_revealed, settlement_computed}`）と `isSettled(stage)`（`stage = settlement_computed`）であり、これらは `src/game_state/progression.ts` が単一所有する述語である（`module:scoring` はこれを import して再採点可否を決め、独自再定義しない）。自己ループ（`answer_revealed`→`answer_revealed`、`settlement_computed`→`settlement_computed`）は正解ライブ編集に伴う自動再採点で、`stage` は変えず `settlements`/`balances` のみを更新する。この段階列（ER-2）なしに再採点範囲は決定できない。
 
 ### 2.3 派生読みモデル連鎖と CRUD 実行点（producer→durable→derived→consumer）
 
 ```mermaid
 flowchart LR
-    A["answerer /tablet<br/>4ボタン(+1/-1/+10/-10)"] -->|"C/U value 0..100<br/>(accepting のみ)"| ANS[("answers")]
+    A["contestant /tablet<br/>4ボタン(+1/-1/+10/-10)"] -->|"C/U value 0..100<br/>(accepting のみ)"| ANS[("answers")]
     HOST["host /control-panel"] -->|"C/U 問題・正解"| Q[("questions.correct_value")]
     HOST -->|"U stage 前進"| RND[("rounds.stage")]
     ANS --> SC{{"module:scoring<br/>apply_question_score"}}
@@ -486,7 +486,7 @@ flowchart LR
 
 ### 2.5 CRUD マトリクス（アクター×表・権限境界と可視性）
 
-| 表 ＼ アクター | host（司会者） | answerer（解答者） | audience（TV観客） | system（サーバ） |
+| 表 ＼ アクター | host（司会者） | contestant（解答者） | audience（TV観客） | system（サーバ） |
 |---|---|---|---|---|
 | questions | C(読込)・R・U(ライブ編集) | — | R(a:出題面 / c:正解) | R(再採点で correct 参照) |
 | participants | R(参加者一覧) | C(参加)・R(自分) | R(b/e:氏名) | R(接続数) |
@@ -497,7 +497,7 @@ flowchart LR
 | balances | R(6列表) | **R(自分のみ)** | R(d/e:通算) | C/U(初期化・精算・再採点) |
 | config | R・U(上限設定) | — | — | R(上限解決) |
 
-**アクター境界の所有（プロセ）**: `role: host` のみが `rounds.stage` 前進・`game_state.tv_mode/phase` 切替・`questions` ライブ編集・`config` 更新の書込みを起こす（INV-5 継承）。`role: answerer` は自分の `answers`（accepting 中のみ C/U）と自分の `balances`（R のみ）に限定され、**他者の `answers`/`balances`/`settlements` はタブレット向け読みモデルに一切含めない**（クロスアクター非可視・dod_submit の readback）。`audience`（TV）は全表 R のみで書込み権を持たない。氏名列 `participants.name` は自己入力値をそのまま TV/制御盤へ露出し、内部割当ラベルへ置換しない。金額列（`balances.amount`／`settlements.delta_yen`／`settlements.pitari_bonus_yen`）は API 応答・TV 表示・内部表現のいずれも「円」で表し、`point`/`pt`/`点` を出さない（dod_settle_currency_yen）。
+**アクター境界の所有（プロセ）**: `role: host` のみが `rounds.stage` 前進・`game_state.tv_mode/phase` 切替・`questions` ライブ編集・`config` 更新の書込みを起こす（INV-5 継承）。`role: contestant` は自分の `answers`（accepting 中のみ C/U）と自分の `balances`（R のみ）に限定され、**他者の `answers`/`balances`/`settlements` はタブレット向け読みモデルに一切含めない**（クロスアクター非可視・dod_submit の readback）。`audience`（TV）は全表 R のみで書込み権を持たない。氏名列 `participants.name` は自己入力値をそのまま TV/制御盤へ露出し、内部割当ラベルへ置換しない。金額列（`balances.amount`／`settlements.delta_yen`／`settlements.pitari_bonus_yen`）は API 応答・TV 表示・内部表現のいずれも「円」で表し、`point`/`pt`/`点` を出さない（dod_settle_currency_yen）。
 
 ---
 
@@ -542,13 +542,13 @@ flowchart LR
 | `/tv`(b) | 観客 | 全員 `participants.name`＋`answers.value`（開示後のみ） | 開示前の解答 | 「解答オープン！」一斉表示 | 開示前の値 |
 | `/tv`(d) | 観客 | 6 列表（name/value/error/delta_yen/pitari_bonus_yen/amount） | ― | 円建て 6 列 | point/pt/点 |
 | `/tv`(e) | 観客 | 通算 `balances.amount`・勝者判別 | ― | 「勝者」通算残額（円） | point/pt/点 |
-| `/control-panel` | 司会者 | 全表 R＋所有 U（進行・編集・上限） | ― | 業務操作ラベル | 内部識別子(host/answerer)の露出 |
+| `/control-panel` | 司会者 | 全表 R＋所有 U（進行・編集・上限） | ― | 業務操作ラベル | 内部識別子(host/contestant)の露出 |
 
-`/join` 等の事前認証サーフェスは、ロール解決済み/保護されたナビゲーションを露出しない。可視コピーは監査対象の業務言語（job-to-be-done）で書き、実装根拠・環境前提・デモ/テスト用語を出さない。内部識別子 `host`/`answerer` は可視ラベル「司会者」「解答者」へ写像する（§1.4）。
+`/join` 等の事前認証サーフェスは、ロール解決済み/保護されたナビゲーションを露出しない。可視コピーは監査対象の業務言語（job-to-be-done）で書き、実装根拠・環境前提・デモ/テスト用語を出さない。内部識別子 `host`/`contestant` は可視ラベル「司会者」「解答者」へ写像する（§1.4）。
 
 ### 3.4 データ層アクセス制御・整合・プライバシー
 
-- **書込み権限境界（INV-5 継承・release-blocking）**: `rounds.stage` 前進／`game_state.tv_mode`・`phase` 切替／`questions` ライブ編集／`config` 更新は `role: host` セッションのみ。ロール判定はセッションのロール属性を単一判定点とし、`role: answerer` の当該コマンドは 401/403 拒否。
+- **書込み権限境界（INV-5 継承・release-blocking）**: `rounds.stage` 前進／`game_state.tv_mode`・`phase` 切替／`questions` ライブ編集／`config` 更新は `role: host` セッションのみ。ロール判定はセッションのロール属性を単一判定点とし、`role: contestant` の当該コマンドは 401/403 拒否。
 - **終端状態ガード**: `answers_locked` 以降は `answers` の C/U をサーバ側 stage 検査で拒否（DB 書込みも stage 経由）。
 - **クロスアクター可視性**: `/tablet` 読みモデルは当該解答者の `answers`＋自分の `balances` のみ。他者解答は `answers_opened`（b 実行）到達前はどの読みモデルにも含めない。
 - **整合制約（defense-in-depth）**: `unique(question_id, participant_id)`（answers・settlements）、FK（answers/settlements/rounds/balances→親）、`CHECK`（`value`・`correct_value`・`error` の 0..100、金額 integer）。`balances.amount` は `settlements` からの全再計算と常に一致する不変式を持つ。
@@ -684,7 +684,7 @@ describe("進行段階（再採点範囲判定 ER-2）", () => {
 |---|---|---|
 | happy path | dod_submit_persist | answers C/U → getOwn R |
 | persistence/readback | dod_load_persist・dod_edit_persist | questions C/U → getByNumber R |
-| permission boundary | dod_lock_host_only | rounds U(host)／answerer 401/403 |
+| permission boundary | dod_lock_host_only | rounds U(host)／contestant 401/403 |
 | terminal-state guard | dod_lock_blocks_submit | answers 🔒(locked 以降) |
 | cross-actor reflection | dod_join_self_name・dod_open_reveals_on_tv | participants C→制御盤R／answers R(TV b) |
 | derived-state chain | dod_settle_delta・dod_rescore_matches_full_recompute | settlements C/U→balances U |
@@ -700,7 +700,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -734,7 +734,7 @@ operation_flow:
         - id: dod_load_correct_value_integer
           text: correct_value が 0〜100 の整数以外では登録が拒否される（DB CHECK を含む）
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -757,7 +757,7 @@ operation_flow:
         - id: dod_join_one_device
           text: connection_id は一意で 1 人 1 台が担保される
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -791,17 +791,17 @@ operation_flow:
       target: answers
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - 全解答者タブレットの入力がロックされる
         - 締切後の answers への書込みは拒否される
       dod_obligations:
         - id: dod_lock_host_only
-          text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+          text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
         - id: dod_lock_blocks_submit
           text: rounds.stage が answers_locked 以降のとき answers への挿入/更新が拒否される
     - id: op_open_answers
@@ -810,7 +810,7 @@ operation_flow:
       target: answers
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -830,7 +830,7 @@ operation_flow:
       target: correct_value
       trigger: 制御盤で正解発表を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed

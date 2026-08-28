@@ -24,7 +24,7 @@ import {
 /** 可視文言へ出してはならない内部語・設定キー名。 */
 const FORBIDDEN_TOKENS = [
   "host",
-  "answerer",
+  "contestant",
   "audience",
   "JOIN_ACCESS_MODE",
   "JOIN_ACCESS_TOKEN",
