@@ -40,7 +40,7 @@ describe("auth/session_registry セッションの発行・解決・破棄", () 
     const host = registry.issue("admin-1", "host");
     expect(requireHost(host).role).toBe("host");
 
-    const contestant = registry.issue("contestant-1", "answerer");
+    const contestant = registry.issue("contestant-1", "contestant");
     expect(() => requireHost(contestant)).toThrow(ForbiddenRoleError);
     // 未ログイン（解決できない）は 401 側へ落ちる。
     expect(() => requireHost(registry.get("nope"))).toThrow(UnauthenticatedError);
@@ -60,7 +60,7 @@ describe("auth/session_registry セッションの発行・解決・破棄", () 
       newSessionId: () => `sid-${++counter}`,
       now: () => "2026-08-28T00:00:00.000Z",
     });
-    const session = registry.issue("account-1", "answerer");
+    const session = registry.issue("account-1", "contestant");
     expect(session.sid).toBe("sid-1");
     expect(session.issuedAt).toBe("2026-08-28T00:00:00.000Z");
     expect(session.accountId).toBe("account-1");

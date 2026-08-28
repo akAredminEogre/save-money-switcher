@@ -317,7 +317,7 @@ describe("scoring", () => {
   - パスワードは **`node:crypto` の scrypt**（外部依存を増やさない）。平文は保存・記録・表示のいずれもしない。
   - 身元は **サーバ側セッション ＋ HttpOnly Cookie**。localStorage の participantId は廃止する。
   - 認可判定は既存の単一決定点 `src/participants/authorize.ts`（`requireHost` / 401 / 403）を再利用し、
-    `admin → host` / `contestant → answerer` の写像だけを新設する（判定核を作り直さない）。
+    `admin → host` / `contestant → contestant` の写像だけを新設する（判定核を作り直さない）。
   - 家族限定アクセス制御（PC-INV-3）は `JOIN_ACCESS_MODE=authenticated`（分岐 B）で満たす。
     分岐 A（URL 秘匿トークン）は用いない。
   - QR は**破棄せず意味を付け替える**：符号化先を `/join` から `/login` へ変更する。

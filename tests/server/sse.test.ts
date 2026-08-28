@@ -2,7 +2,7 @@
  * SSE 接続レジストリ（`server/sse.ts`・案A）。
  *
  * 固定する契約:
- *   - 接続に載る身元は**サーバがセッションから決めた値**であり、解答面（answerer）の接続は
+ *   - 接続に載る身元は**サーバがセッションから決めた値**であり、解答面（contestant）の接続は
  *     ログイン必須ゆえ必ず身元を持つ。制御盤の「接続中のタブレット n / N」はその数を出す。
  *   - 観客面（audience）は未ログインでも購読でき身元を持たない（計上しない）。
  *   - 切断した接続は計上から外れる。
@@ -35,17 +35,17 @@ beforeEach(() => {
   }));
 });
 
-function open(role: "host" | "answerer" | "audience", identity: string | null): number {
+function open(role: "host" | "contestant" | "audience", identity: string | null): number {
   const id = addConnection(fakeResponse(), role, identity);
   opened.push(id);
   return id;
 }
 
 describe("server/sse 接続レジストリと解答者接続数", () => {
-  it("身元を持つ answerer 接続だけを計上する", () => {
+  it("身元を持つ contestant 接続だけを計上する", () => {
     expect(connectedTabletCount()).toBe(0);
-    open("answerer", "acc_child_1");
-    open("answerer", "acc_child_2");
+    open("contestant", "acc_child_1");
+    open("contestant", "acc_child_2");
     expect(connectedTabletCount()).toBe(2);
   });
 
@@ -55,13 +55,13 @@ describe("server/sse 接続レジストリと解答者接続数", () => {
     expect(connectedTabletCount()).toBe(0);
   });
 
-  it("身元の無い answerer 接続は計上しない（案A では発生し得ない状態を計上へ漏らさない）", () => {
-    open("answerer", null);
+  it("身元の無い contestant 接続は計上しない（案A では発生し得ない状態を計上へ漏らさない）", () => {
+    open("contestant", null);
     expect(connectedTabletCount()).toBe(0);
   });
 
   it("切断した接続は計上から外れる", () => {
-    const id = open("answerer", "acc_child_1");
+    const id = open("contestant", "acc_child_1");
     expect(connectedTabletCount()).toBe(1);
     removeConnection(id);
     expect(connectedTabletCount()).toBe(0);
