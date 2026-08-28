@@ -65,6 +65,16 @@ export interface Session {
   loaded: boolean;
   /** 各問の到達段階（問番号 → stage）。未出題の問はエントリを持たない（既定 accepting）。 */
   stages: Map<number, Stage>;
+  /**
+   * 進行セッションが今載せているエピソード（`episodes.id`）。未束縛は `null`。
+   * 案A P2 では 1 卓が同時に進めるのは 1 回だけであり、この値がその唯一のポインタである。
+   */
+  episodeId: string | null;
+  /**
+   * 出題集合。既定はローカル試遊のシード（{@link SEED_QUESTIONS}）で、エピソードを束ねると
+   * その回に登録された問題（`episode_questions`）へ差し替わる。
+   */
+  questions: readonly Question[];
   /** 参加者一覧（自己入力氏名・接続識別子）。 */
   participants: Participant[];
   /** 各問の解答（問番号 → (participantId → 0〜100 の整数)）。 */
@@ -75,12 +85,17 @@ export interface Session {
   seq: SequenceGenerator;
 }
 
-/** 新規セッションを生成する（lobby・第1問・TV モード a）。 */
-function createSession(): Session {
+/**
+ * 新規セッションを生成する（lobby・第1問・TV モード a・出題はシード集合）。
+ * module-level シングルトンの生成点であり、検証が独立したセッションを組むためにも用いる。
+ */
+export function createSession(): Session {
   return {
     game: { currentQuestionNumber: 1, tvMode: "a", phase: "lobby" },
     loaded: false,
     stages: new Map<number, Stage>(),
+    episodeId: null,
+    questions: SEED_QUESTIONS,
     participants: [],
     answers: new Map<number, Map<string, number>>(),
     settlements: new Map<number, readonly QuestionSettlement[]>(),
@@ -96,14 +111,61 @@ export function currentStage(s: Session = session): Stage {
   return s.stages.get(s.game.currentQuestionNumber) ?? INITIAL_STAGE;
 }
 
-/** 現在出題中の問題（シード集合から現在問番号で解決）。 */
+/** 現在出題中の問題（当該セッションの出題集合から現在問番号で解決）。 */
 export function currentQuestion(s: Session = session): Question {
-  const q = SEED_QUESTIONS[s.game.currentQuestionNumber - 1];
+  const q = s.questions[s.game.currentQuestionNumber - 1];
   if (q === undefined) {
-    // 到達不能: currentQuestionNumber は 1〜QUESTIONS_PER_GAME に保たれる。
+    // 到達不能: currentQuestionNumber は 1〜questionCount(s) に保たれる。
     throw new RangeError(`問題番号 ${s.game.currentQuestionNumber} に対応する問題がありません。`);
   }
   return q;
+}
+
+/**
+ * 当該セッションの出題数。エピソードを束ねた場合は登録済みの問数、束ねていない
+ * ローカル試遊ではシードの問数（{@link QUESTIONS_PER_GAME}）になる。
+ */
+export function questionCount(s: Session = session): number {
+  return s.questions.length;
+}
+
+/** エピソードを進行セッションへ束ねる入力（出題集合と参加者は呼出側が解決して渡す）。 */
+export interface EpisodeBinding {
+  readonly episodeId: string;
+  readonly questions: readonly Question[];
+  readonly participants: readonly Participant[];
+}
+
+/**
+ * エピソードを進行セッションへ束ね直す（別の回への切替）。進行途中の状態（到達段階・解答・
+ * 精算台帳）は前の回のものゆえ捨て、受付段階・第 1 問・lobby から始める。`seq` はプロセスを
+ * 通じて単調増加させたいため引き継ぐ（購読中のクライアントが古い連番を受け取らない）。
+ */
+export function bindEpisode(binding: EpisodeBinding, s: Session = session): void {
+  s.episodeId = binding.episodeId;
+  s.questions = binding.questions;
+  s.participants = [...binding.participants];
+  s.game = { currentQuestionNumber: 1, tvMode: "a", phase: "lobby" };
+  s.loaded = false;
+  s.stages = new Map<number, Stage>();
+  s.answers = new Map<number, Map<string, number>>();
+  s.settlements = new Map<number, readonly QuestionSettlement[]>();
+}
+
+/**
+ * 既に束ねてあるエピソードの出題集合・参加者を最新へ揃える（進行状態は保つ）。
+ * 参加者の途中参加・問題の途中編集を、進行中のゲームを壊さずに反映するための更新点である。
+ */
+export function refreshEpisodeBinding(binding: EpisodeBinding, s: Session = session): void {
+  s.episodeId = binding.episodeId;
+  s.questions = binding.questions;
+  for (const participant of binding.participants) registerParticipant(participant, s);
+}
+
+/** 参加者を進行セッションへ登録する（同一 id は二重登録しない）。 */
+export function registerParticipant(participant: Participant, s: Session = session): void {
+  if (s.participants.some((p) => p.id === participant.id)) return;
+  s.participants.push(participant);
 }
 
 /** 指定問の解答マップを取得（無ければ生成して返す）。 */
