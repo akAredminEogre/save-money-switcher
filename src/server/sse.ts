@@ -49,7 +49,7 @@ const connections = new Map<number, Connection>();
 let connectionSeq = 0;
 
 /**
- * 現在の解答者（タブレット）接続数（身元の在る answerer 接続のみ計上）。案A では解答面の購読に
+ * 現在の解答者（タブレット）接続数（身元の在る contestant 接続のみ計上）。案A では解答面の購読に
  * ログインが要る（`auth/surface_access.ts`）ゆえ、これは「ログイン済みで解答面を開いている
  * 接続の数」である。制御盤の「接続中のタブレット n / N」はこの値を出す。
  */

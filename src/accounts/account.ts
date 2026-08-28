@@ -30,11 +30,11 @@ export function isAccountRole(value: unknown): value is AccountRole {
 /**
  * アカウントロール → 認可ロール（`participants/authorize.ts` の {@link Role}）の唯一の写像。
  *
- * admin は制御盤・管理面の権限主体ゆえ `host`、contestant は解答者ゆえ `answerer` へ写す。
+ * admin は制御盤・管理面の権限主体ゆえ `host`、contestant は解答者ゆえ `contestant` へ写す。
  * `audience`（TV 観客）はアカウントを要さぬ受動面のロールゆえ本写像の像に含めない。
  */
 export function toSessionRole(role: AccountRole): Role {
-  return role === "admin" ? "host" : "answerer";
+  return role === "admin" ? "host" : "contestant";
 }
 
 /**

@@ -474,7 +474,7 @@ export interface Participant {
 - パスワードは **`node:crypto` の scrypt** のみで扱う（外部依存を増やさない）。平文は保存・記録・表示の
   いずれもしない（AC-A8）。
 - 一意性（`login_id`）は永続境界 `AccountStore.insertIfLoginIdAbsent` の原子的 insert-if-absent が担保する。
-- 認可ロールへの写像は `toSessionRole`（`admin → host` / `contestant → answerer`）が唯一の変換点である。
+- 認可ロールへの写像は `toSessionRole`（`admin → host` / `contestant → contestant`）が唯一の変換点である。
 
 ```typescript
 // src/accounts/account.ts
