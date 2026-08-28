@@ -172,18 +172,23 @@ export async function startAppInstance(label: string): Promise<AppInstance> {
 }
 
 /**
- * 実ブラウザで初期管理者としてログインし、**セッション Cookie を保持した文脈**を返す。
+ * 実ブラウザで与えた資格情報としてログインし、**セッション Cookie を保持した文脈**を返す。
  * 以降 `context.newPage()` で開く面はすべてログイン済みとして描画される。
  *
  * ログインは素の HTML フォーム送信で行う（案A のログイン面は JavaScript を要さない）。
  */
-export async function createAdminContext(browser: Browser, app: AppInstance): Promise<BrowserContext> {
+export async function createLoginContext(
+  browser: Browser,
+  app: AppInstance,
+  loginId: string,
+  password: string,
+): Promise<BrowserContext> {
   const context = await browser.newContext();
   const page = await context.newPage();
   try {
     await page.goto(`${app.baseUrl}${LOGIN_PATH}`, { waitUntil: "domcontentloaded" });
-    await page.fill('input[name="login_id"]', app.adminLoginId);
-    await page.fill('input[name="password"]', app.adminPassword);
+    await page.fill('input[name="login_id"]', loginId);
+    await page.fill('input[name="password"]', password);
     await Promise.all([
       page.waitForURL((url) => !url.pathname.startsWith(LOGIN_PATH), { timeout: 15_000 }),
       page.click('button[data-op="login"]'),
@@ -192,4 +197,9 @@ export async function createAdminContext(browser: Browser, app: AppInstance): Pr
     await page.close();
   }
   return context;
+}
+
+/** 実ブラウザで初期管理者としてログインした文脈を返す（{@link createLoginContext} の別名）。 */
+export async function createAdminContext(browser: Browser, app: AppInstance): Promise<BrowserContext> {
+  return createLoginContext(browser, app, app.adminLoginId, app.adminPassword);
 }

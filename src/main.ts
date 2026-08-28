@@ -39,7 +39,6 @@ import { renderControlPanelHtml } from "./control_panel/render_control_panel.js"
 import { INITIAL_STAGE } from "./game_state/progression.js";
 import { ROLE_LABELS } from "./game_state/role_labels.js";
 import { renderTvSurface, serializeTvSurface } from "./tv_display/render_tv_surface.js";
-import { renderTabletSurface } from "./tablet/render_tablet_surface.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Role } from "./realtime_sync/protocol.js";
@@ -73,6 +72,51 @@ import { guardAdminSurface, isSafeRedirectTarget } from "./auth/access_guard.js"
 import { authorizeLiveSurface, toLiveSurface } from "./auth/surface_access.js";
 import { buildLoginUrl, LOGIN_PATH } from "./auth/login_link.js";
 import { renderLoginSurface, type LoginSurfaceViewModel } from "./auth/login_surface.js";
+import { createJsonEpisodeStore, episodesFilePath } from "./episodes/json_episode_store.js";
+import {
+  createEpisode,
+  findEpisode,
+  findParticipation,
+  inviteAccount,
+  joinEpisode,
+  listEpisodeQuestions,
+  listEpisodes,
+  listInvitations,
+  listInvitedEpisodes,
+  listParticipants,
+  registerQuestion,
+  updateEpisode,
+  EpisodeNotFoundError,
+  InvalidCorrectValueError,
+  InvalidEpisodeTitleError,
+  InvalidQuestionNumberError,
+  InvalidQuestionTextError,
+  NotInvitedError,
+} from "./episodes/episode_service.js";
+import { isEpisodeStatus } from "./episodes/episode.js";
+import {
+  renderAdminEpisodeDetail,
+  renderAdminEpisodeList,
+  renderInvitedEpisodeList,
+  type AdminEpisodeDetailView,
+  type AdminEpisodeListView,
+  type InvitedEpisodeListView,
+} from "./episodes/episode_surface.js";
+import {
+  EpisodeBusyError,
+  resolveSessionParticipantId,
+  syncEpisodeIntoSession,
+  type EpisodeSessionDeps,
+} from "./server/episode_session.js";
+import {
+  createAccount,
+  listAccounts,
+  DuplicateLoginIdError,
+  InvalidLoginIdError,
+} from "./accounts/account_service.js";
+import { buildTabletFragment } from "./server/view_builders.js";
+import { connectedTabletCount } from "./server/sse.js";
+import { currentStage, session as playSession } from "./server/session.js";
 
 /**
  * 待受ポート。E2E ハーネス（tests/e2e/helpers/env.ts）と runbook のローカル起動権威は
@@ -243,6 +287,19 @@ function sendRedirect(res: ServerResponse, location: string, setCookie?: string)
 /** アカウント永続層（設計 D7・JSON ファイル。境界の裏ゆえ将来 SQLite へ差し替え可能）。 */
 const accountStore = createJsonAccountStore(accountsFilePath(resolveDataDir()));
 
+/** エピソード永続層（設計 D3 / D7・アカウントと同じ作法で境界の裏に置く）。 */
+const episodeStore = createJsonEpisodeStore(episodesFilePath(resolveDataDir()));
+
+/**
+ * エピソード ⇄ 進行セッションの橋渡しに要する依存。表示名の解決だけをアカウント層へ委ね、
+ * `server/episode_session.ts` がアカウント永続層の実装を知らずに済むようにする。
+ */
+const episodeDeps: EpisodeSessionDeps = {
+  store: episodeStore,
+  resolveDisplayName: async (accountId: string): Promise<string | undefined> =>
+    (await findAccountById(accountStore, accountId))?.displayName,
+};
+
 /** サーバ側セッション台帳（プロセス内・再起動で失効してよい・設計 D2）。 */
 const sessions = createSessionRegistry();
 
@@ -339,13 +396,12 @@ function renderHomeHtml(account: Account): string {
   const links =
     account.role === "admin"
       ? `<li><a href="/admin">管理</a></li>` +
+        `<li><a href="/admin/episodes">エピソード一覧</a></li>` +
         `<li><a href="/control-panel">進行制御盤</a></li>` +
         `<li><a href="/tv">TV表示</a></li>`
-      : `<li><a href="/tablet">解答画面</a></li>`;
-  const forContestant =
-    account.role === "contestant"
-      ? `<p data-field="episodes-notice">ご参加いただける回の一覧は準備中です。</p>`
-      : "";
+      : `<li><a href="/episodes">ご参加いただける回</a></li>` +
+        `<li><a href="/tablet">解答画面</a></li>`;
+  const forContestant = "";
   return (
     `<main data-surface="home">` +
     `<h1>${escapeHtml(TV_TITLE)}</h1>` +
@@ -365,6 +421,8 @@ function renderAdminHtml(account: Account): string {
     `<h1>管理</h1>` +
     `<p data-field="display-name">${escapeHtml(account.displayName)}</p>` +
     `<ul>` +
+    `<li><a href="/admin/episodes">エピソード一覧</a></li>` +
+    `<li><a href="/admin/accounts">解答者アカウント</a></li>` +
     `<li><a href="/control-panel">進行制御盤</a></li>` +
     `<li><a href="/tv">TV表示</a></li>` +
     `<li><a href="/me">アカウント設定</a></li>` +
@@ -469,6 +527,280 @@ function guardAdminHtml(
   return "denied";
 }
 
+// ── エピソード面（案A P2・issue #2 R3〜R6 / AC-A3〜AC-A6） ──
+
+/**
+ * 面へ出す通知・エラーの可視文言。要求クエリの値は**この表の鍵としてのみ**用い、文字列を面へ
+ * 反射させない（未知の鍵は文言なし）。反射型注入の経路を作らないための固定表である。
+ */
+const NOTICE_MESSAGES: Readonly<Record<string, string>> = {
+  episode_created: "新しい回を作りました。",
+  episode_saved: "この回の設定を保存しました。",
+  question_saved: "問題を登録しました。",
+  member_invited: "解答者を招待しました。",
+  member_created: "解答者を作って招待しました。",
+  account_saved: "アカウントを更新しました。",
+};
+
+/** 失敗の可視文言（同上・固定表）。 */
+const ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  episode_title: "回の名前を確かめてくだされ。",
+  question_number: "問題番号を確かめてくだされ。",
+  question_text: "問題文を入力してくだされ。",
+  correct_value: "正解は0〜100の整数で入力してくだされ。",
+  login_id: "ログインIDを確かめてくだされ。",
+  duplicate_login_id: "そのログインIDは既に使われています。",
+  weak_password: "パスワードが短すぎます。",
+  display_name: "お名前を確かめてくだされ。",
+  not_invited: "この回へは招待されていません。",
+  episode_busy: "別の回が進行中です。進行中の回を終えてからお試しくだされ。",
+  not_found: "その回は見つかりませんでした。",
+  invalid_request: "入力を確かめてくだされ。",
+};
+
+/** 通知・エラーのクエリを可視文言の断片へ写す（未知の鍵は空断片）。 */
+function messageFragment(url: URL): string {
+  const notice = NOTICE_MESSAGES[url.searchParams.get("notice") ?? ""];
+  const failure = ERROR_MESSAGES[url.searchParams.get("error") ?? ""];
+  const text = failure ?? notice;
+  if (text === undefined) return "";
+  return `<p data-field="message">${escapeHtml(text)}</p>`;
+}
+
+/** `/admin/episodes/<id>[/<rest>]` を解析する（一致しなければ `null`）。 */
+function parseEpisodeAdminPath(path: string): { id: string; rest: string } | null {
+  const prefix = "/admin/episodes/";
+  if (!path.startsWith(prefix)) return null;
+  const remainder = path.slice(prefix.length);
+  if (remainder === "") return null;
+  const slash = remainder.indexOf("/");
+  if (slash < 0) return { id: decodeURIComponent(remainder), rest: "" };
+  return {
+    id: decodeURIComponent(remainder.slice(0, slash)),
+    rest: remainder.slice(slash + 1),
+  };
+}
+
+/** `/episodes/<id>/join` を解析する（一致しなければ `null`）。 */
+function parseEpisodeJoinPath(path: string): string | null {
+  const match = /^\/episodes\/([^/]+)\/join$/.exec(path);
+  return match === null ? null : decodeURIComponent(match[1] as string);
+}
+
+/** 管理者のエピソード一覧面を HTML へ整形する。 */
+function serializeAdminEpisodeList(view: AdminEpisodeListView, message: string): string {
+  const rows = view.episodes
+    .map(
+      (episode) =>
+        `<li data-field="episode">` +
+        `<a href="/admin/episodes/${encodeURIComponent(episode.id)}">${escapeHtml(episode.title)}</a>` +
+        `<span data-field="episode-status">${escapeHtml(episode.statusLabel)}</span></li>`,
+    )
+    .join("");
+  const list =
+    view.episodes.length > 0
+      ? `<ul data-field="episode-list">${rows}</ul>`
+      : `<p data-field="empty">${escapeHtml(view.emptyMessage)}</p>`;
+  return (
+    `<main data-surface="admin-episodes">` +
+    `<h1>${escapeHtml(view.heading)}</h1>` +
+    message +
+    list +
+    `<form method="post" action="/admin/episodes" data-form="episode-create">` +
+    `<label>${escapeHtml(view.titleLabel)}` +
+    `<input type="text" name="title" maxlength="${view.titleMaxLength}" ` +
+    `aria-label="${escapeHtml(view.titleLabel)}"></label>` +
+    `<button type="submit" data-op="create-episode">${escapeHtml(view.createSubmitLabel)}</button>` +
+    `</form>` +
+    `<p><a href="/admin">管理へ戻る</a></p>` +
+    `</main>`
+  );
+}
+
+/** 管理者のエピソード詳細面を HTML へ整形する（進行制御盤を当該回の文脈で埋め込む）。 */
+function serializeAdminEpisodeDetail(
+  view: AdminEpisodeDetailView,
+  controlPanelHtml: string,
+  message: string,
+): string {
+  const base = `/admin/episodes/${encodeURIComponent(view.episodeId)}`;
+  const statusOptions = view.statusOptions
+    .map(
+      (option) =>
+        `<option value="${escapeHtml(option.value)}"` +
+        `${option.value === view.status ? " selected" : ""}>${escapeHtml(option.label)}</option>`,
+    )
+    .join("");
+  const questionRows = view.questions
+    .map(
+      (question) =>
+        `<li data-field="question">` +
+        `<span data-field="question-number">第${question.questionNumber}問</span>` +
+        `<span data-field="question-text">${escapeHtml(question.text)}</span>` +
+        `<span data-field="question-correct">正解 ${question.correctValue}</span></li>`,
+    )
+    .join("");
+  const memberRows = view.members
+    .map(
+      (member) =>
+        `<li data-field="member">` +
+        `<span data-field="member-name">${escapeHtml(member.displayName)}</span>` +
+        `<span data-field="member-state">${escapeHtml(member.stateLabel)}</span></li>`,
+    )
+    .join("");
+  const invitable = view.invitableAccounts
+    .map(
+      (account) =>
+        `<option value="${escapeHtml(account.accountId)}">${escapeHtml(account.displayName)}</option>`,
+    )
+    .join("");
+  const inviteForm =
+    view.invitableAccounts.length > 0
+      ? `<form method="post" action="${base}/invitations" data-form="member-invite">` +
+        `<select name="account_id" aria-label="解答者">${invitable}</select>` +
+        `<button type="submit" data-op="invite-member">${escapeHtml(view.memberInviteSubmitLabel)}</button>` +
+        `</form>`
+      : "";
+  return (
+    `<main data-surface="admin-episode">` +
+    `<h1 data-field="episode-title">${escapeHtml(view.title)}</h1>` +
+    `<p data-field="episode-status">${escapeHtml(view.statusLabel)}</p>` +
+    message +
+    `<form method="post" action="${base}" data-form="episode-update">` +
+    `<label>${escapeHtml(view.titleLabel)}` +
+    `<input type="text" name="title" maxlength="${view.titleMaxLength}" ` +
+    `value="${escapeHtml(view.title)}" aria-label="${escapeHtml(view.titleLabel)}"></label>` +
+    `<select name="status" aria-label="この回の状態">${statusOptions}</select>` +
+    `<button type="submit" data-op="update-episode">${escapeHtml(view.updateSubmitLabel)}</button>` +
+    `</form>` +
+    `<section data-field="questions">` +
+    `<h2>${escapeHtml(view.questionSectionHeading)}</h2>` +
+    (view.questions.length > 0 ? `<ol data-field="question-list">${questionRows}</ol>` : "") +
+    `<form method="post" action="${base}/questions" data-form="question-create">` +
+    `<label>問題番号<input type="number" name="question_number" ` +
+    `min="${view.questionNumberMin}" max="${view.questionNumberMax}" aria-label="問題番号"></label>` +
+    `<label>問題文<input type="text" name="text" aria-label="問題文"></label>` +
+    `<label>正解<input type="number" name="correct_value" ` +
+    `min="${view.correctValueMin}" max="${view.correctValueMax}" aria-label="正解"></label>` +
+    `<button type="submit" data-op="register-question">${escapeHtml(view.questionSubmitLabel)}</button>` +
+    `</form></section>` +
+    `<section data-field="members">` +
+    `<h2>${escapeHtml(view.memberSectionHeading)}</h2>` +
+    (view.members.length > 0 ? `<ul data-field="member-list">${memberRows}</ul>` : "") +
+    `<form method="post" action="${base}/contestants" data-form="member-create">` +
+    `<label>ログインID<input type="text" name="login_id" ` +
+    `maxlength="${view.loginIdMaxLength}" aria-label="ログインID"></label>` +
+    `<label>はじめのパスワード（${view.minPasswordLength}文字以上）` +
+    `<input type="password" name="password" aria-label="はじめのパスワード"></label>` +
+    `<label>お名前<input type="text" name="display_name" ` +
+    `maxlength="${view.displayNameMaxLength}" aria-label="お名前"></label>` +
+    `<button type="submit" data-op="create-member">${escapeHtml(view.memberCreateSubmitLabel)}</button>` +
+    `</form>` +
+    inviteForm +
+    `</section>` +
+    `<section data-field="control-panel"><div id="control-panel">${controlPanelHtml}</div></section>` +
+    `<p><a href="/admin/episodes">エピソード一覧へ戻る</a></p>` +
+    `</main>`
+  );
+}
+
+/** 解答者の招待エピソード一覧面を HTML へ整形する。 */
+function serializeInvitedEpisodeList(view: InvitedEpisodeListView, message: string): string {
+  const rows = view.episodes
+    .map(
+      (episode) =>
+        `<li data-field="episode">` +
+        `<span data-field="episode-title">${escapeHtml(episode.title)}</span>` +
+        `<span data-field="episode-status">${escapeHtml(episode.statusLabel)}</span>` +
+        `<form method="post" action="/episodes/${encodeURIComponent(episode.id)}/join" data-form="join">` +
+        `<button type="submit" data-op="join">${escapeHtml(episode.actionLabel)}</button>` +
+        `</form></li>`,
+    )
+    .join("");
+  const list =
+    view.episodes.length > 0
+      ? `<ul data-field="episode-list">${rows}</ul>`
+      : `<p data-field="empty">${escapeHtml(view.emptyMessage)}</p>`;
+  return (
+    `<main data-surface="episodes">` +
+    `<h1>${escapeHtml(view.heading)}</h1>` +
+    message +
+    list +
+    `<p><a href="/">ホームへ戻る</a></p>` +
+    `</main>`
+  );
+}
+
+/** 管理者のアカウント面（解答者アカウントの作成・編集・AC-A4 / issue #2 R5）を HTML へ整形する。 */
+function serializeAdminAccounts(accounts: readonly Account[], message: string): string {
+  const rows = accounts
+    .filter((account) => account.role === "contestant")
+    .map(
+      (account) =>
+        `<li data-field="account">` +
+        `<span data-field="account-name">${escapeHtml(account.displayName)}</span>` +
+        `<span data-field="account-login-id">${escapeHtml(account.loginId)}</span>` +
+        `<form method="post" action="/admin/accounts/${encodeURIComponent(account.id)}" ` +
+        `data-form="account-update">` +
+        `<input type="text" name="display_name" value="${escapeHtml(account.displayName)}" ` +
+        `maxlength="20" aria-label="お名前">` +
+        `<input type="password" name="password" aria-label="新しいパスワード">` +
+        `<button type="submit" data-op="update-account">この人を保存する</button>` +
+        `</form></li>`,
+    )
+    .join("");
+  return (
+    `<main data-surface="admin-accounts">` +
+    `<h1>解答者アカウント</h1>` +
+    message +
+    (rows === "" ? `<p data-field="empty">解答者はまだいません。</p>` : `<ul data-field="account-list">${rows}</ul>`) +
+    `<form method="post" action="/admin/accounts" data-form="account-create">` +
+    `<label>ログインID<input type="text" name="login_id" aria-label="ログインID"></label>` +
+    `<label>はじめのパスワード<input type="password" name="password" aria-label="はじめのパスワード"></label>` +
+    `<label>お名前<input type="text" name="display_name" maxlength="20" aria-label="お名前"></label>` +
+    `<button type="submit" data-op="create-account">解答者を作る</button>` +
+    `</form>` +
+    `<p><a href="/admin">管理へ戻る</a></p>` +
+    `</main>`
+  );
+}
+
+/** エピソード詳細へ埋め込む進行制御盤の HTML を、現在の進行セッションから組み立てる。 */
+async function buildEmbeddedControlPanel(): Promise<string> {
+  const view = buildControlPanelView({
+    stage: currentStage(),
+    participants: playSession.participants,
+    connectedTablets: connectedTabletCount(),
+    maxTabletConnections,
+    joinUrl: resolveEntryUrl(),
+    joinQrSvg: await getJoinQrSvg(),
+  });
+  return renderControlPanelHtml(view);
+}
+
+/** 業務例外を、面へ戻すときの固定エラーコードへ写す（未知の例外は再送出する）。 */
+function toErrorCode(err: unknown): string {
+  if (err instanceof InvalidEpisodeTitleError) return "episode_title";
+  if (err instanceof InvalidQuestionNumberError) return "question_number";
+  if (err instanceof InvalidQuestionTextError) return "question_text";
+  if (err instanceof InvalidCorrectValueError) return "correct_value";
+  if (err instanceof InvalidLoginIdError) return "login_id";
+  if (err instanceof DuplicateLoginIdError) return "duplicate_login_id";
+  if (err instanceof WeakPasswordError) return "weak_password";
+  if (err instanceof InvalidAccountDisplayNameError) return "display_name";
+  if (err instanceof NotInvitedError) return "not_invited";
+  if (err instanceof EpisodeBusyError) return "episode_busy";
+  if (err instanceof EpisodeNotFoundError) return "not_found";
+  throw err;
+}
+
+/** 数値フィールド（フォームは文字列で届く）を整数へ写す。整数でなければ `NaN` を返す。 */
+function toInteger(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === "") return Number.NaN;
+  const value = Number(raw);
+  return Number.isInteger(value) ? value : Number.NaN;
+}
+
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const path = url.pathname;
@@ -541,9 +873,16 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       Connection: "keep-alive",
     });
     res.write(": connected\n\n");
-    // 接続に載せる身元はセッションのアカウント ID（案A の身元キー・`/tablet/answer` と同一）。
-    // 観客面（tv）は未ログインでも購読できるゆえ身元を持たない（null）。
-    const id = addConnection(res, role, session?.accountId ?? null);
+    // 接続に載せる身元は、解答面なら**進行中の回の参加者識別子**（`episode_participants.id`・
+    // `/tablet/answer` が orchestrator へ渡す鍵と同一）。まだ参加していない者・観客面（tv）は
+    // 身元を持たない（null）。制御盤は接続数の計上にのみ用いるゆえアカウント ID を載せる。
+    const identity =
+      session === undefined
+        ? null
+        : role === "answerer"
+          ? ((await resolveSessionParticipantId(episodeDeps, session.accountId)) ?? null)
+          : session.accountId;
+    const id = addConnection(res, role, identity);
     req.on("close", () => removeConnection(id));
     return;
   }
@@ -565,8 +904,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   // タブレット解答（0〜100・受付中のみ）。ログイン必須。**どのエピソードの参加者としての解答か**
-  // を解決する仕組み（episode_participants）は P2 の関心事ゆえ、ここでは身元の確立までを担い、
-  // 参加者への突合は orchestrator が行う（未参加は業務ステータスで拒否される）。
+  // は進行セッションに載っている回と自分のアカウントから解決し（`episode_participants.id`）、
+  // それを既存ドメインの `participantId` として orchestrator へ渡す（設計 D3）。
   if (path === "/tablet/answer" && req.method === "POST") {
     const session = currentSession(req);
     if (session === undefined) {
@@ -574,7 +913,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     }
     const body = (await readJsonBody(req)) as { value?: unknown } | null;
     if (body === null) return sendJson(res, 400, { ok: false, error: "不正な JSON です。" });
-    const result = applyAnswer(session.accountId, body.value);
+    const participantId = await resolveSessionParticipantId(episodeDeps, session.accountId);
+    if (participantId === undefined) {
+      return sendJson(res, 409, {
+        ok: false,
+        error: "参加する回をお選びください。",
+      });
+    }
+    const result = applyAnswer(participantId, body.value);
     if (result.ok) broadcast();
     return sendJson(res, result.ok ? 200 : result.status ?? 400, { ok: result.ok, error: result.error });
   }
@@ -615,6 +961,274 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   // ── 表示面 ──
 
+  // ── エピソード（案A P2）: 管理者の作成・編集・招待・問題登録／解答者の一覧・参加 ──
+
+  // 管理者のエピソード一覧（issue #2 R3・AC-A3）。
+  if (path === "/admin/episodes" && req.method === "GET") {
+    if (guardAdminHtml(req, res, path) === "denied") return;
+    const view = renderAdminEpisodeList(await listEpisodes(episodeStore));
+    sendHtml(
+      res,
+      200,
+      htmlDocument(view.heading, serializeAdminEpisodeList(view, messageFragment(url))),
+    );
+    return;
+  }
+
+  // エピソードの新規作成（作成直後は準備中）。
+  if (path === "/admin/episodes" && req.method === "POST") {
+    if (guardAdminHtml(req, res, path) === "denied") return;
+    const account = await currentAccount(req);
+    if (account === undefined) return sendRedirect(res, LOGIN_PATH);
+    const body = await readFormOrJsonBody(req);
+    if (body === null) return sendRedirect(res, "/admin/episodes?error=invalid_request");
+    try {
+      const episode = await createEpisode(episodeStore, {
+        title: body["title"] ?? "",
+        createdBy: account.id,
+      });
+      return sendRedirect(
+        res,
+        `/admin/episodes/${encodeURIComponent(episode.id)}?notice=episode_created`,
+      );
+    } catch (err) {
+      return sendRedirect(res, `/admin/episodes?error=${toErrorCode(err)}`);
+    }
+  }
+
+  // 管理者のエピソード詳細とその配下の操作（R4・AC-A3 / AC-A4）。
+  const adminEpisode = parseEpisodeAdminPath(path);
+  if (adminEpisode !== null) {
+    if (guardAdminHtml(req, res, path) === "denied") return;
+    const episode = await findEpisode(episodeStore, adminEpisode.id);
+    if (episode === undefined) {
+      sendHtml(res, 404, htmlDocument("Not Found", `<main><p>Not Found</p></main>`));
+      return;
+    }
+    const base = `/admin/episodes/${encodeURIComponent(episode.id)}`;
+
+    if (adminEpisode.rest === "" && req.method === "GET") {
+      // 当該回を進行セッションへ載せてから制御盤を描く（詳細面の制御盤がその回を映す）。
+      let message = messageFragment(url);
+      try {
+        await syncEpisodeIntoSession(episodeDeps, episode.id);
+      } catch (err) {
+        if (!(err instanceof EpisodeBusyError)) throw err;
+        // 別の回が進行中のときは載せ替えず、その旨だけを面へ伝える（進行中の回を壊さない）。
+        message = `<p data-field="message">${escapeHtml(ERROR_MESSAGES["episode_busy"] as string)}</p>`;
+      }
+      const invitations = await listInvitations(episodeStore, episode.id);
+      const participants = await listParticipants(episodeStore, episode.id);
+      const accounts = await listAccounts(accountStore);
+      const accountById = new Map(accounts.map((account) => [account.id, account]));
+      const invitedIds = new Set(invitations.map((invitation) => invitation.accountId));
+      const members = invitations.flatMap((invitation) => {
+        const account = accountById.get(invitation.accountId);
+        if (account === undefined) return [];
+        const participation = participants.find((p) => p.accountId === invitation.accountId);
+        return [
+          {
+            accountId: account.id,
+            displayName: account.displayName,
+            ...(participation !== undefined ? { participantId: participation.id } : {}),
+          },
+        ];
+      });
+      const invitableAccounts = accounts
+        .filter((account) => account.role === "contestant" && !invitedIds.has(account.id))
+        .map((account) => ({ accountId: account.id, displayName: account.displayName }));
+      const view = renderAdminEpisodeDetail({
+        episode,
+        questions: await listEpisodeQuestions(episodeStore, episode.id),
+        members,
+        invitableAccounts,
+      });
+      sendHtml(
+        res,
+        200,
+        htmlDocument(
+          episode.title,
+          serializeAdminEpisodeDetail(view, await buildEmbeddedControlPanel(), message) +
+            `<script src="/client/episode_detail.client.js"></script>`,
+        ),
+      );
+      return;
+    }
+
+    if (adminEpisode.rest === "" && req.method === "POST") {
+      const body = await readFormOrJsonBody(req);
+      if (body === null) return sendRedirect(res, `${base}?error=invalid_request`);
+      const status = body["status"];
+      try {
+        await updateEpisode(episodeStore, episode.id, {
+          ...(body["title"] !== undefined ? { title: body["title"] } : {}),
+          ...(isEpisodeStatus(status) ? { status } : {}),
+        });
+        return sendRedirect(res, `${base}?notice=episode_saved`);
+      } catch (err) {
+        return sendRedirect(res, `${base}?error=${toErrorCode(err)}`);
+      }
+    }
+
+    // 問題・正解の登録（同じ問題番号への再登録は上書き編集）。
+    if (adminEpisode.rest === "questions" && req.method === "POST") {
+      const body = await readFormOrJsonBody(req);
+      if (body === null) return sendRedirect(res, `${base}?error=invalid_request`);
+      try {
+        await registerQuestion(episodeStore, episode.id, {
+          questionNumber: toInteger(body["question_number"]),
+          text: body["text"] ?? "",
+          correctValue: toInteger(body["correct_value"]),
+        });
+        // 進行セッションに載っている回なら出題集合を最新へ揃える（進行状態は保つ）。
+        if (playSession.episodeId === episode.id) {
+          await syncEpisodeIntoSession(episodeDeps, episode.id);
+          broadcast();
+        }
+        return sendRedirect(res, `${base}?notice=question_saved`);
+      } catch (err) {
+        return sendRedirect(res, `${base}?error=${toErrorCode(err)}`);
+      }
+    }
+
+    // 既存の解答者アカウントを当該回へ招待する。
+    if (adminEpisode.rest === "invitations" && req.method === "POST") {
+      const body = await readFormOrJsonBody(req);
+      if (body === null) return sendRedirect(res, `${base}?error=invalid_request`);
+      const accountId = body["account_id"] ?? "";
+      const invitee = await findAccountById(accountStore, accountId);
+      if (invitee === undefined || invitee.role !== "contestant") {
+        return sendRedirect(res, `${base}?error=invalid_request`);
+      }
+      try {
+        await inviteAccount(episodeStore, episode.id, invitee.id);
+        return sendRedirect(res, `${base}?notice=member_invited`);
+      } catch (err) {
+        return sendRedirect(res, `${base}?error=${toErrorCode(err)}`);
+      }
+    }
+
+    // 解答者アカウントを新規発行し、当該回へ招待する（AC-A4）。
+    if (adminEpisode.rest === "contestants" && req.method === "POST") {
+      const body = await readFormOrJsonBody(req);
+      if (body === null) return sendRedirect(res, `${base}?error=invalid_request`);
+      try {
+        const contestant = await createAccount(accountStore, {
+          loginId: body["login_id"] ?? "",
+          password: body["password"] ?? "",
+          role: "contestant",
+          displayName: body["display_name"] ?? "",
+        });
+        await inviteAccount(episodeStore, episode.id, contestant.id);
+        return sendRedirect(res, `${base}?notice=member_created`);
+      } catch (err) {
+        return sendRedirect(res, `${base}?error=${toErrorCode(err)}`);
+      }
+    }
+
+    sendHtml(res, 404, htmlDocument("Not Found", `<main><p>Not Found</p></main>`));
+    return;
+  }
+
+  // 管理者のアカウント面（解答者アカウントの作成・編集・issue #2 R5）。
+  if (path === "/admin/accounts" && req.method === "GET") {
+    if (guardAdminHtml(req, res, path) === "denied") return;
+    const accounts = await listAccounts(accountStore);
+    sendHtml(
+      res,
+      200,
+      htmlDocument("解答者アカウント", serializeAdminAccounts(accounts, messageFragment(url))),
+    );
+    return;
+  }
+
+  if (path === "/admin/accounts" && req.method === "POST") {
+    if (guardAdminHtml(req, res, path) === "denied") return;
+    const body = await readFormOrJsonBody(req);
+    if (body === null) return sendRedirect(res, "/admin/accounts?error=invalid_request");
+    try {
+      await createAccount(accountStore, {
+        loginId: body["login_id"] ?? "",
+        password: body["password"] ?? "",
+        role: "contestant",
+        displayName: body["display_name"] ?? "",
+      });
+      return sendRedirect(res, "/admin/accounts?notice=member_created");
+    } catch (err) {
+      return sendRedirect(res, `/admin/accounts?error=${toErrorCode(err)}`);
+    }
+  }
+
+  // 解答者アカウントの編集（表示名の変更・パスワードの再発行）。
+  if (path.startsWith("/admin/accounts/") && req.method === "POST") {
+    if (guardAdminHtml(req, res, path) === "denied") return;
+    const accountId = decodeURIComponent(path.slice("/admin/accounts/".length));
+    const target = await findAccountById(accountStore, accountId);
+    if (target === undefined || target.role !== "contestant") {
+      return sendRedirect(res, "/admin/accounts?error=invalid_request");
+    }
+    const body = await readFormOrJsonBody(req);
+    if (body === null) return sendRedirect(res, "/admin/accounts?error=invalid_request");
+    try {
+      const displayName = body["display_name"];
+      if (displayName !== undefined && displayName.trim() !== "") {
+        await changeDisplayName(accountStore, target.id, displayName);
+      }
+      const password = body["password"];
+      if (password !== undefined && password !== "") {
+        await changePassword(accountStore, target.id, password);
+      }
+      // 表示名は制御盤の参加者一覧へも出るゆえ、進行セッションへ即時反映する（AC-A7）。
+      if (playSession.episodeId !== null) {
+        await syncEpisodeIntoSession(episodeDeps, playSession.episodeId);
+        broadcast();
+      }
+      return sendRedirect(res, "/admin/accounts?notice=account_saved");
+    } catch (err) {
+      return sendRedirect(res, `/admin/accounts?error=${toErrorCode(err)}`);
+    }
+  }
+
+  // 解答者の招待エピソード一覧（R6・AC-A5）。招待されていない回は出さない。
+  if (path === "/episodes" && req.method === "GET") {
+    const account = await currentAccount(req);
+    if (account === undefined) {
+      return sendRedirect(res, `${LOGIN_PATH}?required=1&redirect=${encodeURIComponent("/episodes")}`);
+    }
+    if (account.role === "admin") return sendRedirect(res, "/admin/episodes");
+    const episodes = await listInvitedEpisodes(episodeStore, account.id);
+    const joined: string[] = [];
+    for (const episode of episodes) {
+      const participation = await findParticipation(episodeStore, episode.id, account.id);
+      if (participation !== undefined) joined.push(episode.id);
+    }
+    const view = renderInvitedEpisodeList(episodes, joined);
+    sendHtml(
+      res,
+      200,
+      htmlDocument(view.heading, serializeInvitedEpisodeList(view, messageFragment(url))),
+    );
+    return;
+  }
+
+  // エピソードへの参加（AC-A6）。招待されている者だけが参加でき、二度押しでも増えない。
+  const joinTargetEpisodeId = parseEpisodeJoinPath(path);
+  if (joinTargetEpisodeId !== null && req.method === "POST") {
+    const account = await currentAccount(req);
+    if (account === undefined) {
+      return sendRedirect(res, `${LOGIN_PATH}?required=1&redirect=${encodeURIComponent("/episodes")}`);
+    }
+    try {
+      await joinEpisode(episodeStore, joinTargetEpisodeId, account.id);
+      await syncEpisodeIntoSession(episodeDeps, joinTargetEpisodeId);
+      // 参加者一覧（制御盤）と解答面へ即時反映する。
+      broadcast();
+      return sendRedirect(res, "/tablet");
+    } catch (err) {
+      return sendRedirect(res, `/episodes?error=${toErrorCode(err)}`);
+    }
+  }
+
   // ホーム（アプリの入口）。未ログインはログインへ誘導する（素通りさせない）。
   if (path === "/") {
     const account = await currentAccount(req);
@@ -644,7 +1258,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   if (path === "/admin" || path.startsWith("/admin/")) {
     if (guardAdminHtml(req, res, path) === "denied") return;
     if (path !== "/admin") {
-      // `/admin/episodes` 等の実体は P2 の関心事ゆえ、まだ無い面を捏造せず 404 を返す。
+      // `/admin/episodes` / `/admin/accounts` は上流で処理済み。それ以外の `/admin/*` は
+      // 実体が無いゆえ、まだ無い面を捏造せず 404 を返す。
       sendHtml(res, 404, htmlDocument("Not Found", `<main><p>Not Found</p></main>`));
       return;
     }
@@ -671,20 +1286,16 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
-  // 解答者タブレット（入力専用最小面）: 受付中・第1問・残額0円の passive な最小状態で描画する。
-  // 身元は Cookie セッションが持つゆえ、未ログインはログインへ誘導する。
+  // 解答者タブレット（入力専用最小面）。身元は Cookie セッションが持つゆえ、未ログインは
+  // ログインへ誘導する。進行中の回へ参加済みなら自分の表示名・残額・受付状況を映し（AC-A6）、
+  // まだ参加していない者には従来どおり受動的な最小状態（他者情報を持たない）を描く。
   if (path === "/tablet") {
-    if (currentSession(req) === undefined) {
+    const session = currentSession(req);
+    if (session === undefined) {
       return sendRedirect(res, `${LOGIN_PATH}?required=1&redirect=${encodeURIComponent("/tablet")}`);
     }
-    const tablet = renderTabletSurface({
-      questionNumber: 1,
-      answerValue: 0,
-      submitted: false,
-      ownBalanceYen: 0,
-      status: "accepting",
-    });
-    sendHtml(res, 200, page("解答", tablet, "tablet"));
+    const participantId = await resolveSessionParticipantId(episodeDeps, session.accountId);
+    sendHtml(res, 200, page("解答", buildTabletFragment(participantId ?? null), "tablet"));
     return;
   }
 

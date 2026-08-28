@@ -490,10 +490,12 @@ export interface Account {
 }
 ```
 
-### 2.3b エピソード系テーブル（**案A・P2 で実装予定・現時点は未実装**）
+### 2.3b エピソード系テーブル（**案A・P2 実装済**）
 
-案A の全体像として次の 4 表を置くが、**P1 の実装範囲外**であり本リポジトリにはまだ存在しない
-（在らぬものを在るかのように書かないため、実装状況をここに明記する）。
+案A の 4 表は P2（cmd_2553）で実装済みである（`src/episodes/`）。永続は §2.3c のとおり
+`DATA_DIR/episodes.json`（JSON ＋ アトミック書込）で、境界は `episodes/episode_store.ts`
+（`EpisodeStore`）が持つ。業務規則（受理境界・招待の有無・参加の冪等・問の上書き編集）は
+`episodes/episode_service.ts` が単一の置き場である。
 
 | テーブル | 主なカラム | 役割 |
 |---|---|---|
@@ -502,14 +504,23 @@ export interface Account {
 | `episode_participants` | `id` / `episode_id` / `account_id` / `joined_at`（`unique(episode_id, account_id)`） | 実際に参加した解答者。**`id` を既存ドメインの `participantId` として渡す** |
 | `episode_questions` | `id` / `episode_id` / `question_number` / `text` / `correct_value` / `image_path` / `video_path` | 回ごとの問題・正解 |
 
+- **既存ドメインとの接続（実装済の規約）**: `episode_participants.id` をそのまま
+  `participantId` として既存 QC 済みドメイン（scoring / game_state / realtime_sync / render_*）へ渡す。
+  写像点は `server/episode_session.ts` の 1 箇所であり、ドメイン側は無改変である。
+- 出題は `episode_questions` を `questions/question.ts` の `Question` へ写して進行セッションへ載せる
+  （写像点は `episodes/episode.ts` の `toQuestion` 一点）。回に問が 1 問も無ければ出題を始められない。
+- 一意性: 招待は (`episode_id`, `account_id`)、参加は同じ組（冪等・二度参加しても識別子は増えない）、
+  問は (`episode_id`, `question_number`)（同じ番号への再登録は行 `id` を保った上書き編集）。
+
 ### 2.3c 永続方式（**案A・設計 D7**）
 
 - 実行環境は Node **v20.20.0** ゆえ `node:sqlite`（Node 22+）は使えない。家族規模（アカウント数〜十数）
   では **JSON ファイル ＋ アトミック書込**（一時ファイルへ書いて rename）で足りるため、初手は
   zero-dependency の JSON 永続とする（`src/persistence/json_file.ts` / `src/accounts/json_account_store.ts`）。
 - 置き場は `DATA_DIR`（既定 `./data`）が単一の解決点である（`src/config/data_dir.ts`）。
-- 境界（`AccountStore`）と実装を分けてあるため、規模が増えたら Store 実装の差し替えだけで
-  SQLite 等へ移せる。
+- 境界（`AccountStore` / `EpisodeStore`）と実装を分けてあるため、規模が増えたら Store 実装の
+  差し替えだけで SQLite 等へ移せる。その際は本節の表定義を `src/persistence/schema.ts`（DDL の
+  単一定義点）へ追加する（JSON 永続の現時点では DDL を先取りしない）。
 
 ### 2.4 `answers` テーブル（規約 DM-3・0〜100 整数）
 

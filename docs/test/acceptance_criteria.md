@@ -103,10 +103,10 @@ codd:
 | ~~AC-07~~（**2026-08-28 殿裁可 案A により差替**） | ~~同一参加を**端末番号の固定割当では行わない**（事前氏名・座席登録の UI/API が存在しない、または未使用で成立する）~~ → **差替後**: 参加は**事前発行アカウントでのログイン**により成立する（氏名自己入力の `/join` は存在しない）。端末番号の固定割当を行わない点は差替後も同じ | Browser | VB-09 |
 | AC-A1 | 未ログインで `/control-panel` へ来ると `/login` へ誘導される（保護面が素通りしない） | Browser | 案A |
 | AC-A2 | 管理者アカウントでログインすると `/control-panel` と `/admin/*` に入れる。contestant では 403 | Browser | 案A |
-| AC-A3 | 管理者がエピソードを作成でき、一覧→詳細へ遷移し、問題・正解を登録できる（**P2**） | Browser | 案A |
-| AC-A4 | 管理者が解答者アカウント（ログイン ID / 初期パスワード）を作成し、当該エピソードへ招待できる（**P2**） | Browser | 案A |
-| AC-A5 | 解答者が配られた URL・ID・パスワードでログインすると、招待された回のみが一覧に出る（**P2**） | Browser | 案A |
-| AC-A6 | 解答者が一覧から回へ参加でき、解答面で自分の表示名と残額が見える（**P2**） | Browser | 案A |
+| AC-A3 | 管理者がエピソードを作成でき、一覧→詳細へ遷移し、問題・正解を登録できる（P2 実装済・`tests/e2e/episode_flow.browser.spec.ts`） | Browser | 案A |
+| AC-A4 | 管理者が解答者アカウント（ログイン ID / 初期パスワード）を作成し、当該エピソードへ招待できる（P2 実装済・`tests/e2e/episode_flow.browser.spec.ts`） | Browser | 案A |
+| AC-A5 | 解答者が配られた URL・ID・パスワードでログインすると、招待された回のみが一覧に出る（P2 実装済・`tests/e2e/episode_flow.browser.spec.ts`） | Browser | 案A |
+| AC-A6 | 解答者が一覧から回へ参加でき、解答面で自分の表示名と残額が見える（P2 実装済・`tests/e2e/episode_flow.browser.spec.ts`） | Browser | 案A |
 | AC-A7 | `/me` で自分の表示名とパスワードを変更できる | Browser | 案A |
 | AC-A8 | パスワードは平文で保存・ログ出力・画面表示のいずれもされない（scrypt ハッシュのみ） | Unit / Browser | 案A |
 | AC-A9 | tsc 0 errors ／ vitest 全 pass ／ 新規 skip/todo を足さない | CI | 案A |
