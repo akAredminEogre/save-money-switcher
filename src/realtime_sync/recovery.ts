@@ -17,7 +17,7 @@
  *
  * ロール投影を本モジュール自身が適用し、可視境界を構造的に強制する:
  *   - 司会者（host）は全量（全員の残額・送信済み）へ復帰する。
- *   - 解答者（answerer）は進行状態と**自分の残額・自分の送信済み**のみへ復帰し、他者の残額・
+ *   - 解答者（contestant）は進行状態と**自分の残額・自分の送信済み**のみへ復帰し、他者の残額・
  *     送信済み・全体一覧は復帰対象に含めない（`dod_reconnect_own_balance`・他者情報の構造的除外）。
  *   - 観客（audience）は進行状態のみへ復帰する（表示内容は TV モードと以後の live 配信が駆動）。
  *
@@ -97,7 +97,7 @@ export function buildSnapshot(
         balances: { ...data.balances },
         submitted: { ...data.submitted },
       };
-    case "answerer":
+    case "contestant":
       // 解答者は進行状態と自分の残額・送信済みのみへ復帰する。全員分のマップは載せない。
       return {
         ...progression,

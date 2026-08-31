@@ -39,7 +39,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -56,12 +56,12 @@ codd:
       route: /control-panel | /tv | /tablet | /join
       preconditions:
       - WebSocket 待受はクラウドサーバのみに存在する
-      durable_state: hub のロール別接続レジストリ（host/answerer/audience）
+      durable_state: hub のロール別接続レジストリ（host/contestant/audience）
       from_state: handshaking
       to_state: connected
       readback: 接続直後にロール投影済み state_snapshot を unicast で返す
       expected_outcomes:
-      - セッションにロール（host/answerer/audience）が確定する
+      - セッションにロール（host/contestant/audience）が確定する
       - 制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く
       dod_obligations:
       - id: dod_conn_cloud_authority
@@ -72,12 +72,12 @@ codd:
       actor: system
       verb: reject
       target: tablet_connection
-      trigger: answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
+      trigger: contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
       route: /join
-      measurement_source: 現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
+      measurement_source: 現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
       threshold: MAX_TABLET_CONNECTIONS（既定 8）
       preconditions:
-      - connected_answerers >= MAX_TABLET_CONNECTIONS
+      - connected_contestants >= MAX_TABLET_CONNECTIONS
       from_state: handshaking
       to_state: rejected
       durable_state: 既存接続・participants・answers・balances は不変
@@ -106,7 +106,7 @@ codd:
       - id: dod_limit_join_full_copy
         text: /join の満席表示が job-to-be-done 平易文で、設定キー名・接続数会計・ロール識別子を露出しない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -114,7 +114,7 @@ codd:
       ui_pattern: qr_scan_then_name_input
       preconditions:
       - 家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）
-      - answerer 接続数が MAX_TABLET_CONNECTIONS 未満
+      - contestant 接続数が MAX_TABLET_CONNECTIONS 未満
       - 氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下
       from_state: admitted
       to_state: connected
@@ -147,7 +147,7 @@ codd:
       - id: dod_settle_initial_grant
         text: ゲーム開始時に各プレイヤーの balances.amount が 10000 円で初期化されている
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下
@@ -165,7 +165,7 @@ codd:
       to_state: accepting
       readback: 送信後 submit_ack が当該解答者へ unicast され送信済み表示になる
       visible_to:
-      - answerer
+      - contestant
       expected_outcomes:
       - 0〜100 整数の解答が answers に upsert される
       - 送信済み状態が当該解答者にのみ表示され他者・観客へは配信されない
@@ -190,23 +190,23 @@ codd:
     - id: op_propagate_deadline
       actor: host
       verb: lock
-      target: answerer_tablets
+      target: contestant_tablets
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる
       - 締切後のタブレットからの submit_answer はサーバで拒否される
       dod_obligations:
       - id: dod_deadline_host_only
-        text: 締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403)
+        text: 締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403)
           で拒否される
       - id: dod_deadline_sync_lock
         text: 締切の配信で接続中の全解答者タブレットが締切表示へ同期し以後の送信が拒否される
@@ -217,7 +217,7 @@ codd:
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       from_state: answers_locked
       to_state: answers_opened
@@ -241,7 +241,7 @@ codd:
       trigger: 制御盤で「正解発表」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       from_state: answers_opened
       to_state: answer_revealed
@@ -258,7 +258,7 @@ codd:
       - answers_opened 未到達での reveal は不正遷移として拒否
       dod_obligations:
       - id: dod_reveal_host_only
-        text: 正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される
+        text: 正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される
       - id: dod_reveal_marks_disclosed
         text: answer_revealed 到達で当該問が isDisclosed 真となり以後の correct_value 編集が再採点対象になる
       - id: dod_reveal_tv_c
@@ -270,7 +270,7 @@ codd:
       trigger: 制御盤で「精算」を押下し得点精算を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       from_state: answer_revealed
       to_state: settlement_computed
@@ -301,7 +301,7 @@ codd:
       - id: dod_settle_integer_only
         text: error / delta_yen / pitari_bonus_yen / amount がすべて整数で小数値を持たない
       - id: dod_settle_host_only
-        text: 得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される
+        text: 得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される
     - id: op_live_edit_correct
       actor: host
       verb: edit
@@ -310,7 +310,7 @@ codd:
       route: /control-panel
       ui_pattern: inline_edit_then_save
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       preconditions:
       - 対象問が questions に存在する
@@ -333,7 +333,7 @@ codd:
       - id: dod_edit_correct_range_guard
         text: 正解値の編集も 0〜100 整数のみ受理し範囲外はサーバと DB CHECK で拒否される
       - id: dod_edit_host_only
-        text: ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される
+        text: ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される
     - id: op_auto_rescore
       actor: system
       verb: rescore
@@ -377,7 +377,7 @@ codd:
       route: /control-panel
       ui_pattern: next_back_jump
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       durable_state: game_state.tv_mode
       consumer_surfaces:
@@ -394,7 +394,7 @@ codd:
       - 個別ジャンプ：a〜e の任意モードへ直接
       dod_obligations:
       - id: dod_mode_switch_host_only
-        text: モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403)
+        text: モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403)
           で拒否される
       - id: dod_mode_switch_sync_tv
         text: 次へ・戻る・個別ジャンプの 3 系統いずれでも tv_mode_changed が配信され接続中の TV が対応モードへ切り替わる
@@ -405,13 +405,13 @@ codd:
       trigger: 制御盤で「取消」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       durable_state: trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）
       consumer_surfaces:
       - control_panel
       - tv_display
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - trigger_undone が配信され直近の対象操作が取り消される
       - 発動権限は制御盤（host）のみで初版から存置される
@@ -421,7 +421,7 @@ codd:
       - 任意問題再開示 / d 到達問の残額差分巻き戻しの可否は F-03 未確定
       dod_obligations:
       - id: dod_undo_host_only
-        text: 取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は
+        text: 取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は
           F-03/F028、E2E は test.fixme）
     - id: op_determine_winner
       actor: system
@@ -453,11 +453,11 @@ codd:
       consumer_surfaces:
       - control_panel
       - tv_display
-      - answerer_tablets
+      - contestant_tablets
       readback: 遅参・再接続端末は state_snapshot で最新へ整合
       visible_to:
       - host
-      - answerer
+      - contestant
       - audience
       threshold: 状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）
       expected_outcomes:
@@ -474,7 +474,7 @@ codd:
       actor: system
       verb: recover
       target: reconnecting_endpoint
-      trigger: 回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する
+      trigger: 回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する
       route: /control-panel | /tv | /tablet
       measurement_source: サーバ権威の game_state（current_question_number/stage/tv_mode）と
         balances と answers
@@ -592,7 +592,7 @@ stateDiagram-v2
     answer_revealed --> answer_revealed : 正解ライブ編集（correct_value）▶ 自動再採点（settlements 再計算）
     settlement_computed --> settlement_computed : 正解ライブ編集（correct_value）▶ 残額差分再計算＋TV d/e 同時更新
 
-    accepting --> accepting : answerer submit（受付中のみ upsert・他状態は拒否）
+    accepting --> accepting : contestant submit（受付中のみ upsert・他状態は拒否）
 
     answers_locked --> accepting : host「取消」undo（F-03 巻き戻し範囲確定待ち）
     answers_opened --> answers_locked : host「取消」undo（F-03）
@@ -672,13 +672,13 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
     [*] --> handshaking : 端末が公開URLをブラウザで開き WS 接続・ロール申告
-    handshaking --> admitted : admitTablet=ok（connected_answerers < 上限）
+    handshaking --> admitted : admitTablet=ok（connected_contestants < 上限）
     handshaking --> rejected : admitTablet=over_limit（>= MAX_TABLET_CONNECTIONS）
     rejected --> [*] : connection_rejected ＋ WS close(4001)／既存接続・データは不変
 
     admitted --> connected : 参加確定（participants 生成＋balances=10000）／state_snapshot unicast
     connected --> connected : balance_updated 等の live 配信合流
-    connected --> disconnected : heartbeat 失敗（ping 15s／pong 猶予 30s）→ answerer スロット解放
+    connected --> disconnected : heartbeat 失敗（ping 15s／pong 猶予 30s）→ contestant スロット解放
     disconnected --> connected : resume トークンで復帰／ロール投影済み state_snapshot 再送
     disconnected --> handshaking : トークン失効・無効 → 新規参加として上限判定を再通過
     connected --> [*] : ゲーム終了／明示切断
@@ -690,7 +690,7 @@ stateDiagram-v2
     end note
 ```
 
-**所有権と実装境界**: 接続状態集合と上限拒否遷移は `module:participants`（`src/participants/connection_machine.ts` の `admitTablet`）が所有し、上限値そのものは `module:config`（`src/config/connection_limit.ts` の `resolveMaxTabletConnections()`）が **単一解決点** として所有する（SM-3）。既定 **8** は同ファイルの単一定数のみで宣言し、判定コードに数値リテラル 8 を撒かない（`dod_limit_no_hardcode`）。設定 **16／32** へコード改修なしに追随する（`dod_limit_config_follows`）。上限は answerer 接続のみに課し、host/audience は別チャネル。`rejected` 遷移は `connection_rejected` ＋ WS `close(4001)` で断り、既存の接続・`participants`・`answers`・`balances`・進行状態は **不変** である（`dod_limit_existing_unaffected`）。WS 待受はクラウドサーバ（`src/realtime_sync/server.ts`）のみに存在し、遷移の実行（accept/close/unicast）は `module:realtime_sync` が担うが、**受入可否の判定** は `module:participants`＋`module:config` の単一経路を経る（ホスト PC をサーバにしない・§3.4）。`disconnected → handshaking`（失効トークンの再接続）は新規参加として上限判定を再通過する。受付中に永続した解答は `answers` の一意 upsert により切断・再接続を跨いで保持され重複行を作らない（`op_preserve_answer_across_reconnect`）。
+**所有権と実装境界**: 接続状態集合と上限拒否遷移は `module:participants`（`src/participants/connection_machine.ts` の `admitTablet`）が所有し、上限値そのものは `module:config`（`src/config/connection_limit.ts` の `resolveMaxTabletConnections()`）が **単一解決点** として所有する（SM-3）。既定 **8** は同ファイルの単一定数のみで宣言し、判定コードに数値リテラル 8 を撒かない（`dod_limit_no_hardcode`）。設定 **16／32** へコード改修なしに追随する（`dod_limit_config_follows`）。上限は contestant 接続のみに課し、host/audience は別チャネル。`rejected` 遷移は `connection_rejected` ＋ WS `close(4001)` で断り、既存の接続・`participants`・`answers`・`balances`・進行状態は **不変** である（`dod_limit_existing_unaffected`）。WS 待受はクラウドサーバ（`src/realtime_sync/server.ts`）のみに存在し、遷移の実行（accept/close/unicast）は `module:realtime_sync` が担うが、**受入可否の判定** は `module:participants`＋`module:config` の単一経路を経る（ホスト PC をサーバにしない・§3.4）。`disconnected → handshaking`（失効トークンの再接続）は新規参加として上限判定を再通過する。受付中に永続した解答は `answers` の一意 upsert により切断・再接続を跨いで保持され重複行を作らない（`op_preserve_answer_across_reconnect`）。
 
 ---
 
@@ -716,12 +716,12 @@ stateDiagram-v2
 ### 3.2 権限境界（SM-1 の中核）
 
 - **host-only 遷移トリガー**: `lock/open/reveal/settle`（Round Stage）・`next/back/jump`（TV Mode）・`undo`（取消）・`load`（入稿）・`live_edit`（ライブ編集）は `role: host` セッションのみ。サーバは接続確立時に確定したロール属性を **単一判定点** として検査し、非 host コマンドを `command_denied`（403／未認証 401）で拒否する。副司会ロールは発明せず、非 host サーフェスに当該操作要素を置かず、API 直叩きも同一判定点で弾く。
-- **answerer 制限**: 解答者が起こせる状態遷移は `accepting → accepting`（`submit`・受付中のみ）と参加（`join`）のみ。締切・開示・正解発表・精算・モード切替・取消のいずれも発火できない。
+- **contestant 制限**: 解答者が起こせる状態遷移は `accepting → accepting`（`submit`・受付中のみ）と参加（`join`）のみ。締切・開示・正解発表・精算・モード切替・取消のいずれも発火できない。
 - **audience 制限**: 観客はいかなる遷移も発火できない（受動表示のみ）。
 
 ### 3.3 接続上限の設定所有（SM-3）
 
-上限判定は `src/config/connection_limit.ts` の `resolveMaxTabletConnections()` の返す解決値のみを参照し、`src/participants/connection_machine.ts` の `admitTablet` が `connected_answerers < 上限` を評価する。境界は **既定 8：8 台目許可・9 台目拒否／設定 16：16 許可・17 拒否／設定 32：32 許可・33 拒否／切断でスロット解放後は同数まで再受入可**。判定コードに `8` のハードコードを置かず、既定は config の単一定数でのみ宣言する。
+上限判定は `src/config/connection_limit.ts` の `resolveMaxTabletConnections()` の返す解決値のみを参照し、`src/participants/connection_machine.ts` の `admitTablet` が `connected_contestants < 上限` を評価する。境界は **既定 8：8 台目許可・9 台目拒否／設定 16：16 許可・17 拒否／設定 32：32 許可・33 拒否／切断でスロット解放後は同数まで再受入可**。判定コードに `8` のハードコードを置かず、既定は config の単一定数でのみ宣言する。
 
 ### 3.4 状態権威と接続トポロジ（ホスト PC をサーバにしない）
 
@@ -729,7 +729,7 @@ stateDiagram-v2
 
 ### 3.5 アクター向けサーフェス／コピー義務（状態表示のコピー境界）
 
-状態機械の可視化は各サーフェスの job-to-be-done 言語に限り、**内部状態識別子・内部イベント名・設定キー名・実装根拠・環境前提を露出させない**。内部ロール `role: host/answerer` は可視ラベル **司会者／解答者**、観客（TV 視聴者）に対応させ、可視コピーには可視ラベルのみを用いる。
+状態機械の可視化は各サーフェスの job-to-be-done 言語に限り、**内部状態識別子・内部イベント名・設定キー名・実装根拠・環境前提を露出させない**。内部ロール `role: host/contestant` は可視ラベル **司会者／解答者**、観客（TV 視聴者）に対応させ、可視コピーには可視ラベルのみを用いる。
 
 | サーフェス | ルート | 主対象 | 表示してよい状態 | 露出禁止 |
 |---|---|---|---|---|
@@ -909,11 +909,11 @@ export type AdmitResult = { kind: "ok" } | { kind: "over_limit" };
 
 // 判定は解決値のみを参照。数値リテラル 8 を判定コードに置かない（dod_limit_no_hardcode）。
 export function admitTablet(
-  connectedAnswerers: number,
+  connectedContestants: number,
   env: NodeJS.ProcessEnv = process.env,
 ): AdmitResult {
   const max = resolveMaxTabletConnections(env);
-  return connectedAnswerers < max ? { kind: "ok" } : { kind: "over_limit" };
+  return connectedContestants < max ? { kind: "ok" } : { kind: "over_limit" };
 }
 ```
 
@@ -1028,7 +1028,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -1045,12 +1045,12 @@ operation_flow:
       route: /control-panel | /tv | /tablet | /join
       preconditions:
         - WebSocket 待受はクラウドサーバのみに存在する
-      durable_state: hub のロール別接続レジストリ（host/answerer/audience）
+      durable_state: hub のロール別接続レジストリ（host/contestant/audience）
       from_state: handshaking
       to_state: connected
       readback: 接続直後にロール投影済み state_snapshot を unicast で返す
       expected_outcomes:
-        - セッションにロール（host/answerer/audience）が確定する
+        - セッションにロール（host/contestant/audience）が確定する
         - 制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く
       dod_obligations:
         - id: dod_conn_cloud_authority
@@ -1061,12 +1061,12 @@ operation_flow:
       actor: system
       verb: reject
       target: tablet_connection
-      trigger: answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
+      trigger: contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行
       route: /join
-      measurement_source: 現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
+      measurement_source: 現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
       threshold: MAX_TABLET_CONNECTIONS（既定 8）
       preconditions:
-        - connected_answerers >= MAX_TABLET_CONNECTIONS
+        - connected_contestants >= MAX_TABLET_CONNECTIONS
       from_state: handshaking
       to_state: rejected
       durable_state: 既存接続・participants・answers・balances は不変
@@ -1094,7 +1094,7 @@ operation_flow:
         - id: dod_limit_join_full_copy
           text: /join の満席表示が job-to-be-done 平易文で、設定キー名・接続数会計・ロール識別子を露出しない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -1102,7 +1102,7 @@ operation_flow:
       ui_pattern: qr_scan_then_name_input
       preconditions:
         - 家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）
-        - answerer 接続数が MAX_TABLET_CONNECTIONS 未満
+        - contestant 接続数が MAX_TABLET_CONNECTIONS 未満
         - 氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下
       from_state: admitted
       to_state: connected
@@ -1132,7 +1132,7 @@ operation_flow:
         - id: dod_settle_initial_grant
           text: ゲーム開始時に各プレイヤーの balances.amount が 10000 円で初期化されている
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下
@@ -1147,7 +1147,7 @@ operation_flow:
       from_state: accepting
       to_state: accepting
       readback: 送信後 submit_ack が当該解答者へ unicast され送信済み表示になる
-      visible_to: [answerer]
+      visible_to: [contestant]
       expected_outcomes:
         - 0〜100 整数の解答が answers に upsert される
         - 送信済み状態が当該解答者にのみ表示され他者・観客へは配信されない
@@ -1171,20 +1171,20 @@ operation_flow:
     - id: op_propagate_deadline
       actor: host
       verb: lock
-      target: answerer_tablets
+      target: contestant_tablets
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる
         - 締切後のタブレットからの submit_answer はサーバで拒否される
       dod_obligations:
         - id: dod_deadline_host_only
-          text: 締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される
+          text: 締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される
         - id: dod_deadline_sync_lock
           text: 締切の配信で接続中の全解答者タブレットが締切表示へ同期し以後の送信が拒否される
     - id: op_propagate_disclosure
@@ -1193,7 +1193,7 @@ operation_flow:
       target: tv_and_endpoints
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -1213,7 +1213,7 @@ operation_flow:
       target: tv_and_endpoints
       trigger: 制御盤で「正解発表」を押下
       route: /control-panel
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed
@@ -1227,7 +1227,7 @@ operation_flow:
         - answers_opened 未到達での reveal は不正遷移として拒否
       dod_obligations:
         - id: dod_reveal_host_only
-          text: 正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される
+          text: 正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される
         - id: dod_reveal_marks_disclosed
           text: answer_revealed 到達で当該問が isDisclosed 真となり以後の correct_value 編集が再採点対象になる
         - id: dod_reveal_tv_c
@@ -1238,7 +1238,7 @@ operation_flow:
       target: balances
       trigger: 制御盤で「精算」を押下し得点精算を実行
       route: /control-panel
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       from_state: answer_revealed
       to_state: settlement_computed
       measurement_source: answers.value と questions.correct_value
@@ -1263,7 +1263,7 @@ operation_flow:
         - id: dod_settle_integer_only
           text: error / delta_yen / pitari_bonus_yen / amount がすべて整数で小数値を持たない
         - id: dod_settle_host_only
-          text: 得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される
+          text: 得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される
     - id: op_live_edit_correct
       actor: host
       verb: edit
@@ -1271,7 +1271,7 @@ operation_flow:
       trigger: 制御盤のライブ編集 UI で問題文・正解値・画像/動画パスを更新
       route: /control-panel
       ui_pattern: inline_edit_then_save
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       preconditions:
         - 対象問が questions に存在する
       durable_state: questions テーブル更新（text / image_path / video_path / correct_value）
@@ -1292,7 +1292,7 @@ operation_flow:
         - id: dod_edit_correct_range_guard
           text: 正解値の編集も 0〜100 整数のみ受理し範囲外はサーバと DB CHECK で拒否される
         - id: dod_edit_host_only
-          text: ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される
+          text: ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される
     - id: op_auto_rescore
       actor: system
       verb: rescore
@@ -1332,7 +1332,7 @@ operation_flow:
       trigger: 制御盤の「次へ」「戻る」または各モード個別ジャンプ
       route: /control-panel
       ui_pattern: next_back_jump
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       durable_state: game_state.tv_mode
       consumer_surfaces: [tv_mode_a, tv_mode_b, tv_mode_c, tv_mode_d, tv_mode_e]
       expected_outcomes:
@@ -1343,7 +1343,7 @@ operation_flow:
         - 個別ジャンプ：a〜e の任意モードへ直接
       dod_obligations:
         - id: dod_mode_switch_host_only
-          text: モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される
+          text: モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される
         - id: dod_mode_switch_sync_tv
           text: 次へ・戻る・個別ジャンプの 3 系統いずれでも tv_mode_changed が配信され接続中の TV が対応モードへ切り替わる
     - id: op_undo
@@ -1352,9 +1352,9 @@ operation_flow:
       target: last_progression
       trigger: 制御盤で「取消」を押下
       route: /control-panel
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       durable_state: trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）
-      consumer_surfaces: [control_panel, tv_display, answerer_tablets]
+      consumer_surfaces: [control_panel, tv_display, contestant_tablets]
       expected_outcomes:
         - trigger_undone が配信され直近の対象操作が取り消される
         - 発動権限は制御盤（host）のみで初版から存置される
@@ -1363,7 +1363,7 @@ operation_flow:
         - 任意問題再開示 / d 到達問の残額差分巻き戻しの可否は F-03 未確定
       dod_obligations:
         - id: dod_undo_host_only
-          text: 取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）
+          text: 取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）
     - id: op_determine_winner
       actor: system
       verb: determine
@@ -1390,9 +1390,9 @@ operation_flow:
       trigger: ドメインイベント（answers_locked/answers_opened/answer_revealed/settlement_computed/tv_mode_changed/balance_updated/participant_joined/trigger_undone）の確定
       measurement_source: game_state と balances の確定済み遷移
       durable_state: 各イベントに単調増加の seq を付与
-      consumer_surfaces: [control_panel, tv_display, answerer_tablets]
+      consumer_surfaces: [control_panel, tv_display, contestant_tablets]
       readback: 遅参・再接続端末は state_snapshot で最新へ整合
-      visible_to: [host, answerer, audience]
+      visible_to: [host, contestant, audience]
       threshold: 状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）
       expected_outcomes:
         - 該当ロールの接続中全端末へロール投影済みイベントが配信される
@@ -1408,7 +1408,7 @@ operation_flow:
       actor: system
       verb: recover
       target: reconnecting_endpoint
-      trigger: 回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する
+      trigger: 回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する
       route: /control-panel | /tv | /tablet
       measurement_source: サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers
       from_state: disconnected

@@ -61,7 +61,7 @@ codd:
   - targets:
     - module:control_panel
     - role:host
-    - role:answerer
+    - role:contestant
     reason: 司会者（制御盤）・解答者（タブレット入力専用）・観客（TV）のロール境界と権限差を全体設計に反映する（論点7・第三要件）。違反時リリース不可。
   modules:
   - questions
@@ -79,7 +79,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -108,7 +108,7 @@ codd:
       - id: dod_load_runtime_from_db
         text: 出題面の解決元は questions テーブルであり、問題ファイルの再読込に依存しない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -155,7 +155,7 @@ codd:
       - id: dod_limit_no_hardcode
         text: 上限判定は設定値を参照し、ソースに数値リテラル 8 のハードコードが存在しない
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -188,18 +188,18 @@ codd:
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: accepting
       to_state: answers_locked
       durable_state: game_state.stage = answers_locked
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - 全解答者タブレットの入力がロックされる
       - 締切後の送信は拒否される
       dod_obligations:
       - id: dod_lock_host_only
-        text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+        text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
       - id: dod_lock_blocks_submit
         text: 締切後に解答者が送信を試みても answers に追加されず拒否される
     - id: op_open_answers
@@ -209,7 +209,7 @@ codd:
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_locked
       to_state: answers_opened
       durable_state: game_state.stage = answers_opened
@@ -232,7 +232,7 @@ codd:
       trigger: 制御盤で正解発表を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: game_state.stage = answer_revealed
@@ -320,7 +320,7 @@ codd:
       trigger: 制御盤で取消を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       durable_state: trigger_undone イベント
       expected_outcomes:
       - 直近の対象操作が取り消される
@@ -328,7 +328,7 @@ codd:
       - 取消の具体挙動（直近のみか任意問題再開示か）は未確定（F-03・fixme）
       dod_obligations:
       - id: dod_undo_host_only
-        text: 取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される
+        text: 取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される
     - id: op_switch_tv_mode
       actor: host
       verb: switch
@@ -401,7 +401,7 @@ codd:
 | INV-2 | `db:questions` / `module:questions` | 問題は事前ファイル読込で **DB 登録・DB 保持**し、ランタイムは DB から供給（E-1/E-2） | §2.3・§2.8 |
 | INV-3 | `module:config` / `module:participants` | 接続上限は既定 8・**ハードコード禁止**・設定変更で 32 台まで破綻しない同期基盤を選定 | §2.4・§2.7 |
 | INV-4 | `module:participants` | 家族限定アクセス制御（URL 秘匿か認証か）を**設計責務として明示**し、未定でも設計分岐として抱える。**無制御公開はリリース不可** | §2.10・§3.1 |
-| INV-5 | `module:control_panel` / `role:host` / `role:answerer` | 司会者・解答者・観客のロール境界と権限差を全体設計へ反映 | §2.5・§2.10・Operational Behavior Model |
+| INV-5 | `module:control_panel` / `role:host` / `role:contestant` | 司会者・解答者・観客のロール境界と権限差を全体設計へ反映 | §2.5・§2.10・Operational Behavior Model |
 | INV-6 | `module:scoring` / `module:tablet` | 回答・判定・スコアリングは **0〜100 の整数のみ受理**し、小数・負値・100 超は **UI とサーバ双方で拒否** | §2.6・§2.9 |
 | INV-7 | `module:scoring` / `module:tv_display` | **円建て固定**（ポイント/点への置換禁止・現金感を薄めない） | §2.6・§2.9 |
 
@@ -414,7 +414,7 @@ codd:
 
 ### 1.4 アクター向けサーフェス／コピー義務
 
-要件が定めるロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: answerer` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**（司会者／解答者）を用い、内部識別子（host/answerer）や実装根拠・環境前提・権限境界の説明を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止パターンとし、金額は「円」で表す。
+要件が定めるロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: contestant` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**（司会者／解答者）を用い、内部識別子（host/contestant）や実装根拠・環境前提・権限境界の説明を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止パターンとし、金額は「円」で表す。
 
 | サーフェス | ルート | 主対象アクター | 目的 | 許可アクション／ナビゲーション | 禁止アクション／ナビゲーション | 必須の可視コピー意図 | 禁止コピー |
 |---|---|---|---|---|---|---|---|
@@ -492,7 +492,7 @@ export { applyQuestionScore } from "./apply_question_score_impl.js";
 
 ### 2.4 リアルタイム同期設計（`module:realtime_sync`・INV-1/INV-3）
 
-- **配信モデル**: `src/realtime_sync/server.ts` がクラウド上の WebSocket 権威。`hub.ts` が接続をロール（host / answerer / audience）別に束ね、状態遷移イベントを全端末へ push する。状態遷移（締切・開示・モード切替・再採点）は接続中の全端末へ**リアルタイム反映**する（AC-02）。
+- **配信モデル**: `src/realtime_sync/server.ts` がクラウド上の WebSocket 権威。`hub.ts` が接続をロール（host / contestant / audience）別に束ね、状態遷移イベントを全端末へ push する。状態遷移（締切・開示・モード切替・再採点）は接続中の全端末へ**リアルタイム反映**する（AC-02）。
 - **再接続復帰**: 回線断・再接続時、端末は最新のゲーム状態（現在問題番号・進行段階・TV モード・自分の残額）へ復帰する（AC-04）。復帰の権威はサーバ側 `game_state` と `balances`。
 - **スケーラビリティ選定軸（INV-3）**: 同期基盤は既定 8 台を前提に最適化しつつ、`MAX_TABLET_CONNECTIONS` を **16/32** へ設定変更しても破綻しないこと（32 台程度までの同時接続で全端末反映が継続すること）を選定軸に含める。接続受け入れ判定は §2.7 の設定値を参照する。
 - **同期反映の測定ゲート**: 状態遷移の全端末反映を **p95 ≤ 2,000ms** のテストゲートとして設定する。設計に固定 SLA が無いため本値は暫定ゲートであり、SLA 確定時に更新する（F-04・§3.3）。
@@ -501,7 +501,7 @@ export { applyQuestionScore } from "./apply_question_score_impl.js";
 
 - **状態遷移**: `accepting` →（司会者「そこまで」＝ `answers_locked`）→（司会者「解答オープン！」＝ `answers_opened`／b）→（正解発表＝ `answer_revealed`／c）→（得点精算＝ `settlement_computed`／d）。開示前（b 未実行）は他者解答をどの端末にも表示しない。
 - **締切の効果**: `answers_locked` 後は**全解答者タブレットの入力がロック**され、以降の送信はサーバ側で拒否される（終端状態ガード・AC-13）。
-- **権限境界（INV-5・release-blocking）**: `answers_locked`／`answers_opened`／`answer_revealed`／`trigger_undone` を発火できるのは **`role: host` セッションのみ**。`role: answerer`・副司会（制御盤以外）からの当該コマンドは**サーバ側で 401/403 拒否**し、非 host の UI には該当操作要素を置かない（AC-17/AC-18）。ロール判定はセッションのロール属性を単一の判定点とする。
+- **権限境界（INV-5・release-blocking）**: `answers_locked`／`answers_opened`／`answer_revealed`／`trigger_undone` を発火できるのは **`role: host` セッションのみ**。`role: contestant`・副司会（制御盤以外）からの当該コマンドは**サーバ側で 401/403 拒否**し、非 host の UI には該当操作要素を置かない（AC-17/AC-18）。ロール判定はセッションのロール属性を単一の判定点とする。
 - **取消**: 司会者による取消は初版から機能し、直近の対象操作を取り消す。取消の具体挙動（直近のみか／任意問題再開示か）が曖昧な範囲は推測実装せず F028 で殿判断を仰ぐ（§3.2・F-03）。
 
 ### 2.6 スコアリングと再採点（`module:scoring`・INV-6/INV-7）
@@ -604,7 +604,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -633,7 +633,7 @@ operation_flow:
         - id: dod_load_runtime_from_db
           text: 出題面の解決元は questions テーブルであり、問題ファイルの再読込に依存しない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -678,7 +678,7 @@ operation_flow:
         - id: dod_limit_no_hardcode
           text: 上限判定は設定値を参照し、ソースに数値リテラル 8 のハードコードが存在しない
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -710,17 +710,17 @@ operation_flow:
       target: answers
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: accepting
       to_state: answers_locked
       durable_state: game_state.stage = answers_locked
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - 全解答者タブレットの入力がロックされる
         - 締切後の送信は拒否される
       dod_obligations:
         - id: dod_lock_host_only
-          text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+          text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
         - id: dod_lock_blocks_submit
           text: 締切後に解答者が送信を試みても answers に追加されず拒否される
     - id: op_open_answers
@@ -729,7 +729,7 @@ operation_flow:
       target: answers
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_locked
       to_state: answers_opened
       durable_state: game_state.stage = answers_opened
@@ -749,7 +749,7 @@ operation_flow:
       target: correct_value
       trigger: 制御盤で正解発表を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: game_state.stage = answer_revealed
@@ -831,7 +831,7 @@ operation_flow:
       target: last_trigger
       trigger: 制御盤で取消を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       durable_state: trigger_undone イベント
       expected_outcomes:
         - 直近の対象操作が取り消される
@@ -839,7 +839,7 @@ operation_flow:
         - 取消の具体挙動（直近のみか任意問題再開示か）は未確定（F-03・fixme）
       dod_obligations:
         - id: dod_undo_host_only
-          text: 取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される
+          text: 取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される
     - id: op_switch_tv_mode
       actor: host
       verb: switch

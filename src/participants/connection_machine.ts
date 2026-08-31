@@ -31,7 +31,7 @@ import { resolveMaxTabletConnections } from "../config/connection_limit.js";
  * 本モジュールが所有するのは純粋・副作用なしの受入「決定」のみである。over_limit を
  * 受けた `connection_rejected` ＋ WS close(4001) の通知、既存接続・participants・
  * answers・balances の不変性、切断時のスロット解放は `module:realtime_sync`
- * （`src/realtime_sync/`）が担う（§2.5・§3.3 の責務境界）。上限は answerer 接続のみに
+ * （`src/realtime_sync/`）が担う（§2.5・§3.3 の責務境界）。上限は contestant 接続のみに
  * 課し、host/audience はタブレット上限に数えない別チャネルとして扱う。
  *
  * 上限解決点への参照は `connection_limit.ts` の {@link resolveMaxTabletConnections} を
@@ -61,7 +61,7 @@ export type ConnectionState =
 /**
  * タブレット受入判定の結果。`kind` を判別タグとする判別可能ユニオン。
  *
- * - `{ kind: "ok" }`: 現在の answerer 接続数が解決上限「未満」で受入可（`handshaking → admitted`）。
+ * - `{ kind: "ok" }`: 現在の contestant 接続数が解決上限「未満」で受入可（`handshaking → admitted`）。
  * - `{ kind: "over_limit" }`: 解決上限「以上」で受入不可（`handshaking → rejected`）。
  */
 export type AdmitResult =
@@ -71,11 +71,11 @@ export type AdmitResult =
 /**
  * 新規タブレット（解答者）接続の受入可否を判定する純関数（SM-3・§4.4）。
  *
- * 現在の answerer 接続数 `connectedAnswerers` が {@link resolveMaxTabletConnections} の
+ * 現在の contestant 接続数 `connectedContestants` が {@link resolveMaxTabletConnections} の
  * 解決した上限「未満」なら `{ kind: "ok" }`、「以上」なら `{ kind: "over_limit" }` を返す。
  * 境界は 既定 8: 7→ok・8→over_limit（8 台目許可・9 台目拒否）／設定 16: 15→ok・
  * 16→over_limit／設定 32: 31→ok・32→over_limit。切断でスロットが解放されれば同数まで
- * 再受入可となる（接続数会計は呼出し側の `connectedAnswerers` に反映される）。
+ * 再受入可となる（接続数会計は呼出し側の `connectedContestants` に反映される）。
  *
  * 判定は解決値のみを参照して比較し、数値リテラル 8 を持たない（dod_limit_no_hardcode）。
  * 既定 8 は config 側の単一定数にのみ存在するため、`MAX_TABLET_CONNECTIONS` を 16／32 へ
@@ -84,13 +84,13 @@ export type AdmitResult =
  * （connection_rejected／WS close(4001)）と既存データ（participants/answers/balances/
  * 進行状態）の不変性は呼出し側（`src/realtime_sync/`）が担う。
  *
- * @param connectedAnswerers 現在受け入れ済みの answerer（タブレット）接続数。
+ * @param connectedContestants 現在受け入れ済みの contestant（タブレット）接続数。
  * @param env 上限解決に用いる環境変数ソース（既定は実行環境の `process.env`）。
  */
 export function admitTablet(
-  connectedAnswerers: number,
+  connectedContestants: number,
   env: NodeJS.ProcessEnv = process.env,
 ): AdmitResult {
   const max = resolveMaxTabletConnections({ env });
-  return connectedAnswerers < max ? { kind: "ok" } : { kind: "over_limit" };
+  return connectedContestants < max ? { kind: "ok" } : { kind: "over_limit" };
 }

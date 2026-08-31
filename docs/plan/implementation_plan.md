@@ -159,7 +159,7 @@ describe("接続上限の設定外出し（IMPL-10）", () => {
 - `src/game_state/round_machine.ts`（`nextStage`・`previousStage`＝取消の巻き戻し先 topology）
 - `src/game_state/tv_machine.ts`（`nextMode`／`backMode`／`jumpMode`）
 - `src/game_state/rescore_trigger.ts`（`planRescore(stage, patch)`＝`patch.correctValue` 有 ∧ `isDisclosed(stage)` の論理積で `{rescore,syncTvDE}`）
-- `src/participants/connection_machine.ts`（`admitTablet(connectedAnswerers, env)`・`resolveMaxTabletConnections` を R のみ）
+- `src/participants/connection_machine.ts`（`admitTablet(connectedContestants, env)`・`resolveMaxTabletConnections` を R のみ）
 - `src/scoring/validate_answer.ts`（0〜100 整数のサーバ検証）
 - `src/scoring/settle_question.ts`（`error`・`delta_yen`・`pitari_bonus_yen` 算出）
 - `src/scoring/rescore_question.ts`（開示済み問の全 settlements 再計算・balances 差分）
@@ -208,10 +208,10 @@ describe("自動再採点の起動分界（SM-2 / IMPL 未満での非誘発）"
 
 **成果物**:
 - `src/realtime_sync/server.ts`（`ws` 待受・accept/close(4001)）
-- `src/realtime_sync/hub.ts`（host/answerer/audience レジストリ・**ロール単一判定点**）
+- `src/realtime_sync/hub.ts`（host/contestant/audience レジストリ・**ロール単一判定点**）
 - `src/realtime_sync/fanout.ts`（`projectForRole`＝可視範囲外フィールド除去）
 - `src/realtime_sync/recovery.ts`（`buildSnapshot`＝サーバ権威 `game_state`/`balances`/`answers` から再構成）
-- `src/realtime_sync/heartbeat.ts`（ping 15 秒／pong 猶予 30 秒→切断確定・answerer スロット解放）
+- `src/realtime_sync/heartbeat.ts`（ping 15 秒／pong 猶予 30 秒→切断確定・contestant スロット解放）
 - `src/realtime_sync/rejoin.ts`（不透明 resume トークン検証・失効は新規参加として上限判定再通過）
 
 **受入 DoD**: `dod_conn_cloud_authority`・`dod_conn_role_scoped_session`／`dod_broadcast_all_role_endpoints`・`dod_broadcast_role_projection`（解答者へ他者の解答/残額/得点を配信しない）・`dod_broadcast_latency_gate`（p95 ≤ 2,000ms）／`dod_reconnect_progression`・`dod_reconnect_own_balance`・`dod_reconnect_server_authority`・`dod_reconnect_control_panel_resilient`／`dod_answer_preserved_across_reconnect`・`dod_answer_no_duplicate`／`dod_limit_existing_unaffected`（上限拒否時に既存不変）。上限拒否は `connection_rejected`＋WS `close(4001)`、host/audience は上限に数えない別チャネル。

@@ -112,8 +112,8 @@ describe("tablet/描画 入力専用最小面と禁止要素の不在", () => {
   it("面のアクセシブルラベルが単一定義 ROLE_LABELS の解答者ラベルで供給される", () => {
     const html = renderTabletSurface(acceptingState);
     const labels = attrValues(html, "aria-label");
-    expect(labels).toContain(ROLE_LABELS.answerer); // 「解答者」
-    expect(labels).not.toContain("answerer");
+    expect(labels).toContain(ROLE_LABELS.contestant); // 「解答者」
+    expect(labels).not.toContain("contestant");
   });
 
   // codd: covers vb=VB-24
@@ -155,7 +155,7 @@ describe("tablet/文言 解答者向けコピーと内部語の不在", () => {
     const visible = collectTabletVisibleText(vm);
     const joined = visible.join("\n");
     // 内部ロール識別子。
-    expect(joined).not.toMatch(/host|answerer|audience/i);
+    expect(joined).not.toMatch(/host|contestant|audience/i);
     // 内部イベント名。
     expect(joined).not.toMatch(
       /accepting|answers_locked|answers_opened|answer_revealed|settlement_computed|tv_mode/i,

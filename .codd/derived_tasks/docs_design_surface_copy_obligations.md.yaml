@@ -8,7 +8,7 @@ design_docs:
 tasks:
 - id: impl_role_labels
   title: Implement single-source visible role labels
-  description: Create src/game_state/role_labels.ts exporting the Role union ("host"|"answerer"|"audience")
+  description: Create src/game_state/role_labels.ts exporting the Role union ("host"|"contestant"|"audience")
     and ROLE_LABELS mapping to 司会者/解答者/観客 as the single supply of business-facing
     role labels for every surface (§2.8, op_map_role_labels_in_copy). No label value
     may contain an internal identifier.
@@ -62,7 +62,7 @@ tasks:
     every §2.7 host trigger (問題を読み込む/そこまで/解答オープン！/正解発表/精算/次へ/戻る/個別ジャンプ/取消/問題・正解を編集),
     the participant roster of self-entered names, the join QR, and the 「◯/◯台」connection
     count in operational language (op_render_control_panel_surface). It must not render
-    the answerer numeric-input face, invent a sub-host role, or leak internal identifiers/event
+    the contestant numeric-input face, invent a sub-host role, or leak internal identifiers/event
     names/config keys/point tokens; role wording draws from ROLE_LABELS.
   source_design_doc: docs/design/surface_copy_obligations.md
   v_model_layer: detailed
@@ -140,7 +140,7 @@ tasks:
 - id: unit_role_labels
   title: Unit-test role-label mapping and single source
   description: Add tests/game_state/role_labels.test.ts (Vitest) asserting ROLE_LABELS
-    maps host/answerer/audience to 司会者/解答者/観客 and that no label value contains an
+    maps host/contestant/audience to 司会者/解答者/観客 and that no label value contains an
     internal identifier, covering dod_labels_business_facing and dod_labels_single_source
     (§2.11).
   source_design_doc: docs/design/surface_copy_obligations.md
@@ -193,7 +193,7 @@ tasks:
   title: E2E-scan control-panel obligations
   description: Add tests/e2e/control_panel_surface.browser.spec.ts driving /control-panel
     with Playwright (declared and asserted in Vitest) to verify the visible host triggers,
-    the join QR and roster, the absence of the answerer input face, and no internal
+    the join QR and roster, the absence of the contestant input face, and no internal
     identifier/event-name/config-key/point leak (dod_cp_*). Rollback-after-取消 face
     assertions remain test.fixme() per §3.2.
   source_design_doc: docs/design/surface_copy_obligations.md

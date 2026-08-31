@@ -44,7 +44,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -78,7 +78,7 @@ codd:
       - id: dod_load_correct_value_integer
         text: correct_value が 0〜100 の整数以外では登録が拒否される（DB CHECK を含む）
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -103,7 +103,7 @@ codd:
       - id: dod_join_one_device
         text: connection_id は一意で 1 人 1 台が担保される
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -138,18 +138,18 @@ codd:
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - 全解答者タブレットの入力がロックされる
       - 締切後の answers への書込みは拒否される
       dod_obligations:
       - id: dod_lock_host_only
-        text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+        text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
       - id: dod_lock_blocks_submit
         text: rounds.stage が answers_locked 以降のとき answers への挿入/更新が拒否される
     - id: op_open_answers
@@ -159,7 +159,7 @@ codd:
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -182,7 +182,7 @@ codd:
       trigger: 制御盤で正解発表を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed
@@ -350,7 +350,7 @@ codd:
 
 ### 1.4 データ表現に対するアクター向けコピー義務
 
-データが供給するサーフェスとロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: answerer` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**を用い、内部識別子（host/answerer）・実装根拠・環境前提を露出させない。
+データが供給するサーフェスとロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: contestant` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**を用い、内部識別子（host/contestant）・実装根拠・環境前提を露出させない。
 
 - **氏名（`participants.name`）**: 解答者が自己入力した氏名をそのまま提示する。「端末 1」「席番号」等の内部割当ラベルへ置換しない（座席固定を持たない・§2.3）。
 - **金額（`balances.amount` / `settlements.delta_yen` / `settlements.pitari_bonus_yen`）**: 内部表現・API 応答・TV 表示のいずれでも**「円」**で表す。`point`/`pt`/`点` を格納・派生・表示のどこにも出さない（§2.7 で型レベルに固定）。
@@ -431,7 +431,13 @@ export interface QuestionsRepository {
 }
 ```
 
-### 2.3 `participants` テーブル
+### 2.3 ~~`participants` テーブル~~（**2026-08-28 殿裁可 案A により改定**・§2.3a を参照）
+
+> **改定**: 身元の権威は `accounts`（恒久アカウント・§2.3a）へ移り、`participants`（当日その場参加）は
+> 用いない。エピソードごとの参加者は P2 で `episode_participants` として表し、既存 QC 済みドメイン
+> （scoring / game_state / realtime_sync / render_*）が鍵とする `participantId` には
+> `episode_participants.id` を渡す（ドメイン側は無改変）。以下は履歴として残す。
+
 
 | カラム | 型 | 制約・責務 |
 |---|---|---|
@@ -451,6 +457,70 @@ export interface Participant {
   connectionId: string; // 1 人 = 1 台
 }
 ```
+
+### 2.3a `accounts` テーブル（**2026-08-28 殿裁可 案A・P1 実装済**）
+
+| カラム | 型 | 制約・責務 |
+|---|---|---|
+| `id` | text (PK) | 内部識別子（画面へ表示しない） |
+| `login_id` | text | ログイン ID（`unique`・空白を含まない 64 文字以内） |
+| `password_hash` | text | scrypt 導出鍵（16 進 128 文字）。**平文は保存しない** |
+| `password_salt` | text | scrypt ソルト（16 進） |
+| `role` | text | `admin` \| `contestant` |
+| `display_name` | text | 画面表示名（既存 `isValidDisplayName` / 上限 20 を再利用） |
+| `created_at` | text | ISO-8601 |
+| `updated_at` | text | ISO-8601 |
+
+- パスワードは **`node:crypto` の scrypt** のみで扱う（外部依存を増やさない）。平文は保存・記録・表示の
+  いずれもしない（AC-A8）。
+- 一意性（`login_id`）は永続境界 `AccountStore.insertIfLoginIdAbsent` の原子的 insert-if-absent が担保する。
+- 認可ロールへの写像は `toSessionRole`（`admin → host` / `contestant → contestant`）が唯一の変換点である。
+
+```typescript
+// src/accounts/account.ts
+export interface Account {
+  readonly id: string;
+  readonly loginId: string;
+  readonly passwordHash: string;   // scrypt（平文は持たない）
+  readonly passwordSalt: string;
+  readonly role: "admin" | "contestant";
+  readonly displayName: string;
+  readonly createdAt: string;      // ISO-8601
+  readonly updatedAt: string;      // ISO-8601
+}
+```
+
+### 2.3b エピソード系テーブル（**案A・P2 実装済**）
+
+案A の 4 表は P2（cmd_2553）で実装済みである（`src/episodes/`）。永続は §2.3c のとおり
+`DATA_DIR/episodes.json`（JSON ＋ アトミック書込）で、境界は `episodes/episode_store.ts`
+（`EpisodeStore`）が持つ。業務規則（受理境界・招待の有無・参加の冪等・問の上書き編集）は
+`episodes/episode_service.ts` が単一の置き場である。
+
+| テーブル | 主なカラム | 役割 |
+|---|---|---|
+| `episodes` | `id` / `title` / `status`(`draft`\|`live`\|`finished`) / `created_by` / 時刻 | 1 回の収録・開催 |
+| `episode_invitations` | `episode_id` / `account_id` / `invited_at`（PK は 2 列） | 回への参加権（招待） |
+| `episode_participants` | `id` / `episode_id` / `account_id` / `joined_at`（`unique(episode_id, account_id)`） | 実際に参加した解答者。**`id` を既存ドメインの `participantId` として渡す** |
+| `episode_questions` | `id` / `episode_id` / `question_number` / `text` / `correct_value` / `image_path` / `video_path` | 回ごとの問題・正解 |
+
+- **既存ドメインとの接続（実装済の規約）**: `episode_participants.id` をそのまま
+  `participantId` として既存 QC 済みドメイン（scoring / game_state / realtime_sync / render_*）へ渡す。
+  写像点は `server/episode_session.ts` の 1 箇所であり、ドメイン側は無改変である。
+- 出題は `episode_questions` を `questions/question.ts` の `Question` へ写して進行セッションへ載せる
+  （写像点は `episodes/episode.ts` の `toQuestion` 一点）。回に問が 1 問も無ければ出題を始められない。
+- 一意性: 招待は (`episode_id`, `account_id`)、参加は同じ組（冪等・二度参加しても識別子は増えない）、
+  問は (`episode_id`, `question_number`)（同じ番号への再登録は行 `id` を保った上書き編集）。
+
+### 2.3c 永続方式（**案A・設計 D7**）
+
+- 実行環境は Node **v20.20.0** ゆえ `node:sqlite`（Node 22+）は使えない。家族規模（アカウント数〜十数）
+  では **JSON ファイル ＋ アトミック書込**（一時ファイルへ書いて rename）で足りるため、初手は
+  zero-dependency の JSON 永続とする（`src/persistence/json_file.ts` / `src/accounts/json_account_store.ts`）。
+- 置き場は `DATA_DIR`（既定 `./data`）が単一の解決点である（`src/config/data_dir.ts`）。
+- 境界（`AccountStore` / `EpisodeStore`）と実装を分けてあるため、規模が増えたら Store 実装の
+  差し替えだけで SQLite 等へ移せる。その際は本節の表定義を `src/persistence/schema.ts`（DDL の
+  単一定義点）へ追加する（JSON 永続の現時点では DDL を先取りしない）。
 
 ### 2.4 `answers` テーブル（規約 DM-3・0〜100 整数）
 
@@ -537,7 +607,7 @@ export interface GameState {
 }
 ```
 
-- **権限境界**: `stage` を前進させる書込み（`answers_locked`/`answers_opened`/`answer_revealed`/`settlement_computed`）と `game_state.tv_mode` の切替は `role: host` セッションのみ（§2.11）。`role: answerer` からの当該コマンドはサーバで 401/403 拒否。
+- **権限境界**: `stage` を前進させる書込み（`answers_locked`/`answers_opened`/`answer_revealed`/`settlement_computed`）と `game_state.tv_mode` の切替は `role: host` セッションのみ（§2.11）。`role: contestant` からの当該コマンドはサーバで 401/403 拒否。
 
 ### 2.6 `settlements` ＋ `balances`（精算・規約 DM-3・整数円）
 
@@ -770,7 +840,7 @@ describe("接続上限（設定・非ハードコード）", () => {
 
 ### 2.11 データ層のアクセス制御・整合・プライバシー
 
-- **書込み権限境界（INV-5 継承・release-blocking）**: `rounds.stage` の前進、`game_state.tv_mode` 切替、`trigger_undone` の発火を起こす書込みは `role: host` セッションのみ。ロール判定はセッションのロール属性を単一判定点とし、`role: answerer` からの当該書込みコマンドは 401/403 で拒否する。`answers` への書込みは `role: answerer` が自分の 1 レコードに対してのみ、かつ `rounds.stage = accepting` の間だけ許可する。
+- **書込み権限境界（INV-5 継承・release-blocking）**: `rounds.stage` の前進、`game_state.tv_mode` 切替、`trigger_undone` の発火を起こす書込みは `role: host` セッションのみ。ロール判定はセッションのロール属性を単一判定点とし、`role: contestant` からの当該書込みコマンドは 401/403 で拒否する。`answers` への書込みは `role: contestant` が自分の 1 レコードに対してのみ、かつ `rounds.stage = accepting` の間だけ許可する。
 - **終端状態ガード**: `answers_locked` 以降は `answers` の挿入/更新をサーバで拒否（DB 側の書込みも stage 検査を経由）。締切後の送信は `answers` に入らない。
 - **クロスアクター可視性**: `/tablet` 供給読みモデルは当該解答者の `answers` と自分の `balances` のみを含み、他者の `answers`/`balances`/`settlements` を含めない。他者解答は `rounds.stage`（b 実行）到達前はどの端末向け読みモデルにも含めない。制御盤・TV(e) には `participants` 一覧を反映する。
 - **整合制約**: `unique(question_id, participant_id)`（answers・settlements）、FK（answers/settlements/rounds/balances → 親）、`CHECK`（`value`・`correct_value`・`error` の 0〜100、金額の integer）。`balances.amount` は `settlements` からの全再計算と常に一致する不変式を持つ。
@@ -786,7 +856,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -820,7 +890,7 @@ operation_flow:
         - id: dod_load_correct_value_integer
           text: correct_value が 0〜100 の整数以外では登録が拒否される（DB CHECK を含む）
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -843,7 +913,7 @@ operation_flow:
         - id: dod_join_one_device
           text: connection_id は一意で 1 人 1 台が担保される
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -877,17 +947,17 @@ operation_flow:
       target: answers
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - 全解答者タブレットの入力がロックされる
         - 締切後の answers への書込みは拒否される
       dod_obligations:
         - id: dod_lock_host_only
-          text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+          text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
         - id: dod_lock_blocks_submit
           text: rounds.stage が answers_locked 以降のとき answers への挿入/更新が拒否される
     - id: op_open_answers
@@ -896,7 +966,7 @@ operation_flow:
       target: answers
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -916,7 +986,7 @@ operation_flow:
       target: correct_value
       trigger: 制御盤で正解発表を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed

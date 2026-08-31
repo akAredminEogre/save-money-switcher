@@ -29,6 +29,31 @@ codd:
 
 # 運用手順書（当日回線確保・回線断時運用・接続上限変更）
 
+> **⚠ 2026-08-28 殿裁可「案A（事前アカウント方式）」により参加手順が改定された（cmd_2553）。**
+>
+> 本書中の「`/join` で氏名を自己入力して参加する」手順（§2 の参加受付・QR 到達確認・分岐 A/B の確認・
+> 満席平易文の記述）は**失効**しており、履歴として残す。有効な手順は次のとおり:
+>
+> 1. **初期管理者の投入（初回のみ）**: `ADMIN_LOGIN_ID` / `ADMIN_INITIAL_PASSWORD` を起動時にだけ
+>    env で渡す（冪等・既存パスワードは上書きしない）。資格情報は秘密保管庫にのみ置き、
+>    `.env`・ログ・証跡へ平文を書かない。投入結果は起動ログの
+>    `initial admin seed: created | already_exists | not_configured` で確認する。
+> 2. **参加**: 各人は配られた URL（QR が符号化するのは `/login`）でログインする。氏名の自己入力は無い。
+> 3. **保護面**: `/control-panel` と `/admin/*` は admin セッション必須。未ログインは `/login` へ誘導、
+>    非 admin は 403。ホスト操作コマンド（`POST /host/command`）も同じ門番を通る。
+> 4. **家族限定アクセス制御（PC-INV-3）**: `JOIN_ACCESS_MODE=authenticated`（分岐 B）で確定。
+>    分岐 A（`JOIN_ACCESS_TOKEN`）は用いない。
+> 5. **データ退避**: アカウントは `DATA_DIR`（既定 `./data`）配下の `accounts.json`、エピソード
+>    （回・招待・参加者・問題）は同じ置き場の `episodes.json`。破壊的変更・
+>    再デプロイの前に**この 2 ファイルを退避**する（消えると全員ログインできなくなり、
+>    作った回・招待・問題も失われる）。
+> 6. **エピソード運用（P2 実装済）**: 司会者は `/admin/episodes` で回を作り、詳細
+>    （`/admin/episodes/<id>`）で問題と正解を登録し、解答者アカウントを作って招待する。
+>    解答者は `/episodes` の一覧から**招待された回**を選んで参加する。1 卓が同時に進められる
+>    回は 1 つで、別の回が進行中のときは載せ替えを拒む（進行中のゲームを消さない）。
+>
+> Lightsail デプロイ（P3）は未実装であり、本書へは実装後に追記する。
+
 ## 1. Overview
 
 本書は `save-money-switcher`（クラウド WEB アプリ版『賞金先渡しクイズ SAVE MONEY』家族用操作盤）の **`operations:runbook`** であり、技術的親である `design:system-design`（`docs/design/system_design.md`）と `infra:deployment-setup`（`docs/infra/deployment_setup.md`）を唯一の真実源として、**本番当日の運用手順**を権威をもって定める。対象は次の 3 手順を中核とする。
@@ -134,7 +159,7 @@ codd:
 
 ### 2.4 手順 R-4: 本番進行オペレーション（司会者操作・INV-5/INV-6）
 
-本番中に司会者（制御盤）が行う操作系列を確定順で示す。すべて `role: host` セッションからのみ発火でき、`role: answerer`・副司会からの当該コマンドはサーバ側で **401/403** 拒否される。
+本番中に司会者（制御盤）が行う操作系列を確定順で示す。すべて `role: host` セッションからのみ発火でき、`role: contestant`・副司会からの当該コマンドはサーバ側で **401/403** 拒否される。
 
 1. **問題読込（`op_load_questions`）**: ゲーム未開始またはライブ編集フェーズで、制御盤から事前問題ファイルを読み込み `questions`（`text`／`image_path`／`video_path`／`correct_value`〈0〜100 整数〉）へ登録する。ランタイム出題は DB から供給し、ファイル再読込に依存しない（INV-2）。
 2. **参加受付（`op_join_game`）**: 参加 QR を提示し、各解答者がタブレットで読み取り `/join` で**氏名を自己入力**して参加確定する（1 人 = 1 台）。参加は `participants` に登録され、制御盤の参加者一覧と TV(e) に反映される。端末番号の固定割当・事前氏名台帳は用いない。
@@ -248,8 +273,12 @@ describe("接続上限のコード無改修な変更（8→16→32）", () => {
 | 環境変数 | 解決点（`src/config/`） | 既定 | 区分 | 運用上の役割 |
 |---|---|---|---|---|
 | `MAX_TABLET_CONNECTIONS` | `connection_limit.ts` : `resolveMaxTabletConnections()` | 8 | 非機密 | タブレット同時接続上限（§2.7 で 16/32 へ変更） |
-| `PUBLIC_BASE_URL` | `public_base_url.ts` : `resolvePublicBaseUrl()` | 必須（未設定は起動拒否） | 非機密 | 参加 QR／`/join` の基底クラウド公開 URL |
-| `JOIN_ACCESS_MODE` | `access_control_config.ts` : `resolveAccessMode()` | undefined（→起動拒否） | 非機密 | 家族限定制御の方式 `url_secret`／`authenticated` |
+| `PUBLIC_BASE_URL` | `public_base_url.ts` : `resolvePublicBaseUrl()` | 必須（未設定は起動拒否） | 非機密 | 参加 QR／~~`/join`~~ **`/login`** の基底クラウド公開 URL。**https ならセッション Cookie に `Secure` が付く** |
+| `DATA_DIR` | `data_dir.ts` : `resolveDataDir()` | `./data`（CWD 相対） | 非機密 | 永続データ（`accounts.json` / `episodes.json`）の置き場。**デプロイで消えぬ場所を指すこと** |
+| `ADMIN_LOGIN_ID` | `seed_admin.ts` : `resolveInitialAdminCredentials()` | undefined（→投入せず起動） | **機密** | 初期管理者のログイン ID（初回投入時のみ与える） |
+| `ADMIN_INITIAL_PASSWORD` | `seed_admin.ts` : `resolveInitialAdminCredentials()` | undefined（→投入せず起動） | **機密** | 初期管理者の初期パスワード。**保存も記録もされず scrypt ハッシュだけが残る** |
+| `ADMIN_DISPLAY_NAME` | `seed_admin.ts` : `resolveInitialAdminCredentials()` | 「司会者」 | 非機密 | 初期管理者の画面表示名 |
+| `JOIN_ACCESS_MODE` | `access_control_config.ts` : `resolveAccessMode()` | undefined（→起動拒否） | 非機密 | 家族限定制御の方式。**案A では `authenticated` で確定**（`url_secret` は用いない） |
 | `JOIN_ACCESS_TOKEN` | `access_control_config.ts` : `resolveJoinAccessToken()` | undefined | **機密** | 分岐 A の秘匿トークン |
 | `DATABASE_URL` | `server_runtime.ts` : `resolveDatabaseUrl()` | 必須（未設定は起動拒否） | **機密** | 永続 DB 接続文字列（INV-2） |
 | `PORT` | `server_runtime.ts` : `resolvePort()` | 8080 | 非機密 | HTTP/WS 待受ポート |
@@ -259,7 +288,7 @@ describe("接続上限のコード無改修な変更（8→16→32）", () => {
 | `E2E_BASE_URL` | 検証ハーネス | 検証時注入 | 非機密 | E2E の対象オリジン |
 | `NODE_ENV` | ランタイム標準 | `production` | 非機密 | 実行モード |
 
-機密（`DATABASE_URL`・`JOIN_ACCESS_TOKEN`）はリポジトリ・ログ・QR 表示面・クライアント配信ペイロードへ露出させず、PaaS シークレットストア／GitHub Actions 暗号化シークレットにのみ保持する。
+機密（`DATABASE_URL`・`JOIN_ACCESS_TOKEN`・`ADMIN_LOGIN_ID`・`ADMIN_INITIAL_PASSWORD`）はリポジトリ・ログ・QR 表示面・クライアント配信ペイロードへ露出させず、PaaS シークレットストア／GitHub Actions 暗号化シークレットにのみ保持する。
 
 ### 2.9 手順 R-8: ゲーム終了後のデータライフサイクル（プライバシー・INV-6 継承）
 
@@ -296,7 +325,7 @@ export function buildHealthSnapshot(): HealthSnapshot {
   const counts = getConnectionCounts();
   return {
     status: "ok",
-    tabletConnections: counts.answerer,
+    tabletConnections: counts.contestant,
     maxTabletConnections: resolveMaxTabletConnections(),
     http5xxTotal: counts.http5xxTotal,
     syncLatencyP95Ms: counts.syncLatencyP95Ms,
@@ -331,7 +360,7 @@ export function buildHealthSnapshot(): HealthSnapshot {
 
 ### 3.5 権限境界・アクセス監視（INV-5）
 
-- 締切・開示・正解発表・得点精算・取消・モード切替の発火が `role: host` セッションのみであることを、非 host からの当該コマンドに対する **401/403** 応答率で監視する。想定外の許可（`role: answerer` からの発火成立）は重大アラート。
+- 締切・開示・正解発表・得点精算・取消・モード切替の発火が `role: host` セッションのみであることを、非 host からの当該コマンドに対する **401/403** 応答率で監視する。想定外の許可（`role: contestant` からの発火成立）は重大アラート。
 - `/join`（未認証／事前認証サーフェス）が、アクセス状態に整合しない保護ナビ（制御盤操作等）を露出していないことを監視する。
 
 ### 3.6 切断検知・ハートビート監視（RUN-C1）

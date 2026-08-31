@@ -53,7 +53,7 @@ const FORBIDDEN_COPY_PATTERNS: Readonly<Record<ForbiddenCopyCategory, RegExp>> =
   // point/pt/点 の点化文言（円建て固定・現金感を薄めない・§2.5）。
   currency_token: /point|pt|点/gi,
   // 内部ロール識別子（司会者/解答者/観客の可視ラベルでのみ表す・§2.8）。
-  internal_role_identifier: /host|answerer|audience/gi,
+  internal_role_identifier: /host|contestant|audience/gi,
   // 内部イベント名（状態表示は運用語で表す・§1.3）。
   internal_event_name:
     /accepting|answers_locked|answers_opened|answer_revealed|settlement_computed|tv_mode_changed/gi,

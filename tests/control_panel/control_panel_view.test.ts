@@ -165,7 +165,7 @@ describe("control_panel サーフェス描画（op_render_control_panel_surface�
     ];
     const forbidden: readonly RegExp[] = [
       /\bhost\b/i,
-      /\banswerer\b/i,
+      /\bcontestant\b/i,
       /\baudience\b/i,
       /accepting|answers_locked|answers_opened|answer_revealed|settlement_computed|tv_mode_changed/,
       /MAX_TABLET_CONNECTIONS|JOIN_ACCESS_TOKEN|PUBLIC_BASE_URL/,

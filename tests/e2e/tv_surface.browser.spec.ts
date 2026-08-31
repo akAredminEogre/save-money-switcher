@@ -45,10 +45,11 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { chromium, type Browser } from "playwright";
 import { assertServerHealthy } from "./helpers/server-health.js";
+import { startAppInstance, type AppInstance } from "./helpers/app-instance.js";
 import { scanForbiddenCopy, SETTLEMENT_TABLE_HEADERS } from "./helpers/assertions.js";
 
-const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const TV_URL = `${BASE_URL}/tv`;
+/** 本スペック専用に起動する実体のベース URL（beforeAll で確定する）。 */
+let TV_URL = "";
 
 /** TV の 5 モード（surface_copy_obligations §2.4 が固定した a〜e）。 */
 const TV_MODES = ["a", "b", "c", "d", "e"] as const;
@@ -122,13 +123,19 @@ const INTERACTIVE_SELECTOR =
 
 describe("TV 5モードサーフェスの可視要素・禁止要素・禁止コピー（SCO-3・dod_tv_*）", () => {
   let browser: Browser;
+  let app: AppInstance;
 
+  // 常駐サーバの状態に検証を依存させないため、本スペック専用の隔離実体を起動する
+  // （TV は観客向け受動面ゆえログインは要さない）。
   beforeAll(async () => {
     browser = await chromium.launch({ headless: true });
-  }, 60_000);
+    app = await startAppInstance("tv");
+    TV_URL = `${app.baseUrl}/tv`;
+  }, 180_000);
 
   afterAll(async () => {
     if (browser) await browser.close();
+    if (app) await app.stop();
   });
 
   // codd: covers vb=VB-45
@@ -148,7 +155,7 @@ describe("TV 5モードサーフェスの可視要素・禁止要素・禁止コ
         const visibleText = await page.locator("body").innerText();
         expect(visibleText.trim().length, `mode=${mode} が可視コンテンツを描画すること`).toBeGreaterThan(0);
 
-        // 点化文言（point/pt/点）・内部ロール識別子（host/answerer/audience）の非露出。
+        // 点化文言（point/pt/点）・内部ロール識別子（host/contestant/audience）の非露出。
         expect(
           scanForbiddenCopy(visibleText, { categories: ["currency_token"] }),
           `mode=${mode} に点化文言が無いこと`,

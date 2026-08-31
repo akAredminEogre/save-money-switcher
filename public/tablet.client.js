@@ -1,26 +1,12 @@
-// 解答者タブレット client — cmd_2159 Phase1 progressive enhancement。
+// 解答者タブレット client — 案A（事前アカウント方式）。
 // −10/−1/+1/+10 ステッパはクライアント局所値（0〜100 クランプ）を作り、送信で POST /tablet/answer。
 // EventSource で受け取ったサーフェス HTML を #app へ swap し、局所ステッパ値を復元する。
 (function () {
   "use strict";
-  var STORAGE_KEY = "smsw.participantId";
   var app = document.getElementById("app");
   if (!app) return;
-  var params = new URLSearchParams(location.search);
-  // 身元はクエリ→この端末の localStorage の順で解決する。クエリ由来なら端末側へも残し、
-  // 以後クエリ無しでリロードしても同じ参加者のまま（匿名化して残額 0 に落ちない）。
-  var pid = params.get("participantId");
-  if (pid) {
-    try {
-      localStorage.setItem(STORAGE_KEY, pid);
-    } catch (_) {}
-  } else {
-    try {
-      pid = localStorage.getItem(STORAGE_KEY);
-    } catch (_) {
-      pid = null;
-    }
-  }
+  // 身元は HttpOnly Cookie のセッションがサーバ側で持つ（案A）。client は identity を保持せず、
+  // クエリや localStorage の participantId も用いない（書き換えられる値を身元にしない）。
   var localValue = 0;
 
   function restore() {
@@ -41,17 +27,18 @@
     }
     var submit = closest('button[data-op="submit"]');
     if (submit) {
-      if (submit.disabled || !pid) return;
+      if (submit.disabled) return;
       fetch("/tablet/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ participantId: pid, value: localValue }),
+        credentials: "same-origin",
+        body: JSON.stringify({ value: localValue }),
       }).catch(function () {});
     }
   });
 
-  var url = "/events?role=answerer" + (pid ? "&participantId=" + encodeURIComponent(pid) : "");
-  var es = new EventSource(url);
+  // 申告するのは「今開いている面」だけ。購読可否と投影ロールはサーバがセッションから決める。
+  var es = new EventSource("/events?surface=tablet");
   es.onmessage = function (ev) {
     try {
       var msg = JSON.parse(ev.data);

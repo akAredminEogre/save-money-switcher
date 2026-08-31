@@ -110,7 +110,7 @@ steps:
 - &id005
   id: src_game_state_role_labels
   kind: label_map
-  rationale: Role union and ROLE_LABELS (host→司会者, answerer→解答者, audience→観客) is the
+  rationale: Role union and ROLE_LABELS (host→司会者, contestant→解答者, audience→観客) is the
     single visible-label source; role_labels.test.ts asserts the mapping and that
     no label leaks the internal identifiers.
   source_design_section: surface_copy_obligations.md §2.8 / shared_domain_model.md
@@ -537,8 +537,8 @@ steps:
 - &id026
   id: test_game_state_role_labels
   kind: unit_test
-  rationale: Vitest unit test verifying ROLE_LABELS.host/answerer/audience === 司会者/解答者/観客
-    and that no visible label matches /host|answerer|audience/i (VB-80 internal-identifier
+  rationale: Vitest unit test verifying ROLE_LABELS.host/contestant/audience === 司会者/解答者/観客
+    and that no visible label matches /host|contestant|audience/i (VB-80 internal-identifier
     non-leak).
   source_design_section: test_strategy.md §1.6 (VB-80); surface_copy_obligations.md
     §2.11

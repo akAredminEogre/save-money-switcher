@@ -16,7 +16,7 @@
  *
  * 本モジュールは兄弟ユニットからのランタイム import を一切持たないリーフである（型・定数のみ）。
  * ここで固定する release-blocking 事項:
- *   - ロール（host/answerer/audience）・進行段階・TV モード・ドメインイベント種別の語彙（設計 §2.3）。
+ *   - ロール（host/contestant/audience）・進行段階・TV モード・ドメインイベント種別の語彙（設計 §2.3）。
  *   - `ServerEvent<T>` 封筒は**セッション単位で単調増加する `seq`** を必ず担い、金額を伴う
  *     イベントは `currency: "円"` を固定付与する（RS-INV-6・現金感を薄めない＝ `point`/`pt`/`点` 禁止）。
  *   - 上限超過での接続拒否クローズコード `CLOSE_OVER_LIMIT = 4001`（設計 §2.6・§2.11）。
@@ -31,7 +31,7 @@
 // ---- ロール・進行段階・TV モードの語彙（設計 §2.3） ----
 
 /** セッションに確定するロール。配信投影と権限判定の単一判定点が参照する。 */
-export const ROLES = ["host", "answerer", "audience"] as const;
+export const ROLES = ["host", "contestant", "audience"] as const;
 export type Role = (typeof ROLES)[number];
 
 /** 各問の進行段階（サーバ権威 `game_state.stage`）。 */
@@ -214,9 +214,9 @@ export type HostOnlyCommand = (typeof HOST_ONLY_COMMANDS)[number];
 
 /** 各コマンドが許可されるロール集合（設計 §2.3 の許可ロール表を単一語彙に固定）。 */
 export const COMMAND_ALLOWED_ROLES: Readonly<Record<CommandKind, readonly Role[]>> = {
-  join: ["answerer"],
-  resume: ["host", "answerer", "audience"],
-  submit_answer: ["answerer"],
+  join: ["contestant"],
+  resume: ["host", "contestant", "audience"],
+  submit_answer: ["contestant"],
   lock: ["host"],
   open: ["host"],
   reveal: ["host"],

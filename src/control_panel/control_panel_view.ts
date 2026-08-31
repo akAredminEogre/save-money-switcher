@@ -20,8 +20,8 @@
  * 司会者向けの進行制御コンソールの表示モデルを、純関数として組み立てる。可視要素は §2.7 の
  * 全司会者トリガー（{@link HOST_TRIGGERS} と個別ジャンプ {@link MODE_JUMP_TRIGGERS}）、参加者一覧
  * （自己入力氏名 `participants.name`）、接続把握「◯/◯台」、参加用 QR に限る。解答者用の数値入力
- * 送信面（+1/-1/+10/-10 と送信）は持たない（dod_cp_no_answerer_input_face）。ロール表記は単一定義
- * {@link ROLE_LABELS} から供給し、内部ロール識別子（host/answerer）・内部イベント名・設定キー名・
+ * 送信面（+1/-1/+10/-10 と送信）は持たない（dod_cp_no_contestant_input_face）。ロール表記は単一定義
+ * {@link ROLE_LABELS} から供給し、内部ロール識別子（host/contestant）・内部イベント名・設定キー名・
  * point/pt/点・デモ/テスト表記を可視コピーへ出さない（dod_cp_no_internal_leak）。
  *
  * 参加用 QR の符号化（クラウド公開 `/join` URL → SVG）は `module:participants`（`op_display_join_qr`）

@@ -20,7 +20,7 @@ codd:
     reason: 回答・誤差・残額は 0〜100 整数／整数円、金額は円建てで表現し、ポイント型・小数型を共有ドメインに持たせない（論点G・B）。違反時リリース不可。
   - targets:
     - role:host
-    - role:answerer
+    - role:contestant
     reason: 司会者・解答者・観客のロールと権限境界を型・所有境界として明示し、実装がロール境界を曖昧化できないこと（論点7・第三要件）。違反時リリース不可。
   modules:
   - questions
@@ -34,7 +34,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -66,7 +66,7 @@ codd:
         text: Question 型は src/questions/question.ts のみが定義し、correctValue の静的型が AnswerScore
           で 0〜100 整数以外は assertAnswerScore が拒否する
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -93,7 +93,7 @@ codd:
       - id: dod_dm_balance_yen_type
         text: 初期化された Balance.amount の型は Yen で値は整数 10000 であり point/pt/点 語を含まない
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -131,18 +131,18 @@ codd:
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - 全解答者タブレットの入力がロックされる
       - 締切後の answers への書込みは拒否される
       dod_obligations:
       - id: dod_lock_host_only
-        text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+        text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
       - id: dod_lock_blocks_submit
         text: rounds.stage が answers_locked 以降のとき answers への挿入/更新が拒否される
       - id: dod_dm_require_host_single_guard
@@ -155,7 +155,7 @@ codd:
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -181,7 +181,7 @@ codd:
       trigger: 制御盤で正解発表を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed
@@ -239,7 +239,7 @@ codd:
       trigger: 制御盤のライブ編集 UI で問題または正解を更新
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       durable_state: questions 更新（text / image_path / video_path / correct_value）
       readback: DB 再取得で編集後の値を返す
       expected_outcomes:
@@ -291,7 +291,7 @@ codd:
       trigger: 制御盤で取消を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       durable_state: trigger_undone イベント
       expected_outcomes:
       - 直近の対象操作が取り消される
@@ -299,7 +299,7 @@ codd:
       - 取消の具体挙動（直近のみか任意問題再開示か）は未確定（F-03・fixme）
       dod_obligations:
       - id: dod_undo_host_only
-        text: 取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される
+        text: 取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される
       - id: dod_dm_undo_event_owner
         text: trigger_undone は src/realtime_sync/events.ts の DomainEvent ユニオンの一員として単一発行者から配信される
     - id: op_switch_tv_mode
@@ -396,19 +396,19 @@ codd:
 
 - **1 概念 = 1 正準型 = 1 所有ファイル**。同じドメイン概念（金額・回答値・進行段階・ロール等）に対し、正準名と正準型を **唯一のファイル** に置く。他モジュールはそれを `import` するだけで、再定義・再宣言・平行実装を禁止する。
 - 例として「金額」は `Yen`（`src/scoring/yen.ts`）が唯一の型であり、`tv_display`・`control_panel`・`participants` は独自の `number` 金額を宣言せず `Yen` を import する。「回答値」は `AnswerScore`（`src/scoring/answer_score.ts`）が唯一で、`questions.correctValue` も `answers.value` も同型を参照する。
-- 用語も一意化する（project_lexicon の設計原則「同一ドメイン概念には docs/code/config/CLI 横断で単一の正準名」）。ロール `host`/`answerer`/`audience`、ドメインイベント `answers_locked` 等は本書の正準名を全レイヤの正準とする。
+- 用語も一意化する（project_lexicon の設計原則「同一ドメイン概念には docs/code/config/CLI 横断で単一の正準名」）。ロール `host`/`contestant`/`audience`、ドメインイベント `answers_locked` 等は本書の正準名を全レイヤの正準とする。
 
 ### 1.3 リリースブロッキング規約と準拠マップ
 
 | 規約 | 対象 | 不変条件（要旨） | 本書での準拠箇所 |
 |---|---|---|---|
 | **非交渉 1** | `module:scoring`, `module:questions` | 回答・誤差・残額は 0〜100 整数／整数円、金額は円建てで表現し、**ポイント型・小数型を共有ドメインに持たせない**（論点 G・B）。違反時リリース不可 | §2.1・§3.3・§4.1・§4.2 |
-| **非交渉 2** | `role:host`, `role:answerer` | 司会者・解答者・観客のロールと権限境界を **型・所有境界として明示** し、実装がロール境界を曖昧化できない（論点 7・第三要件）。違反時リリース不可 | §2.1・§3.2・§3.5・§4.1 |
+| **非交渉 2** | `role:host`, `role:contestant` | 司会者・解答者・観客のロールと権限境界を **型・所有境界として明示** し、実装がロール境界を曖昧化できない（論点 7・第三要件）。違反時リリース不可 | §2.1・§3.2・§3.5・§4.1 |
 | INV-1（継承） | `module:realtime_sync` | クラウド WebSocket が単一権威。ホスト PC をサーバにしない。ドメインイベントの単一発行者 | §2.2・§3.4 |
 | INV-2（継承） | `module:questions` | 問題は DB 登録・DB 供給、ライブ編集で DB 更新 | §3.1（`Question` 所有） |
 | INV-3（継承） | `module:config` | 接続上限はハードコード禁止・設定解決 | §3.1・§4.1（`resolveMaxTabletConnections`） |
 | INV-4（継承） | `module:participants` | 家族限定アクセス制御を設計責務として保持。無制御公開はリリース不可 | §4.5・§5.3 |
-| INV-5（継承） | `role:host`/`role:answerer` | ロール境界・権限差を全体へ反映。締切・開示・取消は host のみ | §3.2・§3.5 |
+| INV-5（継承） | `role:host`/`role:contestant` | ロール境界・権限差を全体へ反映。締切・開示・取消は host のみ | §3.2・§3.5 |
 | INV-6（継承） | `module:scoring`/`module:tablet` | 0〜100 整数のみ受理、UI＋サーバ二重防衛 | §3.3・§4.1・§4.4 |
 | INV-7（継承） | `module:scoring`/`module:tv_display` | 円建て固定・`point`/`pt`/`点` 置換禁止 | §3.3・§4.1 |
 
@@ -426,7 +426,7 @@ codd:
 | 内部識別子（`role`） | 可視ラベル | データが供給するサーフェス |
 |---|---|---|
 | `host` | **司会者** | `/control-panel` |
-| `answerer` | **解答者** | `/tablet`・`/join` |
+| `contestant` | **解答者** | `/tablet`・`/join` |
 | `audience` | **観客** | `/tv` |
 
 - 金額は表示・内部表現とも **「円」** で表す。`point`/`pt`/`点` の語を型・派生・表示のどこにも出さない（§3.3 で型レベルに固定）。
@@ -522,7 +522,7 @@ classDiagram
     class Role {
         <<enum·realtime_sync>>
         host
-        answerer
+        contestant
         audience
     }
     class Session {
@@ -662,9 +662,9 @@ stateDiagram-v2
 
 **規約への準拠を明言する**：司会者・解答者・観客のロールと権限差を、コメントや UI の慣習ではなく **型と単一所有ガード** で表現する。
 
-- `Role = "host" | "answerer" | "audience"` を `src/realtime_sync/session.ts` が唯一所有する。全接続は `Session` を持ち、`Session.role` が権限判定の単一データ源である。
+- `Role = "host" | "contestant" | "audience"` を `src/realtime_sync/session.ts` が唯一所有する。全接続は `Session` を持ち、`Session.role` が権限判定の単一データ源である。
 - 進行段階を前進させる書込み（`answers_locked`/`answers_opened`/`answer_revealed`/`settlement_computed`）・`trigger_undone` の発火・`game_state.tv_mode` の切替・問題/正解のライブ編集は、**`requireHost(session)` を通過した経路のみが実行できる**。`requireHost` は非 host に対し `ForbiddenRoleError` を投げ、HTTP/WS 層がこれを **401/403** に写像する。ガードは 1 箇所（`session.ts`）に集約し、各コマンドハンドラで再実装しない。
-- `role: answerer` からの締切・開示・取消コマンドは型・ガードの双方で拒否される。非 host の UI（`/tablet`・`/tv`）には該当操作要素を置かない（§3.5）。`answers` への書込みは `answerer` が自分の 1 レコードに対し、かつ `stage = accepting` の間だけ許可する。
+- `role: contestant` からの締切・開示・取消コマンドは型・ガードの双方で拒否される。非 host の UI（`/tablet`・`/tv`）には該当操作要素を置かない（§3.5）。`answers` への書込みは `contestant` が自分の 1 レコードに対し、かつ `stage = accepting` の間だけ許可する。
 
 ### 3.3 円建て・0〜100 整数の型固定（非交渉規約 1 / INV-6・INV-7）
 
@@ -680,7 +680,7 @@ stateDiagram-v2
 
 ### 3.5 アクター向けサーフェス／コピー義務
 
-共有ドメインが供給する型がどのサーフェスに、どの可視ラベルで露出してよいかを固定する。可視コピーは §1.5 の可視ラベルを用い、内部識別子（`host`/`answerer`）・実装根拠・環境前提・権限境界の説明を露出させない。
+共有ドメインが供給する型がどのサーフェスに、どの可視ラベルで露出してよいかを固定する。可視コピーは §1.5 の可視ラベルを用い、内部識別子（`host`/`contestant`）・実装根拠・環境前提・権限境界の説明を露出させない。
 
 | サーフェス | ルート | 主対象 | 供給してよい共有型 | 禁止 | 必須コピー意図 / 禁止コピー |
 |---|---|---|---|---|---|
@@ -703,7 +703,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -734,7 +734,7 @@ operation_flow:
         - id: dod_dm_question_type_owner
           text: Question 型は src/questions/question.ts のみが定義し、correctValue の静的型が AnswerScore で 0〜100 整数以外は assertAnswerScore が拒否する
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -759,7 +759,7 @@ operation_flow:
         - id: dod_dm_balance_yen_type
           text: 初期化された Balance.amount の型は Yen で値は整数 10000 であり point/pt/点 語を含まない
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -795,17 +795,17 @@ operation_flow:
       target: answers
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - 全解答者タブレットの入力がロックされる
         - 締切後の answers への書込みは拒否される
       dod_obligations:
         - id: dod_lock_host_only
-          text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+          text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
         - id: dod_lock_blocks_submit
           text: rounds.stage が answers_locked 以降のとき answers への挿入/更新が拒否される
         - id: dod_dm_require_host_single_guard
@@ -816,7 +816,7 @@ operation_flow:
       target: answers
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -838,7 +838,7 @@ operation_flow:
       target: correct_value
       trigger: 制御盤で正解発表を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed
@@ -888,7 +888,7 @@ operation_flow:
       target: question_or_correct_value
       trigger: 制御盤のライブ編集 UI で問題または正解を更新
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       durable_state: questions 更新（text / image_path / video_path / correct_value）
       readback: DB 再取得で編集後の値を返す
       expected_outcomes:
@@ -934,7 +934,7 @@ operation_flow:
       target: last_trigger
       trigger: 制御盤で取消を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       durable_state: trigger_undone イベント
       expected_outcomes:
         - 直近の対象操作が取り消される
@@ -942,7 +942,7 @@ operation_flow:
         - 取消の具体挙動（直近のみか任意問題再開示か）は未確定（F-03・fixme）
       dod_obligations:
         - id: dod_undo_host_only
-          text: 取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される
+          text: 取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される
         - id: dod_dm_undo_event_owner
           text: trigger_undone は src/realtime_sync/events.ts の DomainEvent ユニオンの一員として単一発行者から配信される
     - id: op_switch_tv_mode
@@ -1085,17 +1085,17 @@ export function isSettled(stage: Stage): boolean {
 
 ```typescript
 // src/realtime_sync/session.ts — ロールと権限ガードの唯一の所有者（非交渉規約 2・INV-5）
-export type Role = "host" | "answerer" | "audience";
+export type Role = "host" | "contestant" | "audience";
 
 export interface Session {
   connectionId: string;
   role: Role;
-  participantId: string | null; // answerer のみ非 null
+  participantId: string | null; // contestant のみ非 null
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
   host: "司会者",
-  answerer: "解答者",
+  contestant: "解答者",
   audience: "観客",
 };
 
@@ -1201,12 +1201,12 @@ describe("ロールと権限ガード", () => {
   it("host のみが進行コマンドを通過できる", () => {
     expect(() => requireHost(session("host"))).not.toThrow();
   });
-  it("answerer の締切/取消コマンドは拒否（401/403 相当）", () => {
-    expect(() => requireHost(session("answerer"))).toThrow(ForbiddenRoleError);
+  it("contestant の締切/取消コマンドは拒否（401/403 相当）", () => {
+    expect(() => requireHost(session("contestant"))).toThrow(ForbiddenRoleError);
   });
   it("内部識別子には可視ラベルが対応する", () => {
     expect(ROLE_LABELS.host).toBe("司会者");
-    expect(ROLE_LABELS.answerer).toBe("解答者");
+    expect(ROLE_LABELS.contestant).toBe("解答者");
     expect(ROLE_LABELS.audience).toBe("観客");
   });
 });

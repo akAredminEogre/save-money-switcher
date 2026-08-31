@@ -134,7 +134,7 @@ tasks:
 - id: implement_connection_machine
   title: Author connection admission decision
   description: Define the `ConnectionState` set (handshaking, admitted, connected,
-    disconnected, rejected) and `admitTablet(connectedAnswerers, env)` returning ok
+    disconnected, rejected) and `admitTablet(connectedContestants, env)` returning ok
     while below the resolved cap and over_limit at or above it (SM-3, §4.4). The judgement
     references only the resolved value, keeping no numeric literal 8 in the decision
     code. Imports `resolveMaxTabletConnections` from connection_limit.ts.
