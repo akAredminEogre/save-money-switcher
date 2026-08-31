@@ -24,6 +24,9 @@ codd:
     - module:participants
     reason: "（2026-08-28 案A 改定。旧: 参加はホスト画面の QR を読み氏名を自己入力し、1人=1台（入力専用）で紐付ける・端末番号固定割当は不採用（論点9改）） → 案A 準拠: 参加は事前発行アカウントでの /login ログインにより成立する（身元はサーバ側セッション権威）。端末番号固定割当は不採用（論点9改・案A でも同じ）。違反時リリース不可。"
   - targets:
+    - module:participants
+    reason: "2026-08-28 殿裁可「案A（事前アカウント方式）」による改定（cmd_2553）。本 frontmatter の operation_flow のうち op_display_join_qr・op_join_game と、dod_join_self_name／dod_join_no_seat_fixed／dod_join_one_device は失効しており、履歴としてのみ残す（本文 §2.4 の失効告知と同一）。有効な参加経路は /login でのログイン＋招待エピソードへの参加のみであり、失効した氏名自己入力の /join を新たに実装・検証してはならない。QR は破棄せず符号化先を /login へ付け替える。家族限定アクセス制御（PC-INV-3）は JOIN_ACCESS_MODE=authenticated（分岐B）で確定し、分岐A（URL 秘匿トークン）は用いない。違反時リリース不可。"
+  - targets:
     - module:config
     - module:participants
     reason: 同時接続上限は既定 8・ハードコード禁止・設定パラメータとして外出しし、上限超過時は接続を断る挙動が設定値を参照して機能すること（論点10）。違反時リリース不可。
