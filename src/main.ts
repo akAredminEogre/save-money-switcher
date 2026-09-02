@@ -53,7 +53,7 @@ import { accountsFilePath, createJsonAccountStore } from "./accounts/json_accoun
 import { createPgAccountStore } from "./accounts/pg_account_store.js";
 import { createPgEpisodeStore } from "./episodes/pg_episode_store.js";
 import { resolveStoreBackend } from "./config/store_backend.js";
-import { createPgPool } from "./persistence/pg/pool.js";
+import { createPgPool, type Pool } from "./persistence/pg/pool.js";
 import { assertReleaseReady, ensureSchema } from "./persistence/pg/ensure_schema.js";
 import { migrateJsonToPg } from "./persistence/pg/migrate_from_json.js";
 import {
@@ -298,7 +298,15 @@ function sendRedirect(res: ServerResponse, location: string, setCookie?: string)
 const storeBackend = resolveStoreBackend();
 
 /** PG バックエンド時だけ生成する単一 Pool（json 時は接続を一切作らない）。 */
-const pgPool = storeBackend === "pg" ? createPgPool() : undefined;
+let pgPool: Pool | undefined;
+try {
+  pgPool = storeBackend === "pg" ? createPgPool() : undefined;
+} catch (err) {
+  const name = err instanceof Error ? err.name : "UnknownError";
+  const message = err instanceof Error ? err.message : String(err);
+  process.stderr.write(`[save-money-switcher] persistence init failed: ${name}: ${message}\n`);
+  process.exit(1);
+}
 
 /** アカウント永続層（設計 D7・境界の裏ゆえ実装差し替えが局所で済む）。 */
 const accountStore =
