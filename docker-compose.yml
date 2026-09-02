@@ -1,6 +1,8 @@
 # docker-compose.yml（cmd_2553 S6・Lightsail 単一インスタンス同居構成: app + postgres:16 + caddy TLS）
 # 機密（POSTGRES_PASSWORD / ADMIN_*）は同ディレクトリの .env（非コミット・1Password 由来）から注入する。
 # DATABASE_URL は compose 内で組み立てるため .env には現れない（値はログへ出さない契約・pool.ts）。
+# POSTGRES_PASSWORD_URLENC は POSTGRES_PASSWORD を URL エンコードした値（.env 生成時に同一機密から導出）。
+# URL 予約文字（@ : # 等）を含むパスワードでも DATABASE_URL の解析が壊れないための分離（Copilot PR#5 指摘）。
 services:
   postgres:
     image: postgres:16
@@ -26,7 +28,7 @@ services:
     environment:
       PORT: "3000"
       STORE_BACKEND: pg
-      DATABASE_URL: postgres://sms:${POSTGRES_PASSWORD}@postgres:5432/save_money_switcher
+      DATABASE_URL: postgres://sms:${POSTGRES_PASSWORD_URLENC:?POSTGRES_PASSWORD_URLENC is required (.env)}@postgres:5432/save_money_switcher
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required (.env)}
       JOIN_ACCESS_MODE: authenticated
       DATA_DIR: /data
