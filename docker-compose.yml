@@ -1,0 +1,57 @@
+# docker-compose.yml（cmd_2553 S6・Lightsail 単一インスタンス同居構成: app + postgres:16 + caddy TLS）
+# 機密（POSTGRES_PASSWORD / ADMIN_*）は同ディレクトリの .env（非コミット・1Password 由来）から注入する。
+# DATABASE_URL は compose 内で組み立てるため .env には現れない（値はログへ出さない契約・pool.ts）。
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: save_money_switcher
+      POSTGRES_USER: sms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (.env)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sms -d save_money_switcher"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      STORE_BACKEND: pg
+      DATABASE_URL: postgres://sms:${POSTGRES_PASSWORD}@postgres:5432/save_money_switcher
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required (.env)}
+      JOIN_ACCESS_MODE: authenticated
+      DATA_DIR: /data
+      ADMIN_LOGIN_ID: ${ADMIN_LOGIN_ID:-}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
+    volumes:
+      - appdata:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?SITE_ADDRESS is required (.env)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  appdata:
+  caddy_data:
+  caddy_config:
