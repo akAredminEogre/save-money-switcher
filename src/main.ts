@@ -50,6 +50,12 @@ import {
   setHostContextProvider,
 } from "./server/sse.js";
 import { accountsFilePath, createJsonAccountStore } from "./accounts/json_account_store.js";
+import { createPgAccountStore } from "./accounts/pg_account_store.js";
+import { createPgEpisodeStore } from "./episodes/pg_episode_store.js";
+import { resolveStoreBackend } from "./config/store_backend.js";
+import { createPgPool } from "./persistence/pg/pool.js";
+import { assertReleaseReady, ensureSchema } from "./persistence/pg/ensure_schema.js";
+import { migrateJsonToPg } from "./persistence/pg/migrate_from_json.js";
 import {
   authenticate,
   changeDisplayName,
@@ -284,11 +290,53 @@ function sendRedirect(res: ServerResponse, location: string, setCookie?: string)
 
 // ── 認証の配線（アカウント永続層・セッション台帳・Cookie 属性） ──
 
-/** アカウント永続層（設計 D7・JSON ファイル。境界の裏ゆえ将来 SQLite へ差し替え可能）。 */
-const accountStore = createJsonAccountStore(accountsFilePath(resolveDataDir()));
+/**
+ * 永続バックエンドの選択（cmd_2553 B案・`STORE_BACKEND` env・既定 json）。
+ * `pg` を明示したときだけ PostgreSQL 永続へ切り替わる。JSON ファイルは PG 移行後も温存される
+ * ため、env を戻すだけで即ロールバックできる（非破壊移行）。
+ */
+const storeBackend = resolveStoreBackend();
+
+/** PG バックエンド時だけ生成する単一 Pool（json 時は接続を一切作らない）。 */
+const pgPool = storeBackend === "pg" ? createPgPool() : undefined;
+
+/** アカウント永続層（設計 D7・境界の裏ゆえ実装差し替えが局所で済む）。 */
+const accountStore =
+  pgPool !== undefined
+    ? createPgAccountStore(pgPool)
+    : createJsonAccountStore(accountsFilePath(resolveDataDir()));
 
 /** エピソード永続層（設計 D3 / D7・アカウントと同じ作法で境界の裏に置く）。 */
-const episodeStore = createJsonEpisodeStore(episodesFilePath(resolveDataDir()));
+const episodeStore =
+  pgPool !== undefined
+    ? createPgEpisodeStore(pgPool)
+    : createJsonEpisodeStore(episodesFilePath(resolveDataDir()));
+
+/**
+ * 永続層の稼働前初期化。PG バックエンドではスキーマ成立（冪等）→ リリース前検証 → JSON からの
+ * 一括移送（冪等・非破壊）を **受付開始前に** 済ませる。失敗時は明快に非 0 終了し、壊れた
+ * 永続層のまま受け付けない（JSON バックエンドでは何もせず即時解決する）。
+ */
+const storesReady: Promise<void> =
+  pgPool === undefined
+    ? Promise.resolve()
+    : (async () => {
+        await ensureSchema(pgPool);
+        await assertReleaseReady(pgPool);
+        const migration = await migrateJsonToPg(
+          accountsFilePath(resolveDataDir()),
+          episodesFilePath(resolveDataDir()),
+          accountStore,
+          episodeStore,
+        );
+        // 件数と検証真偽のみを記録する（機密値・接続文字列は載せない）。
+        process.stdout.write(
+          `[save-money-switcher] json->pg migration: accounts src=${migration.accounts.sourceRows} ` +
+            `inserted=${migration.accounts.inserted} verified=${migration.accounts.verified}; ` +
+            `episodes src=${migration.episodes.sourceRows} inserted=${migration.episodes.inserted} ` +
+            `verified=${migration.episodes.verified}\n`,
+        );
+      })();
 
 /**
  * エピソード ⇄ 進行セッションの橋渡しに要する依存。表示名の解決だけをアカウント層へ委ね、
@@ -1338,18 +1386,6 @@ setHostContextProvider((connectedTablets) => ({
   connectedTablets,
 }));
 
-// 初期管理者の投入（殿裁可 案i・env 由来・冪等）。資格情報は env からのみ入り、平文は保存も
-// 記録もされない。未構成なら何もせず起動を続ける（初期投入前でも /healthz は 200 を返す）。
-void seedInitialAdminFromEnv(accountStore)
-  .then((outcome) => {
-    process.stdout.write(`[save-money-switcher] initial admin seed: ${outcome.status}\n`);
-  })
-  .catch((err: unknown) => {
-    // 設定誤り（弱いパスワード等）は起動を止めず、理由だけを記録する（平文は載せない）。
-    const name = err instanceof Error ? err.name : "UnknownError";
-    process.stdout.write(`[save-money-switcher] initial admin seed failed: ${name}\n`);
-  });
-
 const server = createServer((req, res) => {
   // 非同期ハンドラの拒否は健全性ベースライン（< 500 契約）を守るため 500 で握り、未処理
   // Promise 拒否でプロセスを落とさない。QR 符号化等の非同期経路の失敗をここで境界化する。
@@ -1361,14 +1397,40 @@ const server = createServer((req, res) => {
     }
   });
 });
-server.listen(PORT, () => {
-  // 起動ログ（config / realtime_sync の配線確認）。stdio は起動ハーネスが継承する。
-  process.stdout.write(
-    `[save-money-switcher] listening on http://localhost:${PORT} ` +
-      `(publicBaseUrl=${publicBaseUrl}, maxTabletConnections=${maxTabletConnections}, ` +
-      `realtimeFanoutReady=${realtime.fanoutReady})\n`,
-  );
-});
+
+// 永続層の初期化（PG: スキーマ成立 → リリース前検証 → JSON 移送）を待ってから受付を開始する。
+// json バックエンドでは即時解決ゆえ従来どおりの起動。初期化失敗は非 0 終了で明快に拒む
+// （assertReleaseReady / 移送整合検証の契約・壊れた永続層で受け付けない）。
+storesReady
+  .then(() => {
+    // 初期管理者の投入（殿裁可 案i・env 由来・冪等）。資格情報は env からのみ入り、平文は保存も
+    // 記録もされない。未構成なら何もせず起動を続ける（初期投入前でも /healthz は 200 を返す）。
+    void seedInitialAdminFromEnv(accountStore)
+      .then((outcome) => {
+        process.stdout.write(`[save-money-switcher] initial admin seed: ${outcome.status}\n`);
+      })
+      .catch((err: unknown) => {
+        // 設定誤り（弱いパスワード等）は起動を止めず、理由だけを記録する（平文は載せない）。
+        const name = err instanceof Error ? err.name : "UnknownError";
+        process.stdout.write(`[save-money-switcher] initial admin seed failed: ${name}\n`);
+      });
+
+    server.listen(PORT, () => {
+      // 起動ログ（config / realtime_sync の配線確認）。stdio は起動ハーネスが継承する。
+      process.stdout.write(
+        `[save-money-switcher] listening on http://localhost:${PORT} ` +
+          `(publicBaseUrl=${publicBaseUrl}, maxTabletConnections=${maxTabletConnections}, ` +
+          `storeBackend=${storeBackend}, realtimeFanoutReady=${realtime.fanoutReady})\n`,
+      );
+    });
+  })
+  .catch((err: unknown) => {
+    // 接続文字列・機密値を含み得る生エラーは名前と要約メッセージだけを記録する。
+    const name = err instanceof Error ? err.name : "UnknownError";
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[save-money-switcher] persistence init failed: ${name}: ${message}\n`);
+    process.exit(1);
+  });
 
 // 終了シグナルで待受を閉じる（起動ハーネスは SIGTERM で停止する）。
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
