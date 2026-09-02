@@ -136,15 +136,27 @@ export async function migrateEpisodes(
   for (const row of invitations) {
     if (await pgStore.insertInvitationIfAbsent(row)) inserted += 1;
   }
+  // episode_id 単位でキャッシュを一度だけ構築し、行ごとの存在確認クエリを省く。
+  const participantEpisodeIds = [...new Set(participants.map((p) => p.episode_id))];
+  const participantCache = new Map<string, Set<string>>();
+  for (const episodeId of participantEpisodeIds) {
+    const existing = await pgStore.listParticipantsByEpisode(episodeId);
+    participantCache.set(episodeId, new Set(existing.map((p) => p.account_id)));
+  }
   for (const row of participants) {
-    const already = await pgStore.findParticipant(row.episode_id, row.account_id);
+    const already = participantCache.get(row.episode_id)?.has(row.account_id) ?? false;
     await pgStore.insertParticipantIfAbsent(row);
-    if (already === undefined) inserted += 1;
+    if (!already) inserted += 1;
+  }
+
+  const questionEpisodeIds = [...new Set(questions.map((q) => q.episode_id))];
+  const questionCache = new Map<string, Set<number>>();
+  for (const episodeId of questionEpisodeIds) {
+    const existing = await pgStore.listQuestionsByEpisode(episodeId);
+    questionCache.set(episodeId, new Set(existing.map((q) => q.question_number)));
   }
   for (const row of questions) {
-    const already = (await pgStore.listQuestionsByEpisode(row.episode_id)).some(
-      (q) => q.question_number === row.question_number,
-    );
+    const already = questionCache.get(row.episode_id)?.has(row.question_number) ?? false;
     await pgStore.upsertQuestion(row);
     if (!already) inserted += 1;
   }

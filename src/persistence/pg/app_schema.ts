@@ -254,11 +254,11 @@ export function emitCreateTableIfNotExistsSql(table: AppTableSchema): string {
   for (const fk of table.foreignKeys) {
     lines.push(
       `  CONSTRAINT ${fk.name} FOREIGN KEY (${fk.columns.join(", ")}) ` +
-        `REFERENCES ${fk.referencesTable} (${fk.referencesColumns.join(", ")})`,
+        `REFERENCES public.${fk.referencesTable} (${fk.referencesColumns.join(", ")})`,
     );
   }
   for (const check of table.checks) {
     lines.push(`  CONSTRAINT ${check.name} CHECK (${check.sql})`);
   }
-  return `CREATE TABLE IF NOT EXISTS ${table.name} (\n${lines.join(",\n")}\n);`;
+  return `CREATE TABLE IF NOT EXISTS public.${table.name} (\n${lines.join(",\n")}\n);`;
 }

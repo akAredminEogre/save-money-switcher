@@ -272,13 +272,15 @@ describe.runIf(TEST_URL !== undefined && TEST_URL !== "")("persistence/pg PG バ
 
   describe("JSON → PG 一括移送（冪等・非破壊・整合検証）", () => {
     let dir: string;
+    const createdDirs: string[] = [];
 
     beforeEach(async () => {
       dir = await mkdtemp(join(tmpdir(), "pg-migration-"));
+      createdDirs.push(dir);
     });
 
     afterAll(async () => {
-      await rm(dir, { recursive: true, force: true });
+      await Promise.all(createdDirs.map((d) => rm(d, { recursive: true, force: true })));
     });
 
     it("accounts.json の全行が移送され、行数・PK・全カラムの整合検証が成立する", async () => {
