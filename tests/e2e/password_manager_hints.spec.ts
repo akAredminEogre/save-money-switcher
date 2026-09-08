@@ -184,5 +184,11 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain(
       `<input type="text" autocomplete="username" value="${CONTESTANT_LOGIN_ID}" readonly hidden>`,
     );
+
+    // お名前欄（rename フォーム）も username と取り違えられぬよう対象外を名乗る。
+    const rename = formOf(html, "rename");
+    expect(rename).toContain('method="post"');
+    expect(rename).toContain('action="/me/display-name"');
+    expect(inputOf(rename, "display_name")).toContain('autocomplete="off"');
   });
 });
