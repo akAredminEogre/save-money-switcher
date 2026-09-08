@@ -423,9 +423,12 @@ function serializeAccountSettings(account: Account): string {
     `<p class="me-surface__login-id" data-field="login-id">${escapeHtml(view.loginId)}</p>` +
     `<p class="me-surface__display-name" data-field="display-name">${escapeHtml(view.displayName)}</p>` +
     // 送信は client（`me.client.js`）が横取りするが、`method`/`action` は素の HTML としても
-    // 正しく成立させる。既定の GET へ落ちるとパスワードが URL のクエリへ載るためである。
+    // 正しく成立させる。既定の GET へ落ちると入力値が URL のクエリへ載るためである
+    // （下の変更フォームのようにパスワードを含む面では、とりわけ害が大きい）。
     `<form method="post" action="/me/display-name" data-form="rename">` +
-    `<input type="text" name="display_name" maxlength="${view.displayNameMaxLength}" ` +
+    // お名前は username と取り違えられぬよう、明示的に自動補完の対象外とする。
+    `<input type="text" name="display_name" autocomplete="off" ` +
+    `maxlength="${view.displayNameMaxLength}" ` +
     `aria-label="お名前" value="${escapeHtml(view.displayName)}">` +
     `<button type="submit" data-op="rename">お名前を変更する</button>` +
     `</form>` +
