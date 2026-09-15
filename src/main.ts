@@ -400,7 +400,7 @@ function serializeLoginSurface(view: LoginSurfaceViewModel): string {
     `<main data-surface="login">` +
     `<h1>${escapeHtml(view.heading)}</h1>` +
     message +
-    `<form method="post" action="${LOGIN_PATH}" data-form="login">` +
+    `<form id="login-form" name="login" method="post" action="${LOGIN_PATH}" data-form="login">` +
     redirect +
     inputs +
     `<button type="submit" data-op="login">${escapeHtml(view.submitLabel)}</button>` +
@@ -433,14 +433,14 @@ function serializeAccountSettings(account: Account): string {
     // 送信は client（`me.client.js`）が横取りするが、`method`/`action` は素の HTML としても
     // 正しく成立させる。既定の GET へ落ちると入力値が URL のクエリへ載るためである
     // （下の変更フォームのようにパスワードを含む面では、とりわけ害が大きい）。
-    `<form method="post" action="/me/display-name" data-form="rename">` +
+    `<form id="me-rename-form" name="me-rename" method="post" action="/me/display-name" data-form="rename">` +
     // お名前は username と取り違えられぬよう、明示的に自動補完の対象外とする。
     `<input type="text" name="display_name" autocomplete="off" ` +
     `maxlength="${view.displayNameMaxLength}" ` +
     `aria-label="お名前" value="${escapeHtml(view.displayName)}">` +
     `<button type="submit" data-op="rename">お名前を変更する</button>` +
     `</form>` +
-    `<form method="post" action="/me/password" data-form="password">` +
+    `<form id="me-password-form" name="me-password" method="post" action="/me/password" data-form="password">` +
     // パスワード管理ソフトは「誰のパスワードか」を username 欄から採る。本面の身元は Cookie の
     // セッションが持ち送信もせぬゆえ、`name` を与えぬ読取専用の隠し欄でログイン ID だけを知らせる
     // （`name` が無い制御は送信対象にならぬゆえ、サーバへ渡る値は従来どおりパスワード 1 つである）。
@@ -754,7 +754,7 @@ function serializeAdminEpisodeDetail(
     `<section data-field="members">` +
     `<h2>${escapeHtml(view.memberSectionHeading)}</h2>` +
     (view.members.length > 0 ? `<ul data-field="member-list">${memberRows}</ul>` : "") +
-    `<form method="post" action="${base}/contestants" data-form="member-create">` +
+    `<form id="member-create-form" name="member-create" method="post" action="${base}/contestants" data-form="member-create">` +
     `<label for="member-create-login-id">ログインID` +
     `<input type="text" id="member-create-login-id" name="login_id" autocomplete="username" ` +
     `maxlength="${view.loginIdMaxLength}" aria-label="ログインID"></label>` +
@@ -810,7 +810,9 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
         `<li data-field="account">` +
         `<span data-field="account-name">${escapeHtml(account.displayName)}</span>` +
         `<span data-field="account-login-id">${escapeHtml(account.loginId)}</span>` +
-        `<form method="post" action="/admin/accounts/${encodeURIComponent(account.id)}" ` +
+        `<form id="account-update-form-${escapeHtml(account.id)}" ` +
+        `name="account-update-${escapeHtml(account.id)}" ` +
+        `method="post" action="/admin/accounts/${encodeURIComponent(account.id)}" ` +
         `data-form="account-update">` +
         `<input type="text" autocomplete="username" value="${escapeHtml(account.loginId)}" readonly hidden>` +
         `<input type="text" id="account-update-display-name-${escapeHtml(account.id)}" ` +
@@ -827,7 +829,7 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
     `<h1>解答者アカウント</h1>` +
     message +
     (rows === "" ? `<p data-field="empty">解答者はまだいません。</p>` : `<ul data-field="account-list">${rows}</ul>`) +
-    `<form method="post" action="/admin/accounts" data-form="account-create">` +
+    `<form id="account-create-form" name="account-create" method="post" action="/admin/accounts" data-form="account-create">` +
     `<label for="account-create-login-id">ログインID` +
     `<input type="text" id="account-create-login-id" name="login_id" autocomplete="username" ` +
     `aria-label="ログインID"></label>` +
