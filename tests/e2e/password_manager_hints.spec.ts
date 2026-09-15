@@ -8,6 +8,9 @@
  *   - ログイン面のパスワード欄は `autocomplete="current-password"`、ID 欄は `autocomplete="username"`。
  *   - どの欄も `type="password"` / `name` / `id` を持ち、`<form>` に囲われ、`<label for>` か
  *     隠しの username 欄で「誰のパスワードか」が機械可読である。
+ *   - 各 `<form>` は一意の `id` / `name` を名乗る（1Password 公式の互換要件
+ *     "Use a unique element id or name for every field and form" ―
+ *     developer.1password.com/docs/web/compatible-website-design。登録面判定を確実にするため cmd_2553 redo で追補）。
  *
  * 実機のブラウザ拡張（Google PM / 1Password）が実際に候補を出すか否かは拡張の導入された
  * 殿のブラウザでしか確かめられぬゆえ、本スペックは**属性・構造の側**を機械検証する。
@@ -117,6 +120,9 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain('<label for="login-login_id">');
     expect(form).toContain('<label for="login-password">');
     expect(form).toContain(`action="${LOGIN_PATH}"`);
+    // 1Password 互換要件: フォームは一意の id / name を名乗る。
+    expect(form).toContain('id="login-form"');
+    expect(form).toContain('name="login"');
   });
 
   it("解答者アカウント作成（はじめのパスワード）は username + new-password を名乗る", async () => {
@@ -136,6 +142,9 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain('<label for="account-create-password">');
     // お名前は username と取り違えられぬよう明示的に対象外とする。
     expect(inputOf(form, "display_name")).toContain('autocomplete="off"');
+    // 1Password 互換要件: フォームは一意の id / name を名乗る。
+    expect(form).toContain('id="account-create-form"');
+    expect(form).toContain('name="account-create"');
   });
 
   it("解答者アカウント更新（この人を保存する）は new-password と隠しの username を持つ", async () => {
@@ -150,6 +159,9 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain(
       `<input type="text" autocomplete="username" value="${CONTESTANT_LOGIN_ID}" readonly hidden>`,
     );
+    // 1Password 互換要件: 更新行のフォームは account.id を含む一意の id / name を名乗る。
+    expect(form).toMatch(/id="account-update-form-[^"]+"/);
+    expect(form).toMatch(/name="account-update-[^"]+"/);
   });
 
   it("回の解答者作成（はじめのパスワード）は username + new-password を名乗る", async () => {
@@ -166,6 +178,9 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toContain('id="member-create-password"');
     expect(form).toContain('<label for="member-create-login-id">');
     expect(form).toContain('<label for="member-create-password">');
+    // 1Password 互換要件: フォームは一意の id / name を名乗る。
+    expect(form).toContain('id="member-create-form"');
+    expect(form).toContain('name="member-create"');
   });
 
   it("自分のパスワード変更（/me）は new-password と隠しの username を持つ", async () => {
@@ -184,11 +199,16 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain(
       `<input type="text" autocomplete="username" value="${CONTESTANT_LOGIN_ID}" readonly hidden>`,
     );
+    // 1Password 互換要件: フォームは一意の id / name を名乗る。
+    expect(form).toContain('id="me-password-form"');
+    expect(form).toContain('name="me-password"');
 
     // お名前欄（rename フォーム）も username と取り違えられぬよう対象外を名乗る。
     const rename = formOf(html, "rename");
     expect(rename).toContain('method="post"');
     expect(rename).toContain('action="/me/display-name"');
     expect(inputOf(rename, "display_name")).toContain('autocomplete="off"');
+    expect(rename).toContain('id="me-rename-form"');
+    expect(rename).toContain('name="me-rename"');
   });
 });
