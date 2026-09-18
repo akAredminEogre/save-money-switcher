@@ -748,7 +748,7 @@ function serializeAdminEpisodeDetail(
     (view.members.length > 0 ? `<ul data-field="member-list">${memberRows}</ul>` : "") +
     `<form id="member-create-form" name="member-create" method="post" action="${base}/contestants" data-form="member-create">` +
     `<label for="member-create-login-id">ログインID` +
-    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="username" ` +
+    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="username" data-1p-ignore ` +
     `maxlength="${view.loginIdMaxLength}" aria-label="ログインID"></label>` +
     `<label for="member-create-password">はじめのパスワード（${view.minPasswordLength}文字以上）` +
     `<input type="password" id="member-create-password" name="password" autocomplete="new-password" ` +
@@ -823,7 +823,7 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
     (rows === "" ? `<p data-field="empty">解答者はまだいません。</p>` : `<ul data-field="account-list">${rows}</ul>`) +
     `<form id="account-create-form" name="account-create" method="post" action="/admin/accounts" data-form="account-create">` +
     `<label for="account-create-login-id">ログインID` +
-    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="username" ` +
+    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="username" data-1p-ignore ` +
     `aria-label="ログインID"></label>` +
     `<label for="account-create-password">はじめのパスワード` +
     `<input type="password" id="account-create-password" name="password" autocomplete="new-password" ` +
