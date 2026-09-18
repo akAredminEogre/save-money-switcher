@@ -754,7 +754,7 @@ function serializeAdminEpisodeDetail(
     `<input type="password" id="member-create-password" name="password" autocomplete="new-password" ` +
     `aria-label="はじめのパスワード"></label>` +
     `<label for="member-create-display-name">お名前` +
-    `<input type="text" id="member-create-display-name" name="display_name" autocomplete="off" ` +
+    `<input type="text" id="member-create-display-name" name="display_name" autocomplete="off" data-1p-ignore ` +
     `maxlength="${view.displayNameMaxLength}" aria-label="お名前"></label>` +
     `<button type="submit" data-op="create-member">${escapeHtml(view.memberCreateSubmitLabel)}</button>` +
     `</form>` +
@@ -829,7 +829,7 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
     `<input type="password" id="account-create-password" name="password" autocomplete="new-password" ` +
     `aria-label="はじめのパスワード"></label>` +
     `<label for="account-create-display-name">お名前` +
-    `<input type="text" id="account-create-display-name" name="display_name" autocomplete="off" ` +
+    `<input type="text" id="account-create-display-name" name="display_name" autocomplete="off" data-1p-ignore ` +
     `maxlength="20" aria-label="お名前"></label>` +
     `<button type="submit" data-op="create-account">解答者を作る</button>` +
     `</form>` +
