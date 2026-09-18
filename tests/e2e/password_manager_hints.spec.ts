@@ -6,6 +6,8 @@
  * 本スペックが証跡化する契約（HTML 上の標準形）:
  *   - 新しくパスワードを決める欄（はじめのパスワード・新しいパスワード）は `autocomplete="new-password"`。
  *   - ログイン面のパスワード欄は `autocomplete="current-password"`、ID 欄は `autocomplete="username"`。
+ *   - 新規作成フォームのログインID欄は `autocomplete="off" data-1p-ignore` を名乗る
+ *     （1Password が既存ログイン一致と判定しないための是正・cmd_2553 redo 2026-09-18）。
  *   - どの欄も `type="password"` / `name` / `id` を持ち、`<form>` に囲われ、`<label for>` か
  *     隠しの username 欄で「誰のパスワードか」が機械可読である。
  *   - 各 `<form>` は一意の `id` / `name` を名乗る（1Password 公式の互換要件
@@ -125,7 +127,7 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain('name="login"');
   });
 
-  it("解答者アカウント作成（はじめのパスワード）は username + new-password を名乗る", async () => {
+  it("解答者アカウント作成（はじめのパスワード）は new-password を名乗り、ログインID欄は 1Password に無視させる", async () => {
     const html = await getHtml(app.baseUrl, "/admin/accounts", adminCookie);
     const form = formOf(html, "account-create");
     const id = inputOf(form, "login_id");
@@ -133,7 +135,8 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
 
     expect(form).toContain('method="post"');
     expect(form).toContain('action="/admin/accounts"');
-    expect(id).toContain('autocomplete="username"');
+    expect(id).toContain('autocomplete="off"');
+    expect(id).toContain('data-1p-ignore');
     expect(id).toContain('id="account-create-login-id"');
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
@@ -157,21 +160,22 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toMatch(/id="account-update-password-[^"]+"/);
     // 「誰のパスワードか」を知らせる隠し欄。`name` を持たぬゆえ送信対象にはならない。
     expect(form).toContain(
-      `<input type="text" autocomplete="username" value="${CONTESTANT_LOGIN_ID}" readonly hidden>`,
+      `<input type="text" autocomplete="username" data-1p-ignore value="${CONTESTANT_LOGIN_ID}" readonly hidden>`,
     );
     // 1Password 互換要件: 更新行のフォームは account.id を含む一意の id / name を名乗る。
     expect(form).toMatch(/id="account-update-form-[^"]+"/);
     expect(form).toMatch(/name="account-update-[^"]+"/);
   });
 
-  it("回の解答者作成（はじめのパスワード）は username + new-password を名乗る", async () => {
+  it("回の解答者作成（はじめのパスワード）は new-password を名乗り、ログインID欄は 1Password に無視させる", async () => {
     const html = await getHtml(app.baseUrl, `/admin/episodes/${episodeId}`, adminCookie);
     const form = formOf(html, "member-create");
     const id = inputOf(form, "login_id");
     const password = inputOf(form, "password");
 
     expect(form).toContain(`action="/admin/episodes/${episodeId}/contestants"`);
-    expect(id).toContain('autocomplete="username"');
+    expect(id).toContain('autocomplete="off"');
+    expect(id).toContain('data-1p-ignore');
     expect(id).toContain('id="member-create-login-id"');
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
