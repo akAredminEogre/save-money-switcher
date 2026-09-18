@@ -138,6 +138,8 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(id).toContain('autocomplete="off"');
     expect(id).toContain('data-1p-ignore');
     expect(id).toContain('id="account-create-login-id"');
+    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
+    expect(id).toContain("data-1p-ignore");
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="account-create-password"');
@@ -177,6 +179,8 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(id).toContain('autocomplete="off"');
     expect(id).toContain('data-1p-ignore');
     expect(id).toContain('id="member-create-login-id"');
+    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
+    expect(id).toContain("data-1p-ignore");
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="member-create-password"');

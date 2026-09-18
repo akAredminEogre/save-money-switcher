@@ -53,7 +53,7 @@ import { accountsFilePath, createJsonAccountStore } from "./accounts/json_accoun
 import { createPgAccountStore } from "./accounts/pg_account_store.js";
 import { createPgEpisodeStore } from "./episodes/pg_episode_store.js";
 import { resolveStoreBackend } from "./config/store_backend.js";
-import { createPgPool, type Pool } from "./persistence/pg/pool.js";
+import { createPgPool } from "./persistence/pg/pool.js";
 import { assertReleaseReady, ensureSchema } from "./persistence/pg/ensure_schema.js";
 import { migrateJsonToPg } from "./persistence/pg/migrate_from_json.js";
 import {
@@ -298,15 +298,7 @@ function sendRedirect(res: ServerResponse, location: string, setCookie?: string)
 const storeBackend = resolveStoreBackend();
 
 /** PG バックエンド時だけ生成する単一 Pool（json 時は接続を一切作らない）。 */
-let pgPool: Pool | undefined;
-try {
-  pgPool = storeBackend === "pg" ? createPgPool() : undefined;
-} catch (err) {
-  const name = err instanceof Error ? err.name : "UnknownError";
-  const message = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`[save-money-switcher] persistence init failed: ${name}: ${message}\n`);
-  process.exit(1);
-}
+const pgPool = storeBackend === "pg" ? createPgPool() : undefined;
 
 /** アカウント永続層（設計 D7・境界の裏ゆえ実装差し替えが局所で済む）。 */
 const accountStore =
@@ -756,7 +748,7 @@ function serializeAdminEpisodeDetail(
     (view.members.length > 0 ? `<ul data-field="member-list">${memberRows}</ul>` : "") +
     `<form id="member-create-form" name="member-create" method="post" action="${base}/contestants" data-form="member-create">` +
     `<label for="member-create-login-id">ログインID` +
-    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="off" data-1p-ignore ` +
+    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="username" data-1p-ignore ` +
     `maxlength="${view.loginIdMaxLength}" aria-label="ログインID"></label>` +
     `<label for="member-create-password">はじめのパスワード（${view.minPasswordLength}文字以上）` +
     `<input type="password" id="member-create-password" name="password" autocomplete="new-password" ` +
@@ -814,7 +806,7 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
         `name="account-update-${escapeHtml(account.id)}" ` +
         `method="post" action="/admin/accounts/${encodeURIComponent(account.id)}" ` +
         `data-form="account-update">` +
-        `<input type="text" autocomplete="username" data-1p-ignore value="${escapeHtml(account.loginId)}" readonly hidden>` +
+        `<input type="text" autocomplete="username" value="${escapeHtml(account.loginId)}" readonly hidden>` +
         `<input type="text" id="account-update-display-name-${escapeHtml(account.id)}" ` +
         `name="display_name" value="${escapeHtml(account.displayName)}" autocomplete="off" ` +
         `maxlength="20" aria-label="お名前">` +
@@ -831,7 +823,7 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
     (rows === "" ? `<p data-field="empty">解答者はまだいません。</p>` : `<ul data-field="account-list">${rows}</ul>`) +
     `<form id="account-create-form" name="account-create" method="post" action="/admin/accounts" data-form="account-create">` +
     `<label for="account-create-login-id">ログインID` +
-    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="off" data-1p-ignore ` +
+    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="username" data-1p-ignore ` +
     `aria-label="ログインID"></label>` +
     `<label for="account-create-password">はじめのパスワード` +
     `<input type="password" id="account-create-password" name="password" autocomplete="new-password" ` +
