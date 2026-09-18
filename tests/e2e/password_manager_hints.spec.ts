@@ -144,6 +144,8 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain('<label for="account-create-password">');
     // お名前は username と取り違えられぬよう明示的に対象外とする。
     expect(inputOf(form, "display_name")).toContain('autocomplete="off"');
+    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
+    expect(inputOf(form, "display_name")).toContain("data-1p-ignore");
     // 1Password 互換要件: フォームは一意の id / name を名乗る。
     expect(form).toContain('id="account-create-form"');
     expect(form).toContain('name="account-create"');
@@ -182,6 +184,8 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toContain('id="member-create-password"');
     expect(form).toContain('<label for="member-create-login-id">');
     expect(form).toContain('<label for="member-create-password">');
+    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
+    expect(inputOf(form, "display_name")).toContain("data-1p-ignore");
     // 1Password 互換要件: フォームは一意の id / name を名乗る。
     expect(form).toContain('id="member-create-form"');
     expect(form).toContain('name="member-create"');
