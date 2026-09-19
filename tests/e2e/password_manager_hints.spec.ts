@@ -151,7 +151,7 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain('name="account-create"');
   });
 
-  it("解答者アカウント更新（この人を保存する）は new-password と隠しの username を持つ", async () => {
+  it("解答者アカウント更新（この人を保存する）は new-password を持ち、PM から隠されている", async () => {
     const html = await getHtml(app.baseUrl, "/admin/accounts", adminCookie);
     const form = formOf(html, "account-update");
     const password = inputOf(form, "password");
@@ -159,9 +159,12 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toMatch(/id="account-update-password-[^"]+"/);
-    // 「誰のパスワードか」を知らせる隠し欄。`name` を持たぬゆえ送信対象にはならない。
+    // 更新行は管理者が他者のパスワードを変えるフォームゆえ PM に保存させない。
+    // また同ページの新規作成フォームで PM が生成提案を出すため、
+    // 更新行の username 文脈（value 入り）を PM から隠す（autocomplete="off" + data-1p-ignore）。
+    expect(password).toContain("data-1p-ignore");
     expect(form).toContain(
-      `<input type="text" autocomplete="username" value="${CONTESTANT_LOGIN_ID}" readonly hidden>`,
+      `<input type="text" autocomplete="off" value="${CONTESTANT_LOGIN_ID}" readonly hidden data-1p-ignore>`,
     );
     // 1Password 互換要件: 更新行のフォームは account.id を含む一意の id / name を名乗る。
     expect(form).toMatch(/id="account-update-form-[^"]+"/);
