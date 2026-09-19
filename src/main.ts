@@ -806,12 +806,12 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
         `name="account-update-${escapeHtml(account.id)}" ` +
         `method="post" action="/admin/accounts/${encodeURIComponent(account.id)}" ` +
         `data-form="account-update">` +
-        `<input type="text" autocomplete="username" value="${escapeHtml(account.loginId)}" readonly hidden>` +
+        `<input type="text" autocomplete="off" value="${escapeHtml(account.loginId)}" readonly hidden data-1p-ignore>` +
         `<input type="text" id="account-update-display-name-${escapeHtml(account.id)}" ` +
         `name="display_name" value="${escapeHtml(account.displayName)}" autocomplete="off" ` +
         `maxlength="20" aria-label="お名前">` +
         `<input type="password" id="account-update-password-${escapeHtml(account.id)}" ` +
-        `name="password" autocomplete="new-password" aria-label="新しいパスワード">` +
+        `name="password" autocomplete="new-password" aria-label="新しいパスワード" data-1p-ignore>` +
         `<button type="submit" data-op="update-account">この人を保存する</button>` +
         `</form></li>`,
     )
