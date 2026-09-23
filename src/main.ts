@@ -748,7 +748,9 @@ function serializeAdminEpisodeDetail(
     (view.members.length > 0 ? `<ul data-field="member-list">${memberRows}</ul>` : "") +
     `<form id="member-create-form" name="member-create" method="post" action="${base}/contestants" data-form="member-create">` +
     `<label for="member-create-login-id">ログインID` +
-    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="username" data-1p-ignore ` +
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 回の解答者作成フォームの
+    // login_id からも data-1p-ignore を除去し、account-create フォームと扱いを揃える（同じ signup 型）。
+    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="username" ` +
     `maxlength="${view.loginIdMaxLength}" aria-label="ログインID"></label>` +
     `<label for="member-create-password">はじめのパスワード（${view.minPasswordLength}文字以上）` +
     `<input type="password" id="member-create-password" name="password" autocomplete="new-password" ` +
@@ -828,7 +830,12 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
     (rows === "" ? `<p data-field="empty">解答者はまだいません。</p>` : `<ul data-field="account-list">${rows}</ul>`) +
     `<form id="account-create-form" name="account-create" method="post" action="/admin/accounts" data-form="account-create">` +
     `<label for="account-create-login-id">ログインID` +
-    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="username" data-1p-ignore ` +
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 作成フォームの login_id から
+    // data-1p-ignore を除去する。有力仮説＝この属性が 1Password に username 欄を無視させ、
+    // new-password 欄との対応付け（signup 分類）を弱めて生成サジェスト自体を抑止している。
+    // 9/18 御指示（username 保持＋data-1p-ignore 付与）の反転だが殿明示裁可済。password 欄は
+    // 元より data-1p-ignore を持たぬゆえ変更なし。
+    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="username" ` +
     `aria-label="ログインID"></label>` +
     `<label for="account-create-password">はじめのパスワード` +
     `<input type="password" id="account-create-password" name="password" autocomplete="new-password" ` +
