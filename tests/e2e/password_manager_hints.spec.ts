@@ -160,12 +160,13 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toMatch(/id="account-update-password-[^"]+"/);
     // 更新行は管理者が他者のパスワードを変えるフォームゆえ PM に保存させない。
-    // また同ページの新規作成フォームで PM が生成提案を出すため、
-    // 更新行の username 文脈（value 入り）を PM から隠す（autocomplete="off" + data-1p-ignore）。
     expect(password).toContain("data-1p-ignore");
-    expect(form).toContain(
-      `<input type="text" autocomplete="off" value="${CONTESTANT_LOGIN_ID}" readonly hidden data-1p-ignore>`,
-    );
+    // cmd_2553「次の手」: 更新行の隠しログインID欄（value 入り）は撤去した。値が残ると
+    // 「この頁には既存資格情報が在る」と分類され、同頁の新規作成フォームで生成提案が抑止される
+    // （autocomplete="off" は Chrome がパスワード欄向けに無視するうえ値自体が残るため無効化しきれぬ）。
+    // ゆえに欄ごと除き、更新行に解答者のログインID値を DOM へ出さぬことを契約とする。
+    expect(form).not.toContain(`value="${CONTESTANT_LOGIN_ID}"`);
+    expect(form).not.toContain("readonly hidden");
     // 1Password 互換要件: 更新行のフォームは account.id を含む一意の id / name を名乗る。
     expect(form).toMatch(/id="account-update-form-[^"]+"/);
     expect(form).toMatch(/name="account-update-[^"]+"/);

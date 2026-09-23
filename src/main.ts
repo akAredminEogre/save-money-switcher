@@ -806,7 +806,12 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
         `name="account-update-${escapeHtml(account.id)}" ` +
         `method="post" action="/admin/accounts/${encodeURIComponent(account.id)}" ` +
         `data-form="account-update">` +
-        `<input type="text" autocomplete="off" value="${escapeHtml(account.loginId)}" readonly hidden data-1p-ignore>` +
+        // cmd_2553「次の手」: 更新行が保持しておった隠しログインID欄（value 入り・name 無し・
+        // 送信対象外の PM ヒント）を撤去する。autocomplete="off" では Chrome がパスワード欄向けの
+        // off を無視するうえ、値自体が残るため「この頁には既存資格情報が在る＝合言葉変更の場面」と
+        // 分類され、同頁の新規作成フォームで生成提案が抑止されておった（7735984 の in-place 無効化では
+        // 消えぬ汚染源）。欄ごと除けば /admin/accounts が正常に働く /admin/episodes（更新行なし）と
+        // 同じ「既存資格情報なし」の頁文脈になる。account.id は form の id/name/action に在るため機能不変。
         `<input type="text" id="account-update-display-name-${escapeHtml(account.id)}" ` +
         `name="display_name" value="${escapeHtml(account.displayName)}" autocomplete="off" ` +
         `maxlength="20" aria-label="お名前">` +
