@@ -135,8 +135,10 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain('action="/admin/accounts"');
     expect(id).toContain('autocomplete="username"');
     expect(id).toContain('id="account-create-login-id"');
-    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
-    expect(id).toContain("data-1p-ignore");
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 作成フォームの login_id から
+    // data-1p-ignore を除去する。有力仮説＝この属性が 1Password に username 欄を無視させ、
+    // new-password 欄との signup 対応付けを弱めて生成サジェストを抑止していた。
+    expect(id).not.toContain("data-1p-ignore");
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="account-create-password"');
@@ -181,8 +183,9 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain(`action="/admin/episodes/${episodeId}/contestants"`);
     expect(id).toContain('autocomplete="username"');
     expect(id).toContain('id="member-create-login-id"');
-    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
-    expect(id).toContain("data-1p-ignore");
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 作成フォームの login_id から
+    // data-1p-ignore を除去（account-create と扱いを揃える）。
+    expect(id).not.toContain("data-1p-ignore");
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="member-create-password"');
