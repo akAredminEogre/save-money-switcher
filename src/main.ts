@@ -610,6 +610,7 @@ const ERROR_MESSAGES: Readonly<Record<string, string>> = {
   login_id: "ログインIDを確かめてくだされ。",
   duplicate_login_id: "そのログインIDは既に使われています。",
   weak_password: "パスワードが短すぎます。",
+  password_mismatch: "確認用のパスワードが一致しません。",
   display_name: "お名前を確かめてくだされ。",
   not_invited: "この回へは招待されていません。",
   episode_busy: "別の回が進行中です。進行中の回を終えてからお試しくだされ。",
@@ -755,6 +756,12 @@ function serializeAdminEpisodeDetail(
     `<label for="member-create-password">はじめのパスワード（${view.minPasswordLength}文字以上）` +
     `<input type="password" id="member-create-password" name="password" autocomplete="new-password" ` +
     `aria-label="はじめのパスワード"></label>` +
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を追加し、
+    // account-create と同型で『新規パスワード生成』を一意化＋ログインフォームとのシグネチャ分岐で
+    // 保存済みログインの item マッチを断つ。出典: https://www.1password.dev/web/compatible-website-design/
+    `<label for="member-create-confirm-password">はじめのパスワード（確認）` +
+    `<input type="password" id="member-create-confirm-password" name="confirm_password" autocomplete="new-password" ` +
+    `aria-label="はじめのパスワード（確認）"></label>` +
     `<label for="member-create-display-name">お名前` +
     `<input type="text" id="member-create-display-name" name="display_name" autocomplete="off" data-1p-ignore ` +
     `maxlength="${view.displayNameMaxLength}" aria-label="お名前"></label>` +
@@ -849,6 +856,14 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
     `<label for="account-create-password">はじめのパスワード` +
     `<input type="password" id="account-create-password" name="password" autocomplete="new-password" ` +
     `aria-label="はじめのパスワード"></label>` +
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を追加する。
+    // 効能 (a) 1Password 公式の new-password 型（password＋confirm の 2 つの new-password）に合致させ、
+    // 当該フォームを『新規パスワード生成』の場面として一意化する。効能 (b) ログインフォーム（password 欄 1 個）
+    // とフィールドシグネチャが分岐し、同一ドメインに保存済みの admin ログインが item マッチして『埋める』提案を
+    // 出す挙動を断つ。出典: https://www.1password.dev/web/compatible-website-design/
+    `<label for="account-create-confirm-password">はじめのパスワード（確認）` +
+    `<input type="password" id="account-create-confirm-password" name="confirm_password" autocomplete="new-password" ` +
+    `aria-label="はじめのパスワード（確認）"></label>` +
     `<label for="account-create-display-name">お名前` +
     `<input type="text" id="account-create-display-name" name="display_name" autocomplete="off" data-1p-ignore ` +
     `maxlength="20" aria-label="お名前"></label>` +
@@ -1207,9 +1222,16 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       const body = await readFormOrJsonBody(req);
       if (body === null) return sendRedirect(res, `${base}?error=invalid_request`);
       try {
+        const password = body["password"] ?? "";
+        // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄の一致検証（加算・非破壊）。
+        // 確認欄が空＝旧クライアント後方互換ゆえ従来どおり通す。confirm は検証のみで保存しない。
+        const confirm = body["confirm_password"];
+        if (confirm !== undefined && confirm !== "" && confirm !== password) {
+          return sendRedirect(res, `${base}?error=password_mismatch`);
+        }
         const contestant = await createAccount(accountStore, {
           loginId: body["login_id"] ?? "",
-          password: body["password"] ?? "",
+          password,
           role: "contestant",
           displayName: body["display_name"] ?? "",
         });
@@ -1241,9 +1263,17 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const body = await readFormOrJsonBody(req);
     if (body === null) return sendRedirect(res, "/admin/accounts?error=invalid_request");
     try {
+      const password = body["password"] ?? "";
+      // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄の一致検証（加算・非破壊）。
+      // 確認欄が空＝旧クライアント後方互換ゆえ従来どおり通す。confirm は検証のみで保存しない
+      // （createAccount の引数は不変）。
+      const confirm = body["confirm_password"];
+      if (confirm !== undefined && confirm !== "" && confirm !== password) {
+        return sendRedirect(res, "/admin/accounts?error=password_mismatch");
+      }
       await createAccount(accountStore, {
         loginId: body["login_id"] ?? "",
-        password: body["password"] ?? "",
+        password,
         role: "contestant",
         displayName: body["display_name"] ?? "",
       });
