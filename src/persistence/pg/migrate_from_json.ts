@@ -145,8 +145,12 @@ export async function migrateEpisodes(
     const already = (await pgStore.listQuestionsByEpisode(row.episode_id)).some(
       (q) => q.question_number === row.question_number,
     );
-    await pgStore.upsertQuestion(row);
-    if (!already) inserted += 1;
+    // 非破壊: 既存の PG 行は上書きしない（古い JSON バックアップで新しい PG 問題を潰さない）。
+    // 挿入は不在時のみ行い、既存行が JSON と食い違う場合は下の検証ループが不一致として報告する。
+    if (!already) {
+      await pgStore.upsertQuestion(row);
+      inserted += 1;
+    }
   }
 
   // 検証: 各表で JSON 行が PG に存在し全カラム一致（値は出さず列名のみ）。

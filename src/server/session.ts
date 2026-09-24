@@ -162,10 +162,18 @@ export function refreshEpisodeBinding(binding: EpisodeBinding, s: Session = sess
   for (const participant of binding.participants) registerParticipant(participant, s);
 }
 
-/** 参加者を進行セッションへ登録する（同一 id は二重登録しない）。 */
+/**
+ * 参加者を進行セッションへ登録する（同一 id は重複させず、既存 id は最新レコードへ更新する）。
+ * 表示名の途中編集（`refreshEpisodeBinding` 経由）を進行中のゲームへ反映するため、同一 id が既に
+ * 在るときは差し替える（id/connectionId は同じ参加者レコード由来ゆえ解答の対応付けは壊れない）。
+ */
 export function registerParticipant(participant: Participant, s: Session = session): void {
-  if (s.participants.some((p) => p.id === participant.id)) return;
-  s.participants.push(participant);
+  const index = s.participants.findIndex((p) => p.id === participant.id);
+  if (index === -1) {
+    s.participants.push(participant);
+    return;
+  }
+  s.participants[index] = participant;
 }
 
 /** 指定問の解答マップを取得（無ければ生成して返す）。 */

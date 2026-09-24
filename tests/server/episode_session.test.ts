@@ -98,6 +98,22 @@ describe("server/episode_session エピソードを進行セッションへ載�
     expect(s.participants.map((p) => p.id)).toEqual([participantId, later.id]);
   });
 
+  it("表示名を編集して再読込すると、進行セッションの参加者名が最新へ更新される", async () => {
+    const store = createInMemoryEpisodeStore();
+    const { episodeId, participantId } = await seedEpisode(store);
+    const s = createSession();
+    const names: Record<string, string> = { "acc-child": "たろう" };
+    await syncEpisodeIntoSession(sessionDeps(store, names), episodeId, s);
+    expect(s.participants[0]?.name).toBe("たろう");
+
+    // 管理者が表示名を編集した後の再読込では、既存 id のレコードが最新名へ差し替わる。
+    names["acc-child"] = "タロウ改";
+    await syncEpisodeIntoSession(sessionDeps(store, names), episodeId, s);
+
+    expect(s.participants.map((p) => p.id)).toEqual([participantId]);
+    expect(s.participants[0]?.name).toBe("タロウ改");
+  });
+
   it("別の回が進行中なら載せ替えを拒む（進行中のゲームを消さない）", async () => {
     const store = createInMemoryEpisodeStore();
     const { episodeId } = await seedEpisode(store);
