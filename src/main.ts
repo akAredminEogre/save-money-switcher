@@ -817,8 +817,17 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
         `<input type="text" id="account-update-display-name-${escapeHtml(account.id)}" ` +
         `name="display_name" value="${escapeHtml(account.displayName)}" autocomplete="off" ` +
         `maxlength="20" aria-label="お名前">` +
+        // cmd_2553 Stage1: 更新行の password 欄を既定=閉の <details> で包み、初期の可視/フォーカス面から
+        // 外す。閉じた <details> の子は display:none ゆえ、頁内で可視な new-password 欄が作成フォームの
+        // 1 個だけになり、PM の生成提案が復活する（機序 M2）。ネイティブ要素ゆえ JS 不要・no-JS でも動く。
+        // 保存ボタンは details の外に残す: 表示名だけ直す時に details を開かずに済み、空 password は
+        // 更新ハンドラ（/admin/accounts/:id）が『変更なし』扱いにする（main.ts の password !== "" ガード）
+        // ゆえ挙動は保たれる。input 文字列は served HTML に残る（details 内）ため既存 spec の contains 判定は不変。
+        `<details data-field="account-update-password">` +
+        `<summary>パスワードを変更する</summary>` +
         `<input type="password" id="account-update-password-${escapeHtml(account.id)}" ` +
         `name="password" autocomplete="new-password" aria-label="新しいパスワード" data-1p-ignore>` +
+        `</details>` +
         `<button type="submit" data-op="update-account">この人を保存する</button>` +
         `</form></li>`,
     )
