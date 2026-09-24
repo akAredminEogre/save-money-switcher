@@ -142,8 +142,16 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="account-create-password"');
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を追加し、
+    // 『新規パスワード生成』の場面として一意化する＋ログインフォーム（password 欄 1 個）とシグネチャを分岐させ、
+    // 同一ドメインの保存済み admin ログインの item マッチを断つ（出典 www.1password.dev/web/compatible-website-design）。
+    const confirm = inputOf(form, "confirm_password");
+    expect(confirm).toContain('type="password"');
+    expect(confirm).toContain('autocomplete="new-password"');
+    expect(confirm).toContain('id="account-create-confirm-password"');
     expect(form).toContain('<label for="account-create-login-id">');
     expect(form).toContain('<label for="account-create-password">');
+    expect(form).toContain('<label for="account-create-confirm-password">');
     // お名前は username と取り違えられぬよう明示的に対象外とする。
     expect(inputOf(form, "display_name")).toContain('autocomplete="off"');
     // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
@@ -189,8 +197,15 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="member-create-password"');
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を account-create と
+    // 同型で追加し、『新規パスワード生成』を一意化＋ログインフォームとのシグネチャ分岐で保存済みログインのマッチを断つ。
+    const confirm = inputOf(form, "confirm_password");
+    expect(confirm).toContain('type="password"');
+    expect(confirm).toContain('autocomplete="new-password"');
+    expect(confirm).toContain('id="member-create-confirm-password"');
     expect(form).toContain('<label for="member-create-login-id">');
     expect(form).toContain('<label for="member-create-password">');
+    expect(form).toContain('<label for="member-create-confirm-password">');
     // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
     expect(inputOf(form, "display_name")).toContain("data-1p-ignore");
     // 1Password 互換要件: フォームは一意の id / name を名乗る。
