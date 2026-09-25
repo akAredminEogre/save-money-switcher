@@ -39,7 +39,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -56,11 +56,11 @@ codd:
       route: /control-panel | /tv | /tablet | /join
       preconditions:
       - WebSocket 待受はクラウドサーバのみに存在する
-      measurement_source: 接続時のロール申告と（answerer は）resume トークン
-      durable_state: hub のロール別接続レジストリ（host/answerer/audience）
+      measurement_source: 接続時のロール申告と（contestant は）resume トークン
+      durable_state: hub のロール別接続レジストリ（host/contestant/audience）
       readback: 接続直後にロール投影済み state_snapshot を unicast で返す
       expected_outcomes:
-      - セッションにロール（host/answerer/audience）が確定する
+      - セッションにロール（host/contestant/audience）が確定する
       - 制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く
       dod_obligations:
       - id: dod_conn_cloud_authority
@@ -71,12 +71,12 @@ codd:
       actor: system
       verb: reject
       target: tablet_connection
-      trigger: answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行
+      trigger: contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行
       route: /join
-      measurement_source: 現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
+      measurement_source: 現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
       threshold: MAX_TABLET_CONNECTIONS（既定 8）
       preconditions:
-      - connected_answerers >= MAX_TABLET_CONNECTIONS
+      - connected_contestants >= MAX_TABLET_CONNECTIONS
       durable_state: 既存接続・participants・answers・balances は不変
       expected_outcomes:
       - 上限超過のタブレット接続は connection_rejected とともに WS close(4001) で断られる
@@ -106,11 +106,11 @@ codd:
       consumer_surfaces:
       - control_panel
       - tv_display
-      - answerer_tablets
+      - contestant_tablets
       readback: 遅参・再接続端末は state_snapshot で最新へ整合
       visible_to:
       - host
-      - answerer
+      - contestant
       - audience
       threshold: 状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）
       expected_outcomes:
@@ -126,23 +126,23 @@ codd:
     - id: op_propagate_deadline
       actor: host
       verb: lock
-      target: answerer_tablets
+      target: contestant_tablets
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       from_state: accepting
       to_state: answers_locked
       durable_state: game_state.stage = answers_locked
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる
       - 締切後のタブレットからの submit_answer はサーバで拒否される
       dod_obligations:
       - id: dod_deadline_host_only
-        text: 締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403)
+        text: 締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403)
           で拒否される
       - id: dod_deadline_sync_lock
         text: 締切の配信で接続中の全解答者タブレットが締切表示へ同期し以後の送信が拒否される
@@ -153,7 +153,7 @@ codd:
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       from_state: answers_locked
       to_state: answers_opened
@@ -178,7 +178,7 @@ codd:
       route: /control-panel
       ui_pattern: next_back_jump
       forbidden_actors:
-      - answerer
+      - contestant
       - audience
       durable_state: game_state.tv_mode
       consumer_surfaces:
@@ -191,7 +191,7 @@ codd:
       - 3 系統いずれの操作でも tv_mode_changed が配信され接続中の TV が対応モードへ切り替わる
       dod_obligations:
       - id: dod_mode_switch_host_only
-        text: モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403)
+        text: モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403)
           で拒否される
       - id: dod_mode_switch_sync_tv
         text: 次へ・戻る・個別ジャンプの 3 系統いずれでも tv_mode_changed が配信され接続中の TV が対応モードへ切り替わる
@@ -199,7 +199,7 @@ codd:
       actor: system
       verb: recover
       target: reconnecting_endpoint
-      trigger: 回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する
+      trigger: 回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する
       route: /control-panel | /tv | /tablet
       measurement_source: サーバ権威の game_state（current_question_number/stage/tv_mode）と
         balances と answers
@@ -269,7 +269,7 @@ codd:
 | RS-INV-1 | `module:realtime_sync` | クラウド上の WebSocket 権威へ制御盤／TV／解答者端末を接続し、**締切・開示・モード切替が全端末へ同期反映**される。**ホスト PC をサーバにしない** | §2.1・§2.4・§2.5・§2.8・Operational Behavior Model |
 | RS-INV-2 | `module:config` / `module:participants` | 接続上限判定は**設定値を参照**し、上限超過時は接続を断る挙動が**設定変更に追随**する（論点10） | §2.6・§2.9・OBM `op_enforce_connection_limit` |
 | RS-INV-3 | `module:realtime_sync` | 回線断は運用リスクとして扱い、**切断・再接続時の状態整合（進行状態・回答保持）**を設計で担保する | §2.7・OBM `op_recover_on_reconnect`／`op_preserve_answer_across_reconnect` |
-| RS-INV-4（継承） | `role:host` / `role:answerer` | 締切・開示・正解発表・取消・モード切替の発火は **`role: host` のみ**。非 host コマンドは拒否 | §2.5・§2.9・OBM 各 host 操作 |
+| RS-INV-4（継承） | `role:host` / `role:contestant` | 締切・開示・正解発表・取消・モード切替の発火は **`role: host` のみ**。非 host コマンドは拒否 | §2.5・§2.9・OBM 各 host 操作 |
 | RS-INV-5（継承） | `module:tablet` / privacy | ロール投影により**解答者端末へ他者の解答・残額・得点を配信しない**（開示前は他者解答をどのロールへも送らない） | §2.5・§2.9 |
 | RS-INV-6（継承） | `module:scoring` / `module:tv_display` | 残額配信は**円建て固定**（`point`/`pt`/`点` 禁止） | §2.5・§2.9 |
 
@@ -284,7 +284,7 @@ codd:
 
 ### 1.4 アクター向けサーフェス／コピー義務（同期が駆動する可視状態）
 
-`realtime_sync` は主にバックエンドだが、配信結果として各サーフェスの可視状態を駆動する。要件のロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: answerer` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**を用い、内部識別子（host/answerer）・内部イベント名（`answers_locked` 等）・設定キー名（`MAX_TABLET_CONNECTIONS`）・実装根拠・環境前提を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止し、金額は「円」で表す。
+`realtime_sync` は主にバックエンドだが、配信結果として各サーフェスの可視状態を駆動する。要件のロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: contestant` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**を用い、内部識別子（host/contestant）・内部イベント名（`answers_locked` 等）・設定キー名（`MAX_TABLET_CONNECTIONS`）・実装根拠・環境前提を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止し、金額は「円」で表す。
 
 | サーフェス | ルート | 主対象 | 同期が駆動する可視状態 | 必須の可視コピー意図 | 禁止コピー／禁止ナビ |
 |---|---|---|---|---|---|
@@ -327,7 +327,7 @@ codd:
 | ファイル | 責務 |
 |---|---|
 | `src/realtime_sync/server.ts` | `ws` サーバ起動・HTTP アップグレード受理・接続時ロール確定・admission 呼出 |
-| `src/realtime_sync/hub.ts` | ロール別（host/answerer/audience）接続レジストリ・接続/切断の会計・配信の起点 |
+| `src/realtime_sync/hub.ts` | ロール別（host/contestant/audience）接続レジストリ・接続/切断の会計・配信の起点 |
 | `src/realtime_sync/fanout.ts` | ロール投影（`projectForRole`）・可視範囲フィルタ・イベント配信 |
 | `src/realtime_sync/protocol.ts` | メッセージ封筒（型）・コマンド種別・ドメインイベント種別・close コード |
 | `src/realtime_sync/recovery.ts` | サーバ権威から `state_snapshot` を構築（`buildSnapshot`） |
@@ -354,7 +354,7 @@ export { startRealtimeServer } from "./server_bootstrap.js";
 
 ```typescript
 // src/realtime_sync/protocol.ts
-export type Role = "host" | "answerer" | "audience";
+export type Role = "host" | "contestant" | "audience";
 export type GameStage =
   | "accepting" | "answers_locked" | "answers_opened"
   | "answer_revealed" | "settlement_computed";
@@ -384,9 +384,9 @@ export const CLOSE_OVER_LIMIT = 4001;   // 上限超過での接続拒否
 
 | コマンド | 許可ロール | 効果（配信されるイベント） |
 |---|---|---|
-| `join` | answerer（参加前） | `participants` へ 1 レコード生成・resume トークン発行 → `participant_joined` |
+| `join` | contestant（参加前） | `participants` へ 1 レコード生成・resume トークン発行 → `participant_joined` |
 | `resume` | 任意（トークン提示） | 既存 participant へ再バインド → `state_snapshot`（unicast） |
-| `submit_answer` | answerer | 受付中のみ `answers` へ upsert → `submit_ack`（unicast）／`balance_updated` は精算時 |
+| `submit_answer` | contestant | 受付中のみ `answers` へ upsert → `submit_ack`（unicast）／`balance_updated` は精算時 |
 | `lock` | **host のみ** | `stage=answers_locked` → `answers_locked` を全端末へ |
 | `open` | **host のみ** | `stage=answers_opened` → `answers_opened`（TV b） |
 | `reveal` | **host のみ** | `stage=answer_revealed` → `answer_revealed`（TV c） |
@@ -412,7 +412,7 @@ export const CLOSE_OVER_LIMIT = 4001;   // 上限超過での接続拒否
 |---|---|---|
 | `host`（制御盤） | 全進行状態・参加者一覧・全員の解答/残額・接続数と上限 | — |
 | `audience`（TV） | 現在の `tv_mode` に応じた表示（a〜e）。b 以降のみ氏名＋解答、d/e で円建ての残額表 | 開示前(b 未実行)の他者解答 |
-| `answerer`（タブレット） | 現在問題番号・`accepting/answers_locked` 状態・自分の `submit_ack`・**自分の残額（円）**のみ | **他者の解答・残額・得点、出題内容、全体一覧**（一切投影しない） |
+| `contestant`（タブレット） | 現在問題番号・`accepting/answers_locked` 状態・自分の `submit_ack`・**自分の残額（円）**のみ | **他者の解答・残額・得点、出題内容、全体一覧**（一切投影しない） |
 
 ```typescript
 // src/realtime_sync/fanout.ts（抜粋・型はイメージ）
@@ -420,7 +420,7 @@ export function projectForRole(
   event: ServerEvent,
   ctx: { role: Role; participantId?: string; disclosed: boolean },
 ): ServerEvent | null {
-  if (ctx.role === "answerer") {
+  if (ctx.role === "contestant") {
     // 解答者へは自分に関する情報のみ。他者解答・他者残額は常に投影外。
     if (event.type === "answers_opened" || event.type === "answer_revealed") return null;
     if (event.type === "balance_updated") return projectOwnBalance(event, ctx.participantId);
@@ -442,10 +442,10 @@ export function projectForRole(
 ### 2.6 接続管理・同時接続上限（`admission.ts` / `connection_limit.ts`・RS-INV-2）
 
 - **上限の単一解決点**: `MAX_TABLET_CONNECTIONS` は `src/config/connection_limit.ts` の `resolveMaxTabletConnections()` のみが解決する。既定は **8**（未設定時のフォールバックであり、判定コードに数値リテラル `8` を埋め込まない）。設定機構は環境変数を既定とする（§3.1）。
-- **上限の対象**: 上限は **answerer（タブレット）接続**に対して課す。`host`（制御盤）・`audience`（TV）は別チャネルとして受け、タブレット上限には数えない。
-- **admission 判定**: `src/participants/admission.ts` の `admitTablet({ limit, connected }, { name })` が純関数として受入可否を返す。`server.ts` は接続受理時に現在の answerer 接続数 `connected` と `limit` を渡し、`ok=false` なら `connection_rejected` を unicast して WS を `CLOSE_OVER_LIMIT(4001)` で閉じる。既存接続・`participants`・`answers`・`balances` は不変（`dod_limit_existing_unaffected`）。
+- **上限の対象**: 上限は **contestant（タブレット）接続**に対して課す。`host`（制御盤）・`audience`（TV）は別チャネルとして受け、タブレット上限には数えない。
+- **admission 判定**: `src/participants/admission.ts` の `admitTablet({ limit, connected }, { name })` が純関数として受入可否を返す。`server.ts` は接続受理時に現在の contestant 接続数 `connected` と `limit` を渡し、`ok=false` なら `connection_rejected` を unicast して WS を `CLOSE_OVER_LIMIT(4001)` で閉じる。既存接続・`participants`・`answers`・`balances` は不変（`dod_limit_existing_unaffected`）。
 - **設定追随（改修不要）**: `limit` を毎回 `resolveMaxTabletConnections()` から取り直すため、`MAX_TABLET_CONNECTIONS=16/32` へ変えると判定が即追随する（`dod_limit_config_follows`）。
-- **スロット会計と切断解放**: `heartbeat.ts` が無応答を検知して切断を確定した時点で answerer スロットを 1 解放する。これにより上限会計が実接続と一致する（切断後は同数まで再受入可＝境界ケース）。
+- **スロット会計と切断解放**: `heartbeat.ts` が無応答を検知して切断を確定した時点で contestant スロットを 1 解放する。これにより上限会計が実接続と一致する（切断後は同数まで再受入可＝境界ケース）。
 
 **RS-INV-2 遵守の言明**: 上限判定を設定値参照に一元化し（`dod_limit_no_hardcode`）、既定 8／設定 16／32 の各境界で 8/9・16/17・32/33 台目の可否を機械可検に固定する（§2.10 のテスト）。
 
@@ -455,8 +455,8 @@ export function projectForRole(
 
 回線断は**運用リスク**であり（当日インターネット接続前提・バックアップ回線／テザリングで運用側担保）、オフライン完結やホスト PC のサーバ化で吸収してはならない（RS-INV-1）。コードは当日接続前提で、切断→再接続の**状態整合**を担保する。
 
-- **切断検知**: `heartbeat.ts` が **15 秒間隔で ping**、**30 秒 pong 無し**で切断確定。切断確定で `hub` から当該接続を除去し、answerer ならスロットを解放する。`participants` 行と resume トークンは残す（identity は生存）。
-- **再接続と権威復帰（AC-04）**: 端末が再接続すると `resume`（answerer は participant にひも付く**不透明 resume トークン**を添える）を送る。`recovery.buildSnapshot` が**サーバ権威**の `game_state`（`current_question_number`／`stage`／`tv_mode`）・`balances`・`answers` から**ロール投影済み `state_snapshot`** を構築して unicast する。クライアントは自身の保存値を破棄してスナップショットで再描画し、以後の live 配信に合流する。復帰値はサーバ権威が唯一の出典であり、クライアント保存値に依存しない（`dod_reconnect_server_authority`）。
+- **切断検知**: `heartbeat.ts` が **15 秒間隔で ping**、**30 秒 pong 無し**で切断確定。切断確定で `hub` から当該接続を除去し、contestant ならスロットを解放する。`participants` 行と resume トークンは残す（identity は生存）。
+- **再接続と権威復帰（AC-04）**: 端末が再接続すると `resume`（contestant は participant にひも付く**不透明 resume トークン**を添える）を送る。`recovery.buildSnapshot` が**サーバ権威**の `game_state`（`current_question_number`／`stage`／`tv_mode`）・`balances`・`answers` から**ロール投影済み `state_snapshot`** を構築して unicast する。クライアントは自身の保存値を破棄してスナップショットで再描画し、以後の live 配信に合流する。復帰値はサーバ権威が唯一の出典であり、クライアント保存値に依存しない（`dod_reconnect_server_authority`）。
   - 解答者は**現在問題番号・進行段階・TV モード連動**と**自分の残額・送信済み状態**へ復帰する。**他者情報は復帰対象外**（投影で除外）。
   - 無効・失効トークンの再接続は新規参加として扱い、上限判定（§2.6）を再度通す。
 - **回答保持（`op_preserve_answer_across_reconnect`）**: `submit_answer` は受付中に `answers` へ **`question_id + participant_id` 一意キーで upsert** し、`submit_ack` の前に永続化する。ゆえに ack 後切断は解答を失わない。ack 前切断で resume 後に再送しても、upsert により**重複行を作らず**同一に保たれる（`dod_answer_no_duplicate`）。締切後の再送はサーバで拒否されるが、既に永続した解答は保持される。再接続後の `state_snapshot` は送信済み状態を反映する（`dod_answer_preserved_across_reconnect`）。
@@ -538,7 +538,7 @@ describe("ロール投影による可視境界", () => {
       type: "balance_updated", seq: 2, ts: 0, currency: "円",
       payload: { balances: { p1: 9500, p2: 10000 } },
     } as const;
-    const p = projectForRole(ev, { role: "answerer", participantId: "p1", disclosed: true });
+    const p = projectForRole(ev, { role: "contestant", participantId: "p1", disclosed: true });
     expect(p?.payload).toEqual({ balance: 9500, currency: "円" });
     expect(JSON.stringify(p)).not.toContain("p2");
   });
@@ -556,7 +556,7 @@ describe("再接続時の状態整合", () => {
   it("解答者はサーバ権威の進行状態と自分の残額・送信済みへ復帰する", () => {
     const snap = buildSnapshot(
       { currentQuestionNumber: 3, stage: "answers_locked", tvMode: "a" },
-      { role: "answerer", participantId: "p1", disclosed: false },
+      { role: "contestant", participantId: "p1", disclosed: false },
       { balances: { p1: 9500, p2: 10000 }, submitted: { p1: true } },
     );
     expect(snap.currentQuestionNumber).toBe(3);
@@ -590,7 +590,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -607,11 +607,11 @@ operation_flow:
       route: /control-panel | /tv | /tablet | /join
       preconditions:
         - WebSocket 待受はクラウドサーバのみに存在する
-      measurement_source: 接続時のロール申告と（answerer は）resume トークン
-      durable_state: hub のロール別接続レジストリ（host/answerer/audience）
+      measurement_source: 接続時のロール申告と（contestant は）resume トークン
+      durable_state: hub のロール別接続レジストリ（host/contestant/audience）
       readback: 接続直後にロール投影済み state_snapshot を unicast で返す
       expected_outcomes:
-        - セッションにロール（host/answerer/audience）が確定する
+        - セッションにロール（host/contestant/audience）が確定する
         - 制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く
       dod_obligations:
         - id: dod_conn_cloud_authority
@@ -622,12 +622,12 @@ operation_flow:
       actor: system
       verb: reject
       target: tablet_connection
-      trigger: answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行
+      trigger: contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行
       route: /join
-      measurement_source: 現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
+      measurement_source: 現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値
       threshold: MAX_TABLET_CONNECTIONS（既定 8）
       preconditions:
-        - connected_answerers >= MAX_TABLET_CONNECTIONS
+        - connected_contestants >= MAX_TABLET_CONNECTIONS
       durable_state: 既存接続・participants・answers・balances は不変
       expected_outcomes:
         - 上限超過のタブレット接続は connection_rejected とともに WS close(4001) で断られる
@@ -654,9 +654,9 @@ operation_flow:
       trigger: ドメインイベント（answers_locked/answers_opened/answer_revealed/settlement_computed/tv_mode_changed/balance_updated/participant_joined/trigger_undone）の確定
       measurement_source: game_state と balances の確定済み遷移
       durable_state: 各イベントに単調増加の seq を付与
-      consumer_surfaces: [control_panel, tv_display, answerer_tablets]
+      consumer_surfaces: [control_panel, tv_display, contestant_tablets]
       readback: 遅参・再接続端末は state_snapshot で最新へ整合
-      visible_to: [host, answerer, audience]
+      visible_to: [host, contestant, audience]
       threshold: 状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）
       expected_outcomes:
         - 該当ロールの接続中全端末へロール投影済みイベントが配信される
@@ -671,20 +671,20 @@ operation_flow:
     - id: op_propagate_deadline
       actor: host
       verb: lock
-      target: answerer_tablets
+      target: contestant_tablets
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       from_state: accepting
       to_state: answers_locked
       durable_state: game_state.stage = answers_locked
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる
         - 締切後のタブレットからの submit_answer はサーバで拒否される
       dod_obligations:
         - id: dod_deadline_host_only
-          text: 締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される
+          text: 締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される
         - id: dod_deadline_sync_lock
           text: 締切の配信で接続中の全解答者タブレットが締切表示へ同期し以後の送信が拒否される
     - id: op_propagate_disclosure
@@ -693,7 +693,7 @@ operation_flow:
       target: tv_and_endpoints
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       from_state: answers_locked
       to_state: answers_opened
       durable_state: game_state.stage = answers_opened
@@ -714,21 +714,21 @@ operation_flow:
       trigger: 制御盤の「次へ」「戻る」または各モード個別ジャンプ
       route: /control-panel
       ui_pattern: next_back_jump
-      forbidden_actors: [answerer, audience]
+      forbidden_actors: [contestant, audience]
       durable_state: game_state.tv_mode
       consumer_surfaces: [tv_mode_a, tv_mode_b, tv_mode_c, tv_mode_d, tv_mode_e]
       expected_outcomes:
         - 3 系統いずれの操作でも tv_mode_changed が配信され接続中の TV が対応モードへ切り替わる
       dod_obligations:
         - id: dod_mode_switch_host_only
-          text: モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される
+          text: モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される
         - id: dod_mode_switch_sync_tv
           text: 次へ・戻る・個別ジャンプの 3 系統いずれでも tv_mode_changed が配信され接続中の TV が対応モードへ切り替わる
     - id: op_recover_on_reconnect
       actor: system
       verb: recover
       target: reconnecting_endpoint
-      trigger: 回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する
+      trigger: 回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する
       route: /control-panel | /tv | /tablet
       measurement_source: サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers
       durable_state: 端末側は状態を保持せずサーバ権威から再構成する

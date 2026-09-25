@@ -81,7 +81,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -135,7 +135,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -172,7 +172,7 @@
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -219,13 +219,13 @@
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "rounds.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "全解答者タブレットの入力がロックされる",
@@ -234,7 +234,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_lock_host_only",
-                      "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                      "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                     },
                     {
                       "id": "dod_lock_blocks_submit",
@@ -250,7 +250,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_locked",
                   "to_state": "answers_opened",
@@ -284,7 +284,7 @@
                   "trigger": "制御盤で正解発表を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_opened",
                   "to_state": "answer_revealed",
@@ -510,7 +510,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -564,7 +564,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -601,7 +601,7 @@
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -648,13 +648,13 @@
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "rounds.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "全解答者タブレットの入力がロックされる",
@@ -663,7 +663,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_lock_host_only",
-                  "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                  "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                 },
                 {
                   "id": "dod_lock_blocks_submit",
@@ -679,7 +679,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_locked",
               "to_state": "answers_opened",
@@ -713,7 +713,7 @@
               "trigger": "制御盤で正解発表を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_opened",
               "to_state": "answer_revealed",
@@ -978,7 +978,7 @@
               },
               {
                 "targets": [
-                  "role:answerer",
+                  "role:contestant",
                   "module:tablet"
                 ],
                 "reason": "解答者アクションは回答入力（+1/−1/+10/−10）と送信のみで、締切・開示・他者情報閲覧は禁止（第三要件・N-1）。到達導線は QR 参加→氏名入力→入力画面に限定する。違反時リリース不可。"
@@ -1012,7 +1012,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -1044,7 +1044,7 @@
                     "host"
                   ],
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "expected_outcomes": [
@@ -1113,11 +1113,11 @@
                   "preconditions": [
                     "WebSocket 待受はクラウドサーバのみに存在する"
                   ],
-                  "measurement_source": "接続時のロール申告と（answerer は）resume トークン",
-                  "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+                  "measurement_source": "接続時のロール申告と（contestant は）resume トークン",
+                  "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
                   "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
                   "expected_outcomes": [
-                    "セッションにロール（host/answerer/audience）が確定する",
+                    "セッションにロール（host/contestant/audience）が確定する",
                     "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
                   ],
                   "dod_obligations": [
@@ -1133,7 +1133,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -1141,7 +1141,7 @@
                   "ui_pattern": "qr_scan_then_name_input",
                   "preconditions": [
                     "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                    "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                    "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                     "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
                   ],
                   "measurement_source": "解答者の自己入力氏名",
@@ -1196,12 +1196,12 @@
                   "actor": "system",
                   "verb": "reject",
                   "target": "tablet_connection",
-                  "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+                  "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
                   "route": "/join",
-                  "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+                  "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
                   "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
                   "preconditions": [
-                    "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                    "connected_contestants >= MAX_TABLET_CONNECTIONS"
                   ],
                   "durable_state": "既存接続・participants・answers・balances は不変",
                   "consumer_surfaces": [
@@ -1258,7 +1258,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "file_pick_then_load",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "preconditions": [
@@ -1314,13 +1314,13 @@
                     },
                     {
                       "id": "dod_load_host_only",
-                      "text": "読込は role host のみ発動でき answerer からの読込コマンドは 401/403 で拒否される"
+                      "text": "読込は role host のみ発動でき contestant からの読込コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下",
@@ -1340,7 +1340,7 @@
                   "from_state": "accepting",
                   "to_state": "accepting",
                   "visible_to": [
-                    "answerer"
+                    "contestant"
                   ],
                   "expected_outcomes": [
                     "0〜100 整数の解答が answers に upsert される",
@@ -1380,18 +1380,18 @@
                   "id": "op_propagate_deadline",
                   "actor": "host",
                   "verb": "lock",
-                  "target": "answerer_tablets",
+                  "target": "contestant_tablets",
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "game_state.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -1400,7 +1400,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_deadline_host_only",
-                      "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                      "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_deadline_sync_lock",
@@ -1416,7 +1416,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answers_locked",
@@ -1451,7 +1451,7 @@
                   "trigger": "制御盤で「正解発表」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answers_opened",
@@ -1474,7 +1474,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_reveal_host_only",
-                      "text": "正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される"
+                      "text": "正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_reveal_marks_disclosed",
@@ -1494,7 +1494,7 @@
                   "trigger": "制御盤で「精算」を押下し得点精算を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answer_revealed",
@@ -1537,7 +1537,7 @@
                     },
                     {
                       "id": "dod_settle_host_only",
-                      "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                      "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -1550,7 +1550,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "next_back_jump",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "durable_state": "game_state.tv_mode",
@@ -1567,7 +1567,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_mode_switch_host_only",
-                      "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                      "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_mode_switch_sync_tv",
@@ -1584,7 +1584,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "next_back_jump",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "measurement_source": "questions.video_path / image_path / text（当該問）",
@@ -1625,7 +1625,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "inline_edit_then_save",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "preconditions": [
@@ -1666,7 +1666,7 @@
                     },
                     {
                       "id": "dod_edit_host_only",
-                      "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                      "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -1729,14 +1729,14 @@
                   "trigger": "制御盤で「取消」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "durable_state": "trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）",
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "trigger_undone が配信され直近の対象操作が取り消される",
@@ -1748,7 +1748,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_undo_host_only",
-                      "text": "取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
+                      "text": "取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
                     }
                   ]
                 },
@@ -1792,12 +1792,12 @@
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
                   "visible_to": [
                     "host",
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -1825,7 +1825,7 @@
                   "actor": "system",
                   "verb": "recover",
                   "target": "reconnecting_endpoint",
-                  "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+                  "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
                   "route": "/control-panel | /tv | /tablet",
                   "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
                   "durable_state": "端末側は状態を保持せずサーバ権威から再構成する",
@@ -1934,7 +1934,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -1966,7 +1966,7 @@
                 "host"
               ],
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "expected_outcomes": [
@@ -2035,11 +2035,11 @@
               "preconditions": [
                 "WebSocket 待受はクラウドサーバのみに存在する"
               ],
-              "measurement_source": "接続時のロール申告と（answerer は）resume トークン",
-              "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+              "measurement_source": "接続時のロール申告と（contestant は）resume トークン",
+              "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
               "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
               "expected_outcomes": [
-                "セッションにロール（host/answerer/audience）が確定する",
+                "セッションにロール（host/contestant/audience）が確定する",
                 "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
               ],
               "dod_obligations": [
@@ -2055,7 +2055,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -2063,7 +2063,7 @@
               "ui_pattern": "qr_scan_then_name_input",
               "preconditions": [
                 "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                 "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
               ],
               "measurement_source": "解答者の自己入力氏名",
@@ -2118,12 +2118,12 @@
               "actor": "system",
               "verb": "reject",
               "target": "tablet_connection",
-              "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+              "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
               "route": "/join",
-              "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+              "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
               "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
               "preconditions": [
-                "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                "connected_contestants >= MAX_TABLET_CONNECTIONS"
               ],
               "durable_state": "既存接続・participants・answers・balances は不変",
               "consumer_surfaces": [
@@ -2180,7 +2180,7 @@
               "route": "/control-panel",
               "ui_pattern": "file_pick_then_load",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "preconditions": [
@@ -2236,13 +2236,13 @@
                 },
                 {
                   "id": "dod_load_host_only",
-                  "text": "読込は role host のみ発動でき answerer からの読込コマンドは 401/403 で拒否される"
+                  "text": "読込は role host のみ発動でき contestant からの読込コマンドは 401/403 で拒否される"
                 }
               ]
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下",
@@ -2262,7 +2262,7 @@
               "from_state": "accepting",
               "to_state": "accepting",
               "visible_to": [
-                "answerer"
+                "contestant"
               ],
               "expected_outcomes": [
                 "0〜100 整数の解答が answers に upsert される",
@@ -2302,18 +2302,18 @@
               "id": "op_propagate_deadline",
               "actor": "host",
               "verb": "lock",
-              "target": "answerer_tablets",
+              "target": "contestant_tablets",
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "game_state.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -2322,7 +2322,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_deadline_host_only",
-                  "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                  "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_deadline_sync_lock",
@@ -2338,7 +2338,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answers_locked",
@@ -2373,7 +2373,7 @@
               "trigger": "制御盤で「正解発表」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answers_opened",
@@ -2396,7 +2396,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_reveal_host_only",
-                  "text": "正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される"
+                  "text": "正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_reveal_marks_disclosed",
@@ -2416,7 +2416,7 @@
               "trigger": "制御盤で「精算」を押下し得点精算を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answer_revealed",
@@ -2459,7 +2459,7 @@
                 },
                 {
                   "id": "dod_settle_host_only",
-                  "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                  "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -2472,7 +2472,7 @@
               "route": "/control-panel",
               "ui_pattern": "next_back_jump",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "durable_state": "game_state.tv_mode",
@@ -2489,7 +2489,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_mode_switch_host_only",
-                  "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                  "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_mode_switch_sync_tv",
@@ -2506,7 +2506,7 @@
               "route": "/control-panel",
               "ui_pattern": "next_back_jump",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "measurement_source": "questions.video_path / image_path / text（当該問）",
@@ -2547,7 +2547,7 @@
               "route": "/control-panel",
               "ui_pattern": "inline_edit_then_save",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "preconditions": [
@@ -2588,7 +2588,7 @@
                 },
                 {
                   "id": "dod_edit_host_only",
-                  "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                  "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -2651,14 +2651,14 @@
               "trigger": "制御盤で「取消」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "durable_state": "trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）",
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "trigger_undone が配信され直近の対象操作が取り消される",
@@ -2670,7 +2670,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_undo_host_only",
-                  "text": "取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
+                  "text": "取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
                 }
               ]
             },
@@ -2714,12 +2714,12 @@
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
               "visible_to": [
                 "host",
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -2747,7 +2747,7 @@
               "actor": "system",
               "verb": "recover",
               "target": "reconnecting_endpoint",
-              "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+              "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
               "route": "/control-panel | /tv | /tablet",
               "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
               "durable_state": "端末側は状態を保持せずサーバ権威から再構成する",
@@ -2889,7 +2889,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -2921,7 +2921,7 @@
                     "host"
                   ],
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "expected_outcomes": [
@@ -2982,7 +2982,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -2990,7 +2990,7 @@
                   "ui_pattern": "qr_scan_then_name_input",
                   "preconditions": [
                     "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                    "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                    "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                     "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
                   ],
                   "measurement_source": "解答者の自己入力氏名",
@@ -3040,12 +3040,12 @@
                   "actor": "system",
                   "verb": "reject",
                   "target": "tablet_connection",
-                  "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+                  "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
                   "route": "/join",
-                  "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+                  "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
                   "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
                   "preconditions": [
-                    "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                    "connected_contestants >= MAX_TABLET_CONNECTIONS"
                   ],
                   "durable_state": "既存接続・participants・answers・balances は不変",
                   "consumer_surfaces": [
@@ -3126,7 +3126,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -3158,7 +3158,7 @@
                 "host"
               ],
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "expected_outcomes": [
@@ -3219,7 +3219,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -3227,7 +3227,7 @@
               "ui_pattern": "qr_scan_then_name_input",
               "preconditions": [
                 "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                 "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
               ],
               "measurement_source": "解答者の自己入力氏名",
@@ -3277,12 +3277,12 @@
               "actor": "system",
               "verb": "reject",
               "target": "tablet_connection",
-              "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+              "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
               "route": "/join",
-              "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+              "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
               "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
               "preconditions": [
-                "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                "connected_contestants >= MAX_TABLET_CONNECTIONS"
               ],
               "durable_state": "既存接続・participants・answers・balances は不変",
               "consumer_surfaces": [
@@ -3401,7 +3401,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -3425,7 +3425,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "file_pick_then_load",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "preconditions": [
                     "game_state.phase が lobby またはライブ編集フェーズ（in_progress のライブ編集中）",
@@ -3480,7 +3480,7 @@
                     },
                     {
                       "id": "dod_load_host_only",
-                      "text": "読込は role host のみ発動でき answerer からの読込コマンドは 401/403 で拒否される"
+                      "text": "読込は role host のみ発動でき contestant からの読込コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -3493,7 +3493,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "next_back_jump",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "measurement_source": "questions.video_path / image_path / text（当該問）",
                   "durable_state": "game_state.tv_mode",
@@ -3533,7 +3533,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "inline_edit_then_save",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "preconditions": [
                     "対象問が questions に存在する"
@@ -3573,7 +3573,7 @@
                     },
                     {
                       "id": "dod_edit_host_only",
-                      "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                      "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -3661,7 +3661,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -3685,7 +3685,7 @@
               "route": "/control-panel",
               "ui_pattern": "file_pick_then_load",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "preconditions": [
                 "game_state.phase が lobby またはライブ編集フェーズ（in_progress のライブ編集中）",
@@ -3740,7 +3740,7 @@
                 },
                 {
                   "id": "dod_load_host_only",
-                  "text": "読込は role host のみ発動でき answerer からの読込コマンドは 401/403 で拒否される"
+                  "text": "読込は role host のみ発動でき contestant からの読込コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -3753,7 +3753,7 @@
               "route": "/control-panel",
               "ui_pattern": "next_back_jump",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "measurement_source": "questions.video_path / image_path / text（当該問）",
               "durable_state": "game_state.tv_mode",
@@ -3793,7 +3793,7 @@
               "route": "/control-panel",
               "ui_pattern": "inline_edit_then_save",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "preconditions": [
                 "対象問が questions に存在する"
@@ -3833,7 +3833,7 @@
                 },
                 {
                   "id": "dod_edit_host_only",
-                  "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                  "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -3964,7 +3964,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -3989,11 +3989,11 @@
                   "preconditions": [
                     "WebSocket 待受はクラウドサーバのみに存在する"
                   ],
-                  "measurement_source": "接続時のロール申告と（answerer は）resume トークン",
-                  "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+                  "measurement_source": "接続時のロール申告と（contestant は）resume トークン",
+                  "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
                   "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
                   "expected_outcomes": [
-                    "セッションにロール（host/answerer/audience）が確定する",
+                    "セッションにロール（host/contestant/audience）が確定する",
                     "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
                   ],
                   "dod_obligations": [
@@ -4012,12 +4012,12 @@
                   "actor": "system",
                   "verb": "reject",
                   "target": "tablet_connection",
-                  "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行",
+                  "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行",
                   "route": "/join",
-                  "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+                  "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
                   "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
                   "preconditions": [
-                    "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                    "connected_contestants >= MAX_TABLET_CONNECTIONS"
                   ],
                   "durable_state": "既存接続・participants・answers・balances は不変",
                   "expected_outcomes": [
@@ -4067,12 +4067,12 @@
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
                   "visible_to": [
                     "host",
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -4099,18 +4099,18 @@
                   "id": "op_propagate_deadline",
                   "actor": "host",
                   "verb": "lock",
-                  "target": "answerer_tablets",
+                  "target": "contestant_tablets",
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "game_state.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -4119,7 +4119,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_deadline_host_only",
-                      "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                      "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_deadline_sync_lock",
@@ -4135,7 +4135,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answers_locked",
@@ -4171,7 +4171,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "next_back_jump",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "durable_state": "game_state.tv_mode",
@@ -4188,7 +4188,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_mode_switch_host_only",
-                      "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                      "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_mode_switch_sync_tv",
@@ -4201,7 +4201,7 @@
                   "actor": "system",
                   "verb": "recover",
                   "target": "reconnecting_endpoint",
-                  "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+                  "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
                   "route": "/control-panel | /tv | /tablet",
                   "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
                   "durable_state": "端末側は状態を保持せずサーバ権威から再構成する",
@@ -4295,7 +4295,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -4320,11 +4320,11 @@
               "preconditions": [
                 "WebSocket 待受はクラウドサーバのみに存在する"
               ],
-              "measurement_source": "接続時のロール申告と（answerer は）resume トークン",
-              "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+              "measurement_source": "接続時のロール申告と（contestant は）resume トークン",
+              "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
               "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
               "expected_outcomes": [
-                "セッションにロール（host/answerer/audience）が確定する",
+                "セッションにロール（host/contestant/audience）が確定する",
                 "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
               ],
               "dod_obligations": [
@@ -4343,12 +4343,12 @@
               "actor": "system",
               "verb": "reject",
               "target": "tablet_connection",
-              "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行",
+              "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規タブレット接続試行",
               "route": "/join",
-              "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+              "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
               "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
               "preconditions": [
-                "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                "connected_contestants >= MAX_TABLET_CONNECTIONS"
               ],
               "durable_state": "既存接続・participants・answers・balances は不変",
               "expected_outcomes": [
@@ -4398,12 +4398,12 @@
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
               "visible_to": [
                 "host",
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -4430,18 +4430,18 @@
               "id": "op_propagate_deadline",
               "actor": "host",
               "verb": "lock",
-              "target": "answerer_tablets",
+              "target": "contestant_tablets",
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "game_state.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -4450,7 +4450,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_deadline_host_only",
-                  "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                  "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_deadline_sync_lock",
@@ -4466,7 +4466,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answers_locked",
@@ -4502,7 +4502,7 @@
               "route": "/control-panel",
               "ui_pattern": "next_back_jump",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "durable_state": "game_state.tv_mode",
@@ -4519,7 +4519,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_mode_switch_host_only",
-                  "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                  "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_mode_switch_sync_tv",
@@ -4532,7 +4532,7 @@
               "actor": "system",
               "verb": "recover",
               "target": "reconnecting_endpoint",
-              "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+              "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
               "route": "/control-panel | /tv | /tablet",
               "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
               "durable_state": "端末側は状態を保持せずサーバ権威から再構成する",
@@ -4680,7 +4680,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -4697,7 +4697,7 @@
               "operations": [
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -4731,7 +4731,7 @@
                   "trigger": "制御盤で得点精算を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answer_revealed",
                   "to_state": "settlement_computed",
@@ -4769,7 +4769,7 @@
                     },
                     {
                       "id": "dod_settle_host_only",
-                      "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                      "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -4781,7 +4781,7 @@
                   "trigger": "制御盤のライブ編集 UI で正解を更新",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "durable_state": "questions.correct_value 更新",
                   "readback": "DB 再取得で編集後の正解値を返す",
@@ -4903,7 +4903,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -4920,7 +4920,7 @@
           "operations": [
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -4954,7 +4954,7 @@
               "trigger": "制御盤で得点精算を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answer_revealed",
               "to_state": "settlement_computed",
@@ -4992,7 +4992,7 @@
                 },
                 {
                   "id": "dod_settle_host_only",
-                  "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                  "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -5004,7 +5004,7 @@
               "trigger": "制御盤のライブ編集 UI で正解を更新",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "durable_state": "questions.correct_value 更新",
               "readback": "DB 再取得で編集後の正解値を返す",
@@ -5136,7 +5136,7 @@
               {
                 "targets": [
                   "module:tablet",
-                  "role:answerer"
+                  "role:contestant"
                 ],
                 "reason": "タブレットは入力専用最小 UI（問題番号・数値入力・送信済み表示・自分の残額のみ）に限定し、出題内容・他者情報・全体一覧の提示を禁止する。文言は解答者向けで、内部処理・権限境界の説明やデモ/テスト用ラベルを載せないこと（N-1・第三要件）。違反時リリース不可。"
               },
@@ -5167,7 +5167,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -5194,7 +5194,7 @@
                     "host"
                   ],
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "preconditions": [
@@ -5219,7 +5219,7 @@
                       "text": "制御盤に「問題を読み込む」「そこまで」「解答オープン！」「正解発表」「精算」「次へ」「戻る」「取消」および各モード個別ジャンプの操作要素が司会者向け操作語で存在する"
                     },
                     {
-                      "id": "dod_cp_no_answerer_input_face",
+                      "id": "dod_cp_no_contestant_input_face",
                       "text": "制御盤に解答者用の数値入力送信面（+1/-1/+10/-10 と送信）が存在しない"
                     },
                     {
@@ -5228,20 +5228,20 @@
                     },
                     {
                       "id": "dod_cp_no_internal_leak",
-                      "text": "制御盤の可視文言に内部ロール識別子（host/answerer）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない"
+                      "text": "制御盤の可視文言に内部ロール識別子（host/contestant）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない"
                     }
                   ]
                 },
                 {
                   "id": "op_render_tablet_surface",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "render",
                   "target": "tablet_surface",
                   "trigger": "参加確定後の解答者が /tablet を開く",
                   "route": "/tablet",
                   "ui_pattern": "input_only_minimal",
                   "visible_to": [
-                    "answerer"
+                    "contestant"
                   ],
                   "forbidden_actors": [
                     "host",
@@ -5251,7 +5251,7 @@
                     "参加確定済み（participants に自分のレコードが存在）"
                   ],
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "/tablet の可視要素が問題番号・数値入力・送信・送信済み表示・自分の残額（円）に限られる",
@@ -5275,21 +5275,21 @@
                       "text": "/tablet に締切・開示・正解発表・精算・モード切替・取消の操作要素が存在しない"
                     },
                     {
-                      "id": "dod_tablet_answerer_copy_only",
+                      "id": "dod_tablet_contestant_copy_only",
                       "text": "/tablet の可視文言が解答者向け（問題番号/送信/送信済み/あなたの残額◯◯円/受付中/締切）で、内部処理説明・権限境界説明・デモ/テスト用ラベル・内部イベント名・point/pt/点 が存在しない"
                     }
                   ]
                 },
                 {
                   "id": "op_render_join_surface",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "render",
                   "target": "join_surface",
                   "trigger": "解答者が QR 経由で /join を開く",
                   "route": "/join",
                   "ui_pattern": "name_input_then_join",
                   "visible_to": [
-                    "answerer"
+                    "contestant"
                   ],
                   "preconditions": [
                     "家族限定アクセス制御の判定結果が描画分岐に反映される"
@@ -5397,7 +5397,7 @@
                   "consumer_surfaces": [
                     "tv_mode_d",
                     "tv_mode_e",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "金額はすべて円建てで表示され point/pt/点 の語が存在しない",
@@ -5432,17 +5432,17 @@
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets",
+                    "contestant_tablets",
                     "join_page"
                   ],
                   "expected_outcomes": [
                     "ロールは司会者/解答者/観客の可視ラベルで表示される",
-                    "内部識別子 host/answerer/audience が可視文言に露出しない"
+                    "内部識別子 host/contestant/audience が可視文言に露出しない"
                   ],
                   "dod_obligations": [
                     {
                       "id": "dod_labels_business_facing",
-                      "text": "全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/answerer/audience が露出しない"
+                      "text": "全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/contestant/audience が露出しない"
                     },
                     {
                       "id": "dod_labels_single_source",
@@ -5483,7 +5483,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -5510,7 +5510,7 @@
                 "host"
               ],
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "preconditions": [
@@ -5535,7 +5535,7 @@
                   "text": "制御盤に「問題を読み込む」「そこまで」「解答オープン！」「正解発表」「精算」「次へ」「戻る」「取消」および各モード個別ジャンプの操作要素が司会者向け操作語で存在する"
                 },
                 {
-                  "id": "dod_cp_no_answerer_input_face",
+                  "id": "dod_cp_no_contestant_input_face",
                   "text": "制御盤に解答者用の数値入力送信面（+1/-1/+10/-10 と送信）が存在しない"
                 },
                 {
@@ -5544,20 +5544,20 @@
                 },
                 {
                   "id": "dod_cp_no_internal_leak",
-                  "text": "制御盤の可視文言に内部ロール識別子（host/answerer）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない"
+                  "text": "制御盤の可視文言に内部ロール識別子（host/contestant）・内部イベント名（answers_locked 等）・設定キー名・point/pt/点・デモ/テスト/サンプル表記が存在しない"
                 }
               ]
             },
             {
               "id": "op_render_tablet_surface",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "render",
               "target": "tablet_surface",
               "trigger": "参加確定後の解答者が /tablet を開く",
               "route": "/tablet",
               "ui_pattern": "input_only_minimal",
               "visible_to": [
-                "answerer"
+                "contestant"
               ],
               "forbidden_actors": [
                 "host",
@@ -5567,7 +5567,7 @@
                 "参加確定済み（participants に自分のレコードが存在）"
               ],
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "/tablet の可視要素が問題番号・数値入力・送信・送信済み表示・自分の残額（円）に限られる",
@@ -5591,21 +5591,21 @@
                   "text": "/tablet に締切・開示・正解発表・精算・モード切替・取消の操作要素が存在しない"
                 },
                 {
-                  "id": "dod_tablet_answerer_copy_only",
+                  "id": "dod_tablet_contestant_copy_only",
                   "text": "/tablet の可視文言が解答者向け（問題番号/送信/送信済み/あなたの残額◯◯円/受付中/締切）で、内部処理説明・権限境界説明・デモ/テスト用ラベル・内部イベント名・point/pt/点 が存在しない"
                 }
               ]
             },
             {
               "id": "op_render_join_surface",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "render",
               "target": "join_surface",
               "trigger": "解答者が QR 経由で /join を開く",
               "route": "/join",
               "ui_pattern": "name_input_then_join",
               "visible_to": [
-                "answerer"
+                "contestant"
               ],
               "preconditions": [
                 "家族限定アクセス制御の判定結果が描画分岐に反映される"
@@ -5713,7 +5713,7 @@
               "consumer_surfaces": [
                 "tv_mode_d",
                 "tv_mode_e",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "金額はすべて円建てで表示され point/pt/点 の語が存在しない",
@@ -5748,17 +5748,17 @@
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets",
+                "contestant_tablets",
                 "join_page"
               ],
               "expected_outcomes": [
                 "ロールは司会者/解答者/観客の可視ラベルで表示される",
-                "内部識別子 host/answerer/audience が可視文言に露出しない"
+                "内部識別子 host/contestant/audience が可視文言に露出しない"
               ],
               "dod_obligations": [
                 {
                   "id": "dod_labels_business_facing",
-                  "text": "全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/answerer/audience が露出しない"
+                  "text": "全サーフェスの可視文言でロールが司会者/解答者/観客の可視ラベルで表され、内部識別子 host/contestant/audience が露出しない"
                 },
                 {
                   "id": "dod_labels_single_source",
@@ -5879,7 +5879,7 @@
                 "targets": [
                   "module:control_panel",
                   "role:host",
-                  "role:answerer"
+                  "role:contestant"
                 ],
                 "reason": "司会者（制御盤）・解答者（タブレット入力専用）・観客（TV）のロール境界と権限差を全体設計に反映する（論点7・第三要件）。違反時リリース不可。"
               }
@@ -5904,7 +5904,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -5949,7 +5949,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -6024,7 +6024,7 @@
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -6067,13 +6067,13 @@
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "game_state.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "全解答者タブレットの入力がロックされる",
@@ -6082,7 +6082,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_lock_host_only",
-                      "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                      "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                     },
                     {
                       "id": "dod_lock_blocks_submit",
@@ -6098,7 +6098,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_locked",
                   "to_state": "answers_opened",
@@ -6132,7 +6132,7 @@
                   "trigger": "制御盤で正解発表を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_opened",
                   "to_state": "answer_revealed",
@@ -6261,7 +6261,7 @@
                   "trigger": "制御盤で取消を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "durable_state": "trigger_undone イベント",
                   "expected_outcomes": [
@@ -6273,7 +6273,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_undo_host_only",
-                      "text": "取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される"
+                      "text": "取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -6371,7 +6371,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -6416,7 +6416,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -6491,7 +6491,7 @@
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -6534,13 +6534,13 @@
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "game_state.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "全解答者タブレットの入力がロックされる",
@@ -6549,7 +6549,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_lock_host_only",
-                  "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                  "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                 },
                 {
                   "id": "dod_lock_blocks_submit",
@@ -6565,7 +6565,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_locked",
               "to_state": "answers_opened",
@@ -6599,7 +6599,7 @@
               "trigger": "制御盤で正解発表を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_opened",
               "to_state": "answer_revealed",
@@ -6728,7 +6728,7 @@
               "trigger": "制御盤で取消を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "durable_state": "trigger_undone イベント",
               "expected_outcomes": [
@@ -6740,7 +6740,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_undo_host_only",
-                  "text": "取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される"
+                  "text": "取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -6872,7 +6872,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -6917,7 +6917,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -6992,7 +6992,7 @@
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -7039,13 +7039,13 @@
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "rounds.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "全解答者タブレットの入力がロックされる",
@@ -7054,7 +7054,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_lock_host_only",
-                      "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                      "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                     },
                     {
                       "id": "dod_lock_blocks_submit",
@@ -7074,7 +7074,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_locked",
                   "to_state": "answers_opened",
@@ -7108,7 +7108,7 @@
                   "trigger": "制御盤で正解発表を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_opened",
                   "to_state": "answer_revealed",
@@ -7178,7 +7178,7 @@
                   "trigger": "制御盤のライブ編集 UI で問題または正解を更新",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "durable_state": "questions 更新（text / image_path / video_path / correct_value）",
                   "readback": "DB 再取得で編集後の値を返す",
@@ -7245,7 +7245,7 @@
                   "trigger": "制御盤で取消を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "durable_state": "trigger_undone イベント",
                   "expected_outcomes": [
@@ -7257,7 +7257,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_undo_host_only",
-                      "text": "取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される"
+                      "text": "取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される"
                     },
                     {
                       "id": "dod_cdm_undo_event_owner",
@@ -7364,7 +7364,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -7409,7 +7409,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -7484,7 +7484,7 @@
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -7531,13 +7531,13 @@
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "rounds.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "全解答者タブレットの入力がロックされる",
@@ -7546,7 +7546,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_lock_host_only",
-                  "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                  "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                 },
                 {
                   "id": "dod_lock_blocks_submit",
@@ -7566,7 +7566,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_locked",
               "to_state": "answers_opened",
@@ -7600,7 +7600,7 @@
               "trigger": "制御盤で正解発表を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_opened",
               "to_state": "answer_revealed",
@@ -7670,7 +7670,7 @@
               "trigger": "制御盤のライブ編集 UI で問題または正解を更新",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "durable_state": "questions 更新（text / image_path / video_path / correct_value）",
               "readback": "DB 再取得で編集後の値を返す",
@@ -7737,7 +7737,7 @@
               "trigger": "制御盤で取消を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "durable_state": "trigger_undone イベント",
               "expected_outcomes": [
@@ -7749,7 +7749,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_undo_host_only",
-                  "text": "取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される"
+                  "text": "取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される"
                 },
                 {
                   "id": "dod_cdm_undo_event_owner",
@@ -7893,7 +7893,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -7947,7 +7947,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -7984,7 +7984,7 @@
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -8031,13 +8031,13 @@
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "rounds.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "全解答者タブレットの入力がロックされる",
@@ -8046,7 +8046,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_lock_host_only",
-                      "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                      "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                     },
                     {
                       "id": "dod_lock_blocks_submit",
@@ -8062,7 +8062,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_locked",
                   "to_state": "answers_opened",
@@ -8096,7 +8096,7 @@
                   "trigger": "制御盤で正解発表を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_opened",
                   "to_state": "answer_revealed",
@@ -8322,7 +8322,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -8376,7 +8376,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -8413,7 +8413,7 @@
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -8460,13 +8460,13 @@
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "rounds.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "全解答者タブレットの入力がロックされる",
@@ -8475,7 +8475,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_lock_host_only",
-                  "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                  "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                 },
                 {
                   "id": "dod_lock_blocks_submit",
@@ -8491,7 +8491,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_locked",
               "to_state": "answers_opened",
@@ -8525,7 +8525,7 @@
               "trigger": "制御盤で正解発表を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_opened",
               "to_state": "answer_revealed",
@@ -8798,7 +8798,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -8830,7 +8830,7 @@
                     "host"
                   ],
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "expected_outcomes": [
@@ -8899,11 +8899,11 @@
                   "preconditions": [
                     "WebSocket 待受はクラウドサーバのみに存在する"
                   ],
-                  "measurement_source": "接続時のロール申告と（answerer は）resume トークン",
-                  "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+                  "measurement_source": "接続時のロール申告と（contestant は）resume トークン",
+                  "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
                   "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
                   "expected_outcomes": [
-                    "セッションにロール（host/answerer/audience）が確定する",
+                    "セッションにロール（host/contestant/audience）が確定する",
                     "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
                   ],
                   "dod_obligations": [
@@ -8919,7 +8919,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -8927,7 +8927,7 @@
                   "ui_pattern": "qr_scan_then_name_input",
                   "preconditions": [
                     "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                    "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                    "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                     "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
                   ],
                   "measurement_source": "解答者の自己入力氏名",
@@ -8982,12 +8982,12 @@
                   "actor": "system",
                   "verb": "reject",
                   "target": "tablet_connection",
-                  "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+                  "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
                   "route": "/join",
-                  "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+                  "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
                   "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
                   "preconditions": [
-                    "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                    "connected_contestants >= MAX_TABLET_CONNECTIONS"
                   ],
                   "durable_state": "既存接続・participants・answers・balances は不変",
                   "consumer_surfaces": [
@@ -9037,7 +9037,7 @@
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下",
@@ -9057,7 +9057,7 @@
                   "from_state": "accepting",
                   "to_state": "accepting",
                   "visible_to": [
-                    "answerer"
+                    "contestant"
                   ],
                   "expected_outcomes": [
                     "0〜100 整数の解答が answers に upsert される",
@@ -9097,18 +9097,18 @@
                   "id": "op_propagate_deadline",
                   "actor": "host",
                   "verb": "lock",
-                  "target": "answerer_tablets",
+                  "target": "contestant_tablets",
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "game_state.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -9117,7 +9117,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_deadline_host_only",
-                      "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                      "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_deadline_sync_lock",
@@ -9133,7 +9133,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answers_locked",
@@ -9168,7 +9168,7 @@
                   "trigger": "制御盤で「正解発表」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answers_opened",
@@ -9191,7 +9191,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_reveal_host_only",
-                      "text": "正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される"
+                      "text": "正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_reveal_marks_disclosed",
@@ -9211,7 +9211,7 @@
                   "trigger": "制御盤で「精算」を押下し得点精算を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answer_revealed",
@@ -9254,7 +9254,7 @@
                     },
                     {
                       "id": "dod_settle_host_only",
-                      "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                      "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -9267,7 +9267,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "next_back_jump",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "durable_state": "game_state.tv_mode",
@@ -9284,7 +9284,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_mode_switch_host_only",
-                      "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                      "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_mode_switch_sync_tv",
@@ -9301,7 +9301,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "next_back_jump",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "measurement_source": "questions.video_path / image_path / text（当該問）",
@@ -9342,7 +9342,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "inline_edit_then_save",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "preconditions": [
@@ -9383,7 +9383,7 @@
                     },
                     {
                       "id": "dod_edit_host_only",
-                      "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                      "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -9446,14 +9446,14 @@
                   "trigger": "制御盤で「取消」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "durable_state": "trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）",
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "trigger_undone が配信され直近の対象操作が取り消される",
@@ -9465,7 +9465,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_undo_host_only",
-                      "text": "取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
+                      "text": "取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
                     }
                   ]
                 },
@@ -9480,12 +9480,12 @@
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
                   "visible_to": [
                     "host",
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -9513,7 +9513,7 @@
                   "actor": "system",
                   "verb": "recover",
                   "target": "reconnecting_endpoint",
-                  "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+                  "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
                   "route": "/control-panel | /tv | /tablet",
                   "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
                   "durable_state": "端末側は状態を保持せずサーバ権威から再構成する",
@@ -9641,7 +9641,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -9673,7 +9673,7 @@
                 "host"
               ],
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "expected_outcomes": [
@@ -9742,11 +9742,11 @@
               "preconditions": [
                 "WebSocket 待受はクラウドサーバのみに存在する"
               ],
-              "measurement_source": "接続時のロール申告と（answerer は）resume トークン",
-              "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+              "measurement_source": "接続時のロール申告と（contestant は）resume トークン",
+              "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
               "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
               "expected_outcomes": [
-                "セッションにロール（host/answerer/audience）が確定する",
+                "セッションにロール（host/contestant/audience）が確定する",
                 "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
               ],
               "dod_obligations": [
@@ -9762,7 +9762,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -9770,7 +9770,7 @@
               "ui_pattern": "qr_scan_then_name_input",
               "preconditions": [
                 "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                 "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
               ],
               "measurement_source": "解答者の自己入力氏名",
@@ -9825,12 +9825,12 @@
               "actor": "system",
               "verb": "reject",
               "target": "tablet_connection",
-              "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+              "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
               "route": "/join",
-              "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+              "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
               "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
               "preconditions": [
-                "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                "connected_contestants >= MAX_TABLET_CONNECTIONS"
               ],
               "durable_state": "既存接続・participants・answers・balances は不変",
               "consumer_surfaces": [
@@ -9880,7 +9880,7 @@
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下",
@@ -9900,7 +9900,7 @@
               "from_state": "accepting",
               "to_state": "accepting",
               "visible_to": [
-                "answerer"
+                "contestant"
               ],
               "expected_outcomes": [
                 "0〜100 整数の解答が answers に upsert される",
@@ -9940,18 +9940,18 @@
               "id": "op_propagate_deadline",
               "actor": "host",
               "verb": "lock",
-              "target": "answerer_tablets",
+              "target": "contestant_tablets",
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "game_state.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -9960,7 +9960,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_deadline_host_only",
-                  "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                  "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_deadline_sync_lock",
@@ -9976,7 +9976,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answers_locked",
@@ -10011,7 +10011,7 @@
               "trigger": "制御盤で「正解発表」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answers_opened",
@@ -10034,7 +10034,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_reveal_host_only",
-                  "text": "正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される"
+                  "text": "正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_reveal_marks_disclosed",
@@ -10054,7 +10054,7 @@
               "trigger": "制御盤で「精算」を押下し得点精算を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answer_revealed",
@@ -10097,7 +10097,7 @@
                 },
                 {
                   "id": "dod_settle_host_only",
-                  "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                  "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -10110,7 +10110,7 @@
               "route": "/control-panel",
               "ui_pattern": "next_back_jump",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "durable_state": "game_state.tv_mode",
@@ -10127,7 +10127,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_mode_switch_host_only",
-                  "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                  "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_mode_switch_sync_tv",
@@ -10144,7 +10144,7 @@
               "route": "/control-panel",
               "ui_pattern": "next_back_jump",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "measurement_source": "questions.video_path / image_path / text（当該問）",
@@ -10185,7 +10185,7 @@
               "route": "/control-panel",
               "ui_pattern": "inline_edit_then_save",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "preconditions": [
@@ -10226,7 +10226,7 @@
                 },
                 {
                   "id": "dod_edit_host_only",
-                  "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                  "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -10289,14 +10289,14 @@
               "trigger": "制御盤で「取消」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "durable_state": "trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）",
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "trigger_undone が配信され直近の対象操作が取り消される",
@@ -10308,7 +10308,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_undo_host_only",
-                  "text": "取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
+                  "text": "取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
                 }
               ]
             },
@@ -10323,12 +10323,12 @@
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
               "visible_to": [
                 "host",
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -10356,7 +10356,7 @@
               "actor": "system",
               "verb": "recover",
               "target": "reconnecting_endpoint",
-              "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+              "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
               "route": "/control-panel | /tv | /tablet",
               "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
               "durable_state": "端末側は状態を保持せずサーバ権威から再構成する",
@@ -10494,7 +10494,7 @@
               {
                 "targets": [
                   "role:host",
-                  "role:answerer"
+                  "role:contestant"
                 ],
                 "reason": "司会者・解答者・観客のロールと権限境界を型・所有境界として明示し、実装がロール境界を曖昧化できないこと（論点7・第三要件）。違反時リリース不可。"
               }
@@ -10515,7 +10515,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -10564,7 +10564,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -10605,7 +10605,7 @@
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -10656,13 +10656,13 @@
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "rounds.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "全解答者タブレットの入力がロックされる",
@@ -10671,7 +10671,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_lock_host_only",
-                      "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                      "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                     },
                     {
                       "id": "dod_lock_blocks_submit",
@@ -10691,7 +10691,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_locked",
                   "to_state": "answers_opened",
@@ -10729,7 +10729,7 @@
                   "trigger": "制御盤で正解発表を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "from_state": "answers_opened",
                   "to_state": "answer_revealed",
@@ -10811,7 +10811,7 @@
                   "trigger": "制御盤のライブ編集 UI で問題または正解を更新",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "durable_state": "questions 更新（text / image_path / video_path / correct_value）",
                   "readback": "DB 再取得で編集後の値を返す",
@@ -10886,7 +10886,7 @@
                   "trigger": "制御盤で取消を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer"
+                    "contestant"
                   ],
                   "durable_state": "trigger_undone イベント",
                   "expected_outcomes": [
@@ -10898,7 +10898,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_undo_host_only",
-                      "text": "取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される"
+                      "text": "取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される"
                     },
                     {
                       "id": "dod_dm_undo_event_owner",
@@ -11055,7 +11055,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -11104,7 +11104,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -11145,7 +11145,7 @@
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信",
@@ -11196,13 +11196,13 @@
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "rounds.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "全解答者タブレットの入力がロックされる",
@@ -11211,7 +11211,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_lock_host_only",
-                  "text": "締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される"
+                  "text": "締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される"
                 },
                 {
                   "id": "dod_lock_blocks_submit",
@@ -11231,7 +11231,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_locked",
               "to_state": "answers_opened",
@@ -11269,7 +11269,7 @@
               "trigger": "制御盤で正解発表を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "from_state": "answers_opened",
               "to_state": "answer_revealed",
@@ -11351,7 +11351,7 @@
               "trigger": "制御盤のライブ編集 UI で問題または正解を更新",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "durable_state": "questions 更新（text / image_path / video_path / correct_value）",
               "readback": "DB 再取得で編集後の値を返す",
@@ -11426,7 +11426,7 @@
               "trigger": "制御盤で取消を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer"
+                "contestant"
               ],
               "durable_state": "trigger_undone イベント",
               "expected_outcomes": [
@@ -11438,7 +11438,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_undo_host_only",
-                  "text": "取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される"
+                  "text": "取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される"
                 },
                 {
                   "id": "dod_dm_undo_event_owner",
@@ -11636,7 +11636,7 @@
                   "surface": "/control-panel"
                 },
                 {
-                  "id": "answerer",
+                  "id": "contestant",
                   "label": "解答者（タブレット）",
                   "surface": "/tablet"
                 },
@@ -11661,12 +11661,12 @@
                   "preconditions": [
                     "WebSocket 待受はクラウドサーバのみに存在する"
                   ],
-                  "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+                  "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
                   "from_state": "handshaking",
                   "to_state": "connected",
                   "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
                   "expected_outcomes": [
-                    "セッションにロール（host/answerer/audience）が確定する",
+                    "セッションにロール（host/contestant/audience）が確定する",
                     "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
                   ],
                   "dod_obligations": [
@@ -11685,12 +11685,12 @@
                   "actor": "system",
                   "verb": "reject",
                   "target": "tablet_connection",
-                  "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+                  "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
                   "route": "/join",
-                  "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+                  "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
                   "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
                   "preconditions": [
-                    "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                    "connected_contestants >= MAX_TABLET_CONNECTIONS"
                   ],
                   "from_state": "handshaking",
                   "to_state": "rejected",
@@ -11742,7 +11742,7 @@
                 },
                 {
                   "id": "op_join_game",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "join",
                   "target": "game_session",
                   "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -11750,7 +11750,7 @@
                   "ui_pattern": "qr_scan_then_name_input",
                   "preconditions": [
                     "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                    "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                    "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                     "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
                   ],
                   "from_state": "admitted",
@@ -11799,7 +11799,7 @@
                 },
                 {
                   "id": "op_submit_answer",
-                  "actor": "answerer",
+                  "actor": "contestant",
                   "verb": "submit",
                   "target": "answer",
                   "trigger": "タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下",
@@ -11819,7 +11819,7 @@
                   "to_state": "accepting",
                   "readback": "送信後 submit_ack が当該解答者へ unicast され送信済み表示になる",
                   "visible_to": [
-                    "answerer"
+                    "contestant"
                   ],
                   "expected_outcomes": [
                     "0〜100 整数の解答が answers に upsert される",
@@ -11859,18 +11859,18 @@
                   "id": "op_propagate_deadline",
                   "actor": "host",
                   "verb": "lock",
-                  "target": "answerer_tablets",
+                  "target": "contestant_tablets",
                   "trigger": "制御盤で「そこまで」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "accepting",
                   "to_state": "answers_locked",
                   "durable_state": "rounds.stage = answers_locked",
                   "consumer_surfaces": [
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -11879,7 +11879,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_deadline_host_only",
-                      "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                      "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_deadline_sync_lock",
@@ -11895,7 +11895,7 @@
                   "trigger": "制御盤で「解答オープン！」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answers_locked",
@@ -11930,7 +11930,7 @@
                   "trigger": "制御盤で「正解発表」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answers_opened",
@@ -11953,7 +11953,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_reveal_host_only",
-                      "text": "正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される"
+                      "text": "正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_reveal_marks_disclosed",
@@ -11973,7 +11973,7 @@
                   "trigger": "制御盤で「精算」を押下し得点精算を実行",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "from_state": "answer_revealed",
@@ -12016,7 +12016,7 @@
                     },
                     {
                       "id": "dod_settle_host_only",
-                      "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                      "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -12029,7 +12029,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "inline_edit_then_save",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "preconditions": [
@@ -12062,7 +12062,7 @@
                     },
                     {
                       "id": "dod_edit_host_only",
-                      "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                      "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                     }
                   ]
                 },
@@ -12126,7 +12126,7 @@
                   "route": "/control-panel",
                   "ui_pattern": "next_back_jump",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "durable_state": "game_state.tv_mode",
@@ -12148,7 +12148,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_mode_switch_host_only",
-                      "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                      "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                     },
                     {
                       "id": "dod_mode_switch_sync_tv",
@@ -12164,14 +12164,14 @@
                   "trigger": "制御盤で「取消」を押下",
                   "route": "/control-panel",
                   "forbidden_actors": [
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "durable_state": "trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）",
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "expected_outcomes": [
                     "trigger_undone が配信され直近の対象操作が取り消される",
@@ -12184,7 +12184,7 @@
                   "dod_obligations": [
                     {
                       "id": "dod_undo_host_only",
-                      "text": "取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
+                      "text": "取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
                     }
                   ]
                 },
@@ -12228,12 +12228,12 @@
                   "consumer_surfaces": [
                     "control_panel",
                     "tv_display",
-                    "answerer_tablets"
+                    "contestant_tablets"
                   ],
                   "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
                   "visible_to": [
                     "host",
-                    "answerer",
+                    "contestant",
                     "audience"
                   ],
                   "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -12261,7 +12261,7 @@
                   "actor": "system",
                   "verb": "recover",
                   "target": "reconnecting_endpoint",
-                  "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+                  "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
                   "route": "/control-panel | /tv | /tablet",
                   "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
                   "from_state": "disconnected",
@@ -12362,7 +12362,7 @@
               "surface": "/control-panel"
             },
             {
-              "id": "answerer",
+              "id": "contestant",
               "label": "解答者（タブレット）",
               "surface": "/tablet"
             },
@@ -12387,12 +12387,12 @@
               "preconditions": [
                 "WebSocket 待受はクラウドサーバのみに存在する"
               ],
-              "durable_state": "hub のロール別接続レジストリ（host/answerer/audience）",
+              "durable_state": "hub のロール別接続レジストリ（host/contestant/audience）",
               "from_state": "handshaking",
               "to_state": "connected",
               "readback": "接続直後にロール投影済み state_snapshot を unicast で返す",
               "expected_outcomes": [
-                "セッションにロール（host/answerer/audience）が確定する",
+                "セッションにロール（host/contestant/audience）が確定する",
                 "制御盤ブラウザは待受ソケットを持たず配信はクラウド権威から届く"
               ],
               "dod_obligations": [
@@ -12411,12 +12411,12 @@
               "actor": "system",
               "verb": "reject",
               "target": "tablet_connection",
-              "trigger": "answerer 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
+              "trigger": "contestant 接続数が MAX_TABLET_CONNECTIONS に達した状態での新規参加確定の試行",
               "route": "/join",
-              "measurement_source": "現在の answerer 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
+              "measurement_source": "現在の contestant 接続数と src/config の MAX_TABLET_CONNECTIONS 解決値",
               "threshold": "MAX_TABLET_CONNECTIONS（既定 8）",
               "preconditions": [
-                "connected_answerers >= MAX_TABLET_CONNECTIONS"
+                "connected_contestants >= MAX_TABLET_CONNECTIONS"
               ],
               "from_state": "handshaking",
               "to_state": "rejected",
@@ -12468,7 +12468,7 @@
             },
             {
               "id": "op_join_game",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "join",
               "target": "game_session",
               "trigger": "制御盤の QR を読取り /join で氏名を自己入力して参加確定",
@@ -12476,7 +12476,7 @@
               "ui_pattern": "qr_scan_then_name_input",
               "preconditions": [
                 "家族限定アクセス制御を通過している（分岐A トークン一致 または 分岐B 認証済）",
-                "answerer 接続数が MAX_TABLET_CONNECTIONS 未満",
+                "contestant 接続数が MAX_TABLET_CONNECTIONS 未満",
                 "氏名が非空かつ MAX_DISPLAY_NAME_LENGTH 以下"
               ],
               "from_state": "admitted",
@@ -12525,7 +12525,7 @@
             },
             {
               "id": "op_submit_answer",
-              "actor": "answerer",
+              "actor": "contestant",
               "verb": "submit",
               "target": "answer",
               "trigger": "タブレット入力画面で +1/-1/+10/-10 のステッパで 0〜100 の数値を作り「送信」を押下",
@@ -12545,7 +12545,7 @@
               "to_state": "accepting",
               "readback": "送信後 submit_ack が当該解答者へ unicast され送信済み表示になる",
               "visible_to": [
-                "answerer"
+                "contestant"
               ],
               "expected_outcomes": [
                 "0〜100 整数の解答が answers に upsert される",
@@ -12585,18 +12585,18 @@
               "id": "op_propagate_deadline",
               "actor": "host",
               "verb": "lock",
-              "target": "answerer_tablets",
+              "target": "contestant_tablets",
               "trigger": "制御盤で「そこまで」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "accepting",
               "to_state": "answers_locked",
               "durable_state": "rounds.stage = answers_locked",
               "consumer_surfaces": [
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "answers_locked が接続中の全解答者タブレットへ配信され入力が同期ロックされる",
@@ -12605,7 +12605,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_deadline_host_only",
-                  "text": "締切コマンドは role host のみ発動でき answerer/audience からの締切コマンドは command_denied(403) で拒否される"
+                  "text": "締切コマンドは role host のみ発動でき contestant/audience からの締切コマンドは command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_deadline_sync_lock",
@@ -12621,7 +12621,7 @@
               "trigger": "制御盤で「解答オープン！」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answers_locked",
@@ -12656,7 +12656,7 @@
               "trigger": "制御盤で「正解発表」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answers_opened",
@@ -12679,7 +12679,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_reveal_host_only",
-                  "text": "正解発表は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される"
+                  "text": "正解発表は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_reveal_marks_disclosed",
@@ -12699,7 +12699,7 @@
               "trigger": "制御盤で「精算」を押下し得点精算を実行",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "from_state": "answer_revealed",
@@ -12742,7 +12742,7 @@
                 },
                 {
                   "id": "dod_settle_host_only",
-                  "text": "得点精算は role host のみ発動でき answerer からの精算コマンドは 401/403 で拒否される"
+                  "text": "得点精算は role host のみ発動でき contestant からの精算コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -12755,7 +12755,7 @@
               "route": "/control-panel",
               "ui_pattern": "inline_edit_then_save",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "preconditions": [
@@ -12788,7 +12788,7 @@
                 },
                 {
                   "id": "dod_edit_host_only",
-                  "text": "ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される"
+                  "text": "ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される"
                 }
               ]
             },
@@ -12852,7 +12852,7 @@
               "route": "/control-panel",
               "ui_pattern": "next_back_jump",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "durable_state": "game_state.tv_mode",
@@ -12874,7 +12874,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_mode_switch_host_only",
-                  "text": "モード切替は role host のみ発動でき answerer/audience からのモード切替は command_denied(403) で拒否される"
+                  "text": "モード切替は role host のみ発動でき contestant/audience からのモード切替は command_denied(403) で拒否される"
                 },
                 {
                   "id": "dod_mode_switch_sync_tv",
@@ -12890,14 +12890,14 @@
               "trigger": "制御盤で「取消」を押下",
               "route": "/control-panel",
               "forbidden_actors": [
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "durable_state": "trigger_undone イベント（巻き戻し範囲は F-03 未確定・発明しない）",
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "expected_outcomes": [
                 "trigger_undone が配信され直近の対象操作が取り消される",
@@ -12910,7 +12910,7 @@
               "dod_obligations": [
                 {
                   "id": "dod_undo_host_only",
-                  "text": "取消は role host のみ発動でき answerer/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
+                  "text": "取消は role host のみ発動でき contestant/audience からは command_denied(403) で拒否される（巻き戻し挙動詳細は F-03/F028、E2E は test.fixme）"
                 }
               ]
             },
@@ -12954,12 +12954,12 @@
               "consumer_surfaces": [
                 "control_panel",
                 "tv_display",
-                "answerer_tablets"
+                "contestant_tablets"
               ],
               "readback": "遅参・再接続端末は state_snapshot で最新へ整合",
               "visible_to": [
                 "host",
-                "answerer",
+                "contestant",
                 "audience"
               ],
               "threshold": "状態遷移の全端末反映 p95 <= 2000ms（暫定ゲート・F-04）",
@@ -12987,7 +12987,7 @@
               "actor": "system",
               "verb": "recover",
               "target": "reconnecting_endpoint",
-              "trigger": "回線断後の端末が再接続し（answerer は resume トークンを添えて）resume する",
+              "trigger": "回線断後の端末が再接続し（contestant は resume トークンを添えて）resume する",
               "route": "/control-panel | /tv | /tablet",
               "measurement_source": "サーバ権威の game_state（current_question_number/stage/tv_mode）と balances と answers",
               "from_state": "disconnected",

@@ -50,7 +50,7 @@
     }
   });
 
-  var url = "/events?role=answerer" + (pid ? "&participantId=" + encodeURIComponent(pid) : "");
+  var url = "/events?role=contestant" + (pid ? "&participantId=" + encodeURIComponent(pid) : "");
   var es = new EventSource(url);
   es.onmessage = function (ev) {
     try {

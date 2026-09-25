@@ -37,7 +37,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -67,7 +67,7 @@ codd:
         text: questions テーブルへの書込みは src/questions の QuestionsRepository 経由のみで、control_panel
           は realtime_sync 経由で questions を呼び出し独自の questions 書込みを持たない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -117,7 +117,7 @@ codd:
         text: 上限判定経路は participants/admission.ts が config/connection_limit.ts の resolveMaxTabletConnections
           解決値を参照する 1 本のみで、config 以外のソースに上限リテラル 8 が存在しない
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -154,18 +154,18 @@ codd:
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
       consumer_surfaces:
-      - answerer_tablets
+      - contestant_tablets
       expected_outcomes:
       - 全解答者タブレットの入力がロックされる
       - 締切後の answers への書込みは拒否される
       dod_obligations:
       - id: dod_lock_host_only
-        text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+        text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
       - id: dod_lock_blocks_submit
         text: rounds.stage が answers_locked 以降のとき game_state の Answer リポジトリが answers
           への挿入/更新を拒否する
@@ -179,7 +179,7 @@ codd:
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -202,7 +202,7 @@ codd:
       trigger: 制御盤で正解発表を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed
@@ -252,7 +252,7 @@ codd:
       trigger: 制御盤のライブ編集 UI で問題または正解を更新
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       durable_state: questions 更新（text / image_path / video_path / correct_value）
       readback: DB 再取得で編集後の値を返す
       expected_outcomes:
@@ -301,7 +301,7 @@ codd:
       trigger: 制御盤で取消を実行
       route: /control-panel
       forbidden_actors:
-      - answerer
+      - contestant
       durable_state: trigger_undone イベント
       expected_outcomes:
       - 直近の対象操作が取り消される
@@ -309,7 +309,7 @@ codd:
       - 取消の具体挙動（直近のみか任意問題再開示か）は未確定（F-03・fixme）
       dod_obligations:
       - id: dod_undo_host_only
-        text: 取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される
+        text: 取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される
       - id: dod_cdm_undo_event_owner
         text: trigger_undone は realtime_sync/events.ts の DomainEvent ユニオンの一員として realtime_sync
           の単一発行者からのみ配信される
@@ -394,7 +394,7 @@ codd:
 | INV-2（継承） | `module:questions` | 問題は DB 登録・DB 供給。`questions` テーブルへの書込みは `questions` リポジトリ経由のみ | §3.2 |
 | INV-3（継承） | `module:config`/`module:participants` | 接続上限はハードコード禁止・設定解決。16/32 へ非改修追随 | §2.3・§3.2 |
 | INV-4（継承） | `module:participants` | 家族限定アクセス制御を設計責務として保持。無制御公開はリリース不可 | §4.5・§5.3 |
-| INV-5（継承） | `role:host`/`role:answerer` | 締切・開示・取消は host のみ。ガードは `realtime_sync/session` の `requireHost` 単一経路 | §3.4・§4.5 |
+| INV-5（継承） | `role:host`/`role:contestant` | 締切・開示・取消は host のみ。ガードは `realtime_sync/session` の `requireHost` 単一経路 | §3.4・§4.5 |
 | INV-6（継承） | `module:scoring`/`module:tablet` | 0〜100 整数のみ受理、UI＋サーバ二重防衛。両経路が同一 `assertAnswerScore`（scoring）を import | §3.1・§4.2 |
 | INV-7（継承） | `module:scoring`/`module:tv_display` | 円建て固定。金額型は `scoring/yen.ts` の `Yen` に収束、`tv_display` は import のみ | §3.1 |
 
@@ -407,7 +407,7 @@ codd:
 
 ### 1.4 アクター向けサーフェス → モジュール対応・コピー義務
 
-各サーフェスは L3 の 1 モジュールが所有し、供給データは下流依存でのみ得る。可視コピーには可視ラベル（司会者／解答者／観客）を用い、内部識別子（`host`/`answerer`）・実装根拠・環境前提・権限境界の説明を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止パターンとし、金額は「円」で表す。
+各サーフェスは L3 の 1 モジュールが所有し、供給データは下流依存でのみ得る。可視コピーには可視ラベル（司会者／解答者／観客）を用い、内部識別子（`host`/`contestant`）・実装根拠・環境前提・権限境界の説明を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止パターンとし、金額は「円」で表す。
 
 | サーフェス | ルート | 所有モジュール | 主対象 | 許可ナビ／アクション | 禁止ナビ／アクション | 必須の可視コピー意図 / 禁止コピー |
 |---|---|---|---|---|---|---|
@@ -595,7 +595,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -624,7 +624,7 @@ operation_flow:
         - id: dod_cdm_questions_write_owner
           text: questions テーブルへの書込みは src/questions の QuestionsRepository 経由のみで、control_panel は realtime_sync 経由で questions を呼び出し独自の questions 書込みを持たない
     - id: op_join_game
-      actor: answerer
+      actor: contestant
       verb: join
       target: game_session
       trigger: 制御盤の QR を読取り /join で氏名を自己入力して参加確定
@@ -669,7 +669,7 @@ operation_flow:
         - id: dod_cdm_config_single_point
           text: 上限判定経路は participants/admission.ts が config/connection_limit.ts の resolveMaxTabletConnections 解決値を参照する 1 本のみで、config 以外のソースに上限リテラル 8 が存在しない
     - id: op_submit_answer
-      actor: answerer
+      actor: contestant
       verb: submit
       target: answer
       trigger: タブレットの 4 ボタン（+1/-1/+10/-10）で値を作り送信
@@ -703,17 +703,17 @@ operation_flow:
       target: answers
       trigger: 制御盤で「そこまで」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: accepting
       to_state: answers_locked
       durable_state: rounds.stage = answers_locked
-      consumer_surfaces: [answerer_tablets]
+      consumer_surfaces: [contestant_tablets]
       expected_outcomes:
         - 全解答者タブレットの入力がロックされる
         - 締切後の answers への書込みは拒否される
       dod_obligations:
         - id: dod_lock_host_only
-          text: 締切は role host のみ発動でき answerer からの締切コマンドは 401/403 で拒否される
+          text: 締切は role host のみ発動でき contestant からの締切コマンドは 401/403 で拒否される
         - id: dod_lock_blocks_submit
           text: rounds.stage が answers_locked 以降のとき game_state の Answer リポジトリが answers への挿入/更新を拒否する
         - id: dod_cdm_host_guard_single
@@ -724,7 +724,7 @@ operation_flow:
       target: answers
       trigger: 制御盤で「解答オープン！」を押下
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_locked
       to_state: answers_opened
       durable_state: rounds.stage = answers_opened
@@ -744,7 +744,7 @@ operation_flow:
       target: correct_value
       trigger: 制御盤で正解発表を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       from_state: answers_opened
       to_state: answer_revealed
       durable_state: rounds.stage = answer_revealed
@@ -788,7 +788,7 @@ operation_flow:
       target: question_or_correct_value
       trigger: 制御盤のライブ編集 UI で問題または正解を更新
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       durable_state: questions 更新（text / image_path / video_path / correct_value）
       readback: DB 再取得で編集後の値を返す
       expected_outcomes:
@@ -830,7 +830,7 @@ operation_flow:
       target: last_trigger
       trigger: 制御盤で取消を実行
       route: /control-panel
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       durable_state: trigger_undone イベント
       expected_outcomes:
         - 直近の対象操作が取り消される
@@ -838,7 +838,7 @@ operation_flow:
         - 取消の具体挙動（直近のみか任意問題再開示か）は未確定（F-03・fixme）
       dod_obligations:
         - id: dod_undo_host_only
-          text: 取消は role host のみ発動でき answerer からの取消コマンドは 401/403 で拒否される
+          text: 取消は role host のみ発動でき contestant からの取消コマンドは 401/403 で拒否される
         - id: dod_cdm_undo_event_owner
           text: trigger_undone は realtime_sync/events.ts の DomainEvent ユニオンの一員として realtime_sync の単一発行者からのみ配信される
     - id: op_switch_tv_mode

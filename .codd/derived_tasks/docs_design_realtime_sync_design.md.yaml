@@ -46,7 +46,7 @@ tasks:
 - id: implement_tablet_admission
   title: Implement tablet admission decision
   description: Implement admitTablet({ limit, connected }, { name }) in src/participants/admission.ts
-    as a pure function returning accept/reject from the current answerer count versus
+    as a pure function returning accept/reject from the current contestant count versus
     the passed-in limit; the source takes limit as a parameter and does not import
     the resolver. The bundled unit test imports resolveMaxTabletConnections to prove
     the decision tracks the configured value across the 8/9, 16/17, and 32/33 boundaries,
@@ -66,11 +66,11 @@ tasks:
 - id: implement_role_projection_fanout
   title: Implement role projection fan-out filter
   description: 'Implement projectForRole(event, ctx) in src/realtime_sync/fanout.ts
-    to enforce visibility at the transport layer: answerers receive only their own
+    to enforce visibility at the transport layer: contestants receive only their own
     balance/state, audience receives nothing that reveals others'' answers before
     disclosure, and host receives full payloads. The module imports the envelope and
     role types from protocol.ts. Ship the unit test proving pre-disclosure suppression
-    for audience and own-only balance projection for answerers.'
+    for audience and own-only balance projection for contestants.'
   source_design_doc: docs/design/realtime_sync_design.md
   v_model_layer: detailed
   expected_outputs:
@@ -89,7 +89,7 @@ tasks:
     to reconstruct a role-projected state_snapshot from server authority (current
     question number, stage, tv mode, own balance, own submitted) while structurally
     excluding other participants' data. The module imports the stage/mode/role types
-    from protocol.ts and applies role scoping itself. Ship the unit test proving answerer
+    from protocol.ts and applies role scoping itself. Ship the unit test proving contestant
     recovery to progression plus own balance/submitted with no other-participant leakage.
   source_design_doc: docs/design/realtime_sync_design.md
   v_model_layer: detailed

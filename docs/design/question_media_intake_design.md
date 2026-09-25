@@ -36,7 +36,7 @@ codd:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -53,7 +53,7 @@ codd:
       route: /control-panel
       ui_pattern: file_pick_then_load
       forbidden_actors:
-      - answerer
+      - contestant
       preconditions:
       - game_state.phase が lobby またはライブ編集フェーズ（in_progress のライブ編集中）
       - 参照される全メディアが所定フォルダ（QUESTION_MEDIA_ROOT）配下に事前配置済み
@@ -89,7 +89,7 @@ codd:
       - id: dod_load_all_or_nothing
         text: 検証エラーが 1 件でもある入稿では questions が 1 行も追加されない
       - id: dod_load_host_only
-        text: 読込は role host のみ発動でき answerer からの読込コマンドは 401/403 で拒否される
+        text: 読込は role host のみ発動でき contestant からの読込コマンドは 401/403 で拒否される
     - id: op_switch_tv_mode
       actor: host
       verb: switch
@@ -98,7 +98,7 @@ codd:
       route: /control-panel
       ui_pattern: next_back_jump
       forbidden_actors:
-      - answerer
+      - contestant
       measurement_source: questions.video_path / image_path / text（当該問）
       durable_state: game_state.tv_mode
       consumer_surfaces:
@@ -125,7 +125,7 @@ codd:
       route: /control-panel
       ui_pattern: inline_edit_then_save
       forbidden_actors:
-      - answerer
+      - contestant
       preconditions:
       - 対象問が questions に存在する
       durable_state: questions テーブル更新（text / image_path / video_path / correct_value）
@@ -151,7 +151,7 @@ codd:
       - id: dod_edit_correct_range_guard
         text: 正解値の編集も 0〜100 整数のみ受理し範囲外はサーバと DB CHECK で拒否される
       - id: dod_edit_host_only
-        text: ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される
+        text: ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される
     - id: op_auto_rescore
       actor: system
       verb: rescore
@@ -220,11 +220,11 @@ codd:
 
 ### 1.4 アクター向けサーフェス／コピー義務
 
-本書が供給・変更するサーフェスとロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: answerer` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**（司会者／解答者）を用い、内部識別子（host/answerer）・実装根拠・環境前提・入稿の内部処理名を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止パターンとし、金額は「円」で表す。
+本書が供給・変更するサーフェスとロール（内部識別子 → 可視ラベル）: `role: host` → **司会者**、`role: contestant` → **解答者**、観客（TV 視聴者）。可視コピーには**可視ラベル**（司会者／解答者）を用い、内部識別子（host/contestant）・実装根拠・環境前提・入稿の内部処理名を露出させない。全サーフェス共通で `point`／`pt`／`点` を禁止パターンとし、金額は「円」で表す。
 
 | サーフェス | ルート | 主対象アクター | 目的 | 許可アクション | 禁止アクション | 必須の可視コピー意図 | 禁止コピー |
 |---|---|---|---|---|---|---|---|
-| 制御盤（入稿・ライブ編集面） | `/control-panel` | 司会者 | 問題ファイル読込・問題文/正解値/画像パス/動画パスのライブ編集 | ファイル選択と読込実行・各問の編集と保存・入稿検証結果の確認 | 解答者の入力操作面の露出・入稿検証の生スタックトレース出力 | 「問題ファイルを読み込む」「問題を編集」「正解を編集」等の司会者向け操作語・**未配置メディアを問題番号で示す**検証結果（例: 「問題3の動画が所定フォルダに未配置です」） | 内部 role 識別子(host/answerer)・`intake_validator` 等の内部処理名・テスト/デモ/サンプル問題ラベル・`point`/`pt`/`点` |
+| 制御盤（入稿・ライブ編集面） | `/control-panel` | 司会者 | 問題ファイル読込・問題文/正解値/画像パス/動画パスのライブ編集 | ファイル選択と読込実行・各問の編集と保存・入稿検証結果の確認 | 解答者の入力操作面の露出・入稿検証の生スタックトレース出力 | 「問題ファイルを読み込む」「問題を編集」「正解を編集」等の司会者向け操作語・**未配置メディアを問題番号で示す**検証結果（例: 「問題3の動画が所定フォルダに未配置です」） | 内部 role 識別子(host/contestant)・`intake_validator` 等の内部処理名・テスト/デモ/サンプル問題ラベル・`point`/`pt`/`点` |
 | TV（a 出題面） | `/tv` | 観客 | 解決された出題面（動画 or 画像 or テキスト）の提示 | 表示のみ（受動） | いかなる入力・操作要素・生パス文字列・フォールバック内部理由の露出 | 解決された出題面そのもの（動画再生 / 画像 / テキスト本文） | 実装ノート・`fallback`/`video_path` 等の内部語・生のファイルパス文字列・`point`/`pt`/`点` |
 | タブレット | `/tablet` | 解答者 | 数値入力（**出題内容は出さない**） | 自分の数値入力・送信・自分の残額閲覧 | **出題内容（問題文・メディア）の表示/埋め込み/リンク**・他者情報の表示 | 問題番号・数値入力・送信済み表示・自分の残額（**円**） | 出題本文・出題メディア・他者情報・司会者操作語・`point`/`pt`/`点` |
 
@@ -515,7 +515,7 @@ export function rescoreDiff(
 
 ### 2.9 アクセス制御・整合・プライバシー
 
-- **入稿・編集の権限境界（INV-5 継承・release-blocking）**: 問題ファイル読込（`op_load_questions`）とライブ編集（`op_live_edit_correct`）は制御盤（`role: host`）サーフェスの操作であり、`role: host` セッションのみが `questions` への書込みを起こせる。`role: answerer` からの読込・編集コマンドはサーバ側で **401/403 拒否**し、非 host UI に該当操作要素を置かない。ロール判定はセッションのロール属性を単一判定点とする。
+- **入稿・編集の権限境界（INV-5 継承・release-blocking）**: 問題ファイル読込（`op_load_questions`）とライブ編集（`op_live_edit_correct`）は制御盤（`role: host`）サーフェスの操作であり、`role: host` セッションのみが `questions` への書込みを起こせる。`role: contestant` からの読込・編集コマンドはサーバ側で **401/403 拒否**し、非 host UI に該当操作要素を置かない。ロール判定はセッションのロール属性を単一判定点とする。
 - **0〜100 整数の三層防衛（INV-6 継承）**: 正解値は入稿検証（`isAnswerScore`）・サーバ検証・DB `CHECK(0<=correct_value<=100)` の三層で 0〜100 整数のみ受理する。入稿・ライブ編集いずれの経路でも -1/101/50.5 は拒否され `questions` に入らない。
 - **メディア未配置の事前防衛**: 宣言されたメディアパスは入稿時に所定フォルダ配下の実体存在を検証し、未配置は問題番号を添えて拒否する（a モードの空画面を本番前に排除）。
 - **プライバシー / データ取扱い**: 出題内容（問題文・メディア）とメディア資産はタブレット向け読みモデルに含めない。メディア配信は家族限定アクセス境界（URL 秘匿 or 認証・上位設計 §2.10・§3.3）の内側でのみ到達可能とする。収集する個人データは解答者の自己入力氏名・当日の解答・残額に限り、本書の入稿・編集は問題データのみを扱う。恒久的な事前氏名台帳を持たない前提を侵さない。
@@ -648,7 +648,7 @@ operation_flow:
     - id: host
       label: 司会者（制御盤）
       surface: /control-panel
-    - id: answerer
+    - id: contestant
       label: 解答者（タブレット）
       surface: /tablet
     - id: audience
@@ -664,7 +664,7 @@ operation_flow:
       trigger: 制御盤で事前問題ファイル（JSON）の読込を実行
       route: /control-panel
       ui_pattern: file_pick_then_load
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       preconditions:
         - game_state.phase が lobby またはライブ編集フェーズ（in_progress のライブ編集中）
         - 参照される全メディアが所定フォルダ（QUESTION_MEDIA_ROOT）配下に事前配置済み
@@ -698,7 +698,7 @@ operation_flow:
         - id: dod_load_all_or_nothing
           text: 検証エラーが 1 件でもある入稿では questions が 1 行も追加されない
         - id: dod_load_host_only
-          text: 読込は role host のみ発動でき answerer からの読込コマンドは 401/403 で拒否される
+          text: 読込は role host のみ発動でき contestant からの読込コマンドは 401/403 で拒否される
     - id: op_switch_tv_mode
       actor: host
       verb: switch
@@ -706,7 +706,7 @@ operation_flow:
       trigger: 制御盤の「次へ」「戻る」または各モード個別ジャンプで a モードへ切替
       route: /control-panel
       ui_pattern: next_back_jump
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       measurement_source: questions.video_path / image_path / text（当該問）
       durable_state: game_state.tv_mode
       consumer_surfaces: [tv_mode_a]
@@ -731,7 +731,7 @@ operation_flow:
       trigger: 制御盤のライブ編集 UI で問題文・正解値・画像/動画パスを更新
       route: /control-panel
       ui_pattern: inline_edit_then_save
-      forbidden_actors: [answerer]
+      forbidden_actors: [contestant]
       preconditions:
         - 対象問が questions に存在する
       durable_state: questions テーブル更新（text / image_path / video_path / correct_value）
@@ -756,7 +756,7 @@ operation_flow:
         - id: dod_edit_correct_range_guard
           text: 正解値の編集も 0〜100 整数のみ受理し範囲外はサーバと DB CHECK で拒否される
         - id: dod_edit_host_only
-          text: ライブ編集は role host のみ発動でき answerer からの編集コマンドは 401/403 で拒否される
+          text: ライブ編集は role host のみ発動でき contestant からの編集コマンドは 401/403 で拒否される
     - id: op_auto_rescore
       actor: system
       verb: rescore

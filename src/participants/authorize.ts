@@ -13,7 +13,7 @@
  * release-blocking な権限境界を具体化する:
  *   締切（lock）・開示（open）・正解発表（reveal）・得点精算（settle）・取消（undo）——
  *   ならびに問題読込（load）・ライブ編集（edit）・TV モード切替（switch）—— の各コマンドは
- *   **`role: host` セッションのみ**が発動でき、`role: answerer`（解答者タブレット）・
+ *   **`role: host` セッションのみ**が発動でき、`role: contestant`（解答者タブレット）・
  *   `role: audience`（観客）・副司会など非 host からの発動はサーバ側で拒否する
  *   （認証済みだが権限のないロール = **403**、セッション未確立・不正ロール = **401**）。
  *
@@ -24,12 +24,12 @@
  *
  * ネットワーク越しに偽装されうるセッション値を信頼しないため、入力を `unknown` として厳格に
  * 検査する（サーバ側最終防衛）。`src/participants/` の認可判定をリーフに保つため他モジュールへ
- * 依存しない。可視ラベルは「司会者」を用い、内部ロール識別子（host/answerer/audience）は
+ * 依存しない。可視ラベルは「司会者」を用い、内部ロール識別子（host/contestant/audience）は
  * エラーメッセージへ露出させない（監査用途で {@link ForbiddenRoleError.role} にのみ保持）。
  */
 
 /** ロールの宣言集合（内部識別子）。可視ラベルへの写像は本モジュールの責務外。 */
-export const ROLES = ["host", "answerer", "audience"] as const;
+export const ROLES = ["host", "contestant", "audience"] as const;
 
 /** アクセス・ルーティング判断に用いるロール。`participants` 等のセッション属性と一致する。 */
 export type Role = (typeof ROLES)[number];
@@ -51,7 +51,7 @@ export interface Session {
 export type HostSession = Session & { readonly role: "host" };
 
 /**
- * ホスト限定トリガーの登録簿。operation_flow の `forbidden_actors: [answerer]` および
+ * ホスト限定トリガーの登録簿。operation_flow の `forbidden_actors: [contestant]` および
  * host アクター指定（VB-22/23・VB-67・VB-72・VB-74・VB-75）に一致する。非 host UI は本集合に
  * 属する操作要素を置かず、サーバはこれらを {@link requireHost} で門番する。
  */
@@ -156,7 +156,7 @@ export function isHostSession(session: unknown): session is HostSession {
  * ロールチェックを再実装せず本関数を経由する。
  *
  * - セッション未確立（`null`/`undefined`/非オブジェクト）・不正ロール → {@link UnauthenticatedError}（401）
- * - 認証済みだが非 host（answerer/audience 等） → {@link ForbiddenRoleError}（403）
+ * - 認証済みだが非 host（contestant/audience 等） → {@link ForbiddenRoleError}（403）
  *
  * @throws {UnauthenticatedError} 認証が確立していない場合（401）。
  * @throws {ForbiddenRoleError} host でないロールが発動しようとした場合（403）。

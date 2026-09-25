@@ -20,7 +20,7 @@ import {
 } from "../src/participants/authorize.js";
 
 const hostSession: Session = { role: "host", participantId: 1, connectionId: "c-host" };
-const answererSession: Session = { role: "answerer", participantId: 2, connectionId: "c-ans" };
+const contestantSession: Session = { role: "contestant", participantId: 2, connectionId: "c-ans" };
 const audienceSession: Session = { role: "audience", connectionId: "c-tv" };
 
 /**
@@ -50,10 +50,10 @@ describe("participants/authorize — 締切・開示・取消の権限境界", (
   // codd: covers vb=VB-23
   it("解答者・観客・未認証からの締切・開示・正解発表・取消は 401/403 で拒否される", () => {
     for (const trigger of ["lock", "open", "reveal", "undo"] as const) {
-      const answererErr = captureThrow(() => authorizeTrigger(answererSession, trigger));
-      expect(answererErr).toBeInstanceOf(ForbiddenRoleError);
-      expect((answererErr as ForbiddenRoleError).status).toBe(403);
-      expect((answererErr as ForbiddenRoleError).role).toBe("answerer");
+      const contestantErr = captureThrow(() => authorizeTrigger(contestantSession, trigger));
+      expect(contestantErr).toBeInstanceOf(ForbiddenRoleError);
+      expect((contestantErr as ForbiddenRoleError).status).toBe(403);
+      expect((contestantErr as ForbiddenRoleError).role).toBe("contestant");
 
       const audienceErr = captureThrow(() => authorizeTrigger(audienceSession, trigger));
       expect(audienceErr).toBeInstanceOf(ForbiddenRoleError);
@@ -72,7 +72,7 @@ describe("participants/authorize — 精算・モード切替・読込・編集�
     expect(isHostOnlyTrigger("settle")).toBe(true);
     expect(authorizeTrigger(hostSession, "settle").session.role).toBe("host");
 
-    const forbidden = captureThrow(() => authorizeTrigger(answererSession, "settle"));
+    const forbidden = captureThrow(() => authorizeTrigger(contestantSession, "settle"));
     expect(forbidden).toBeInstanceOf(ForbiddenRoleError);
     expect((forbidden as ForbiddenRoleError).status).toBe(403);
 
@@ -96,7 +96,7 @@ describe("participants/authorize — 精算・モード切替・読込・編集�
     expect(isHostOnlyTrigger("load")).toBe(true);
     expect(authorizeTrigger(hostSession, "load").session.role).toBe("host");
 
-    const forbidden = captureThrow(() => authorizeTrigger(answererSession, "load"));
+    const forbidden = captureThrow(() => authorizeTrigger(contestantSession, "load"));
     expect(forbidden).toBeInstanceOf(ForbiddenRoleError);
     expect((forbidden as ForbiddenRoleError).status).toBe(403);
 
@@ -110,7 +110,7 @@ describe("participants/authorize — 精算・モード切替・読込・編集�
     expect(isHostOnlyTrigger("edit")).toBe(true);
     expect(authorizeTrigger(hostSession, "edit").session.role).toBe("host");
 
-    const forbidden = captureThrow(() => authorizeTrigger(answererSession, "edit"));
+    const forbidden = captureThrow(() => authorizeTrigger(contestantSession, "edit"));
     expect(forbidden).toBeInstanceOf(ForbiddenRoleError);
     expect((forbidden as ForbiddenRoleError).status).toBe(403);
   });
@@ -122,7 +122,7 @@ describe("participants/authorize — requireHost（単一のロール判定点�
     expect(authorized.role).toBe("host");
     expect(authorized.participantId).toBe(1);
     expect(isHostSession(hostSession)).toBe(true);
-    expect(isHostSession(answererSession)).toBe(false);
+    expect(isHostSession(contestantSession)).toBe(false);
   });
 
   it("観客(audience)セッションを 403 で拒否し、拒否ロールを監査用に保持する", () => {
@@ -149,7 +149,7 @@ describe("participants/authorize — requireHost（単一のロール判定点�
   });
 
   it("認可拒否はいずれも AuthorizationError であり status を保持する", () => {
-    const forbidden = captureThrow(() => requireHost(answererSession));
+    const forbidden = captureThrow(() => requireHost(contestantSession));
     const unauth = captureThrow(() => requireHost(undefined));
     expect(forbidden).toBeInstanceOf(AuthorizationError);
     expect(unauth).toBeInstanceOf(AuthorizationError);
@@ -157,10 +157,10 @@ describe("participants/authorize — requireHost（単一のロール判定点�
     expect((unauth as AuthorizationError).status).toBe(401);
   });
 
-  it("拒否メッセージに内部ロール識別子(host/answerer/audience)を露出しない", () => {
-    const forbidden = captureThrow(() => requireHost(answererSession)) as ForbiddenRoleError;
+  it("拒否メッセージに内部ロール識別子(host/contestant/audience)を露出しない", () => {
+    const forbidden = captureThrow(() => requireHost(contestantSession)) as ForbiddenRoleError;
     const unauth = captureThrow(() => requireHost(undefined)) as UnauthenticatedError;
-    for (const identifier of ["host", "answerer", "audience"]) {
+    for (const identifier of ["host", "contestant", "audience"]) {
       expect(forbidden.message).not.toContain(identifier);
       expect(unauth.message).not.toContain(identifier);
     }

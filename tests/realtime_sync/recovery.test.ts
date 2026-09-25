@@ -33,7 +33,7 @@ describe("realtime_sync/recovery 再接続時のサーバ権威からの状態�
   it("解答者はサーバ権威の進行状態と自分の残額・送信済みへ復帰し他者情報は復帰対象外", () => {
     const snap = buildSnapshot(
       gameState,
-      { role: "answerer", participantId: "p1", disclosed: false },
+      { role: "contestant", participantId: "p1", disclosed: false },
       authority,
     );
 
@@ -61,7 +61,7 @@ describe("realtime_sync/recovery 再接続時のサーバ権威からの状態�
   it("未送信の解答者は送信済み false へ・自分の残額のみ復帰する", () => {
     const snap = buildSnapshot(
       gameState,
-      { role: "answerer", participantId: "p2", disclosed: false },
+      { role: "contestant", participantId: "p2", disclosed: false },
       authority,
     );
     // p2 は submitted マップに無い → 送信済みは false。
@@ -77,7 +77,7 @@ describe("realtime_sync/recovery 再接続時のサーバ権威からの状態�
   it("残額未登録の解答者は残額 null・送信済み false へ復帰する", () => {
     const snap = buildSnapshot(
       gameState,
-      { role: "answerer", participantId: "unknown", disclosed: false },
+      { role: "contestant", participantId: "unknown", disclosed: false },
       authority,
     );
     expect(snap.ownBalance).toBeNull();
@@ -90,7 +90,7 @@ describe("realtime_sync/recovery 再接続時のサーバ権威からの状態�
   it("残額 0 の解答者は 0 を残額として復帰する（不在と 0 を混同しない）", () => {
     const snap = buildSnapshot(
       gameState,
-      { role: "answerer", participantId: "p3", disclosed: false },
+      { role: "contestant", participantId: "p3", disclosed: false },
       { balances: { p3: 0 }, submitted: {} },
     );
     // 0 円は「未登録（null）」ではなく数値 0 として復帰する。
