@@ -42,7 +42,7 @@ export interface DisclosureInput {
  * 提示する（dod_tv_hide_before_disclosure）。
  */
 export function renderTvModeB(input: DisclosureInput): DisclosureViewModel {
-  const heading = `${ROLE_LABELS.answerer}の解答`;
+  const heading = `${ROLE_LABELS.contestant}の解答`;
   if (!input.disclosed) {
     return { mode: "b", heading, disclosed: false, rows: [] };
   }

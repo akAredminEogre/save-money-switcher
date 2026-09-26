@@ -93,7 +93,7 @@ npm run dev          # tsc で dist へビルドし node dist/main.js を起動�
 5. **「問題を読み込む」** をもう一度押すと次の問へ進む。10 問すべて精算後に押すと総合一覧（TV=e・勝者）へ。
    任意の時点で **「個別ジャンプ」→「総合一覧」** でも e を表示できる。
 
-live 反映は **SSE**（Server-Sent Events）で行う（`/events?role=host|answerer|audience`・ws 依存なし）。
+live 反映は **SSE**（Server-Sent Events）で行う（`/events?role=host|contestant|audience`・ws 依存なし）。
 各画面は progressive enhancement で、初期 chrome は静的に返し `client.js` が SSE 購読・操作を担う。
 
 ### 開発環境へ別端末（スマホ）から接続する場合（任意）

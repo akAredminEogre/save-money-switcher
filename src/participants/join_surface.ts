@@ -22,7 +22,7 @@
  * ビュー投影である。許可済・非満席のときのみ氏名の自己入力欄と「参加する」を提示し、可視要素は
  * それに限る（事前氏名台帳・端末番号割当の入力要素を型としても持たない・dod_join_no_seat_ledger_ui）。
  * 満席時・アクセス不可時・分岐B 未認証時は job-to-be-done 平易文へ分岐し、設定キー名
- * （MAX_TABLET_CONNECTIONS 等）・接続数会計（◯/◯台）・内部ロール識別子（host/answerer/
+ * （MAX_TABLET_CONNECTIONS 等）・接続数会計（◯/◯台）・内部ロール識別子（host/contestant/
  * audience）・アクセス制御方式（トークン/認証）を一切露出しない（dod_join_full_plain_copy /
  * dod_join_access_denied_plain_copy）。未認証・未参加の到達点に制御盤操作等の保護ナビを露出
  * させず、分岐B 未認証はログインへ誘導する（dod_join_no_protected_nav）。
@@ -104,7 +104,7 @@ export interface JoinSurfaceInput {
   readonly accessGranted: boolean;
   /** 分岐B（認証）で未認証のため、保護ナビを露出せずログインへ誘導すべきか。 */
   readonly loginRedirectRequired: boolean;
-  /** answerer 接続が上限に達している（満席）か（admitTablet の over_limit 相当）。 */
+  /** contestant 接続が上限に達している（満席）か（admitTablet の over_limit 相当）。 */
   readonly atCapacity: boolean;
 }
 
@@ -129,7 +129,7 @@ export function renderJoinSurface(input: JoinSurfaceInput): JoinSurfaceViewModel
   }
   return {
     kind: "form",
-    heading: `${ROLE_LABELS.answerer}として参加`,
+    heading: `${ROLE_LABELS.contestant}として参加`,
     prompt: JOIN_NAME_PROMPT,
     fields: [
       { purpose: "display_name", control: "text", maxLength: MAX_DISPLAY_NAME_LENGTH },

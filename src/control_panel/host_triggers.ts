@@ -21,9 +21,9 @@
  * （操作語）で可視化してよい唯一のアクターである。本モジュールは §2.7 が列挙する全トリガー
  * を「内部コマンド識別子（非可視・`data-command` にのみ用いる）」と「司会者向けの可視操作語
  * ラベル」の対で一元定義する。可視ラベルには内部イベント名（`answers_locked` 等）・内部ロール
- * 識別子（host/answerer）・設定キー名・point/pt/点 を一切含めない（dod_cp_visible_host_triggers /
+ * 識別子（host/contestant）・設定キー名・point/pt/点 を一切含めない（dod_cp_visible_host_triggers /
  * dod_cp_no_internal_leak）。解答者用の数値入力送信面（+1/-1/+10/-10 と送信）は本集合に
- * 含めない（dod_cp_no_answerer_input_face）。副司会という別ロール導線も発明しない。
+ * 含めない（dod_cp_no_contestant_input_face）。副司会という別ロール導線も発明しない。
  */
 
 /**

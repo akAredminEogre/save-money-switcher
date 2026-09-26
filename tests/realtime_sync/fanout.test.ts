@@ -44,14 +44,14 @@ describe("realtime_sync/fanout ロール投影による可視境界", () => {
       // 解答者（タブレット）: 他者の解答は開示状態に依らず常に配信外。
       expect(
         projectForRole(answersOpened, {
-          role: "answerer",
+          role: "contestant",
           participantId: "p1",
           disclosed: false,
         }),
       ).toBeNull();
       expect(
         projectForRole(answersOpened, {
-          role: "answerer",
+          role: "contestant",
           participantId: "p1",
           disclosed: true,
         }),
@@ -104,9 +104,9 @@ describe("realtime_sync/fanout ロール投影による可視境界", () => {
     });
   });
 
-  describe("解答者（answerer）", () => {
-    const answererCtx: ProjectionContext = {
-      role: "answerer",
+  describe("解答者（contestant）", () => {
+    const contestantCtx: ProjectionContext = {
+      role: "contestant",
       participantId: "p1",
       disclosed: true,
     };
@@ -121,7 +121,7 @@ describe("realtime_sync/fanout ロール投影による可視境界", () => {
         currency: "円",
         payload: { balances: { p1: 9500, p2: 10000, p3: 8700 } },
       };
-      const projected = projectForRole(balanceEvent, answererCtx);
+      const projected = projectForRole(balanceEvent, contestantCtx);
       expect(projected).not.toBeNull();
       const ownEvent = projected as ServerEvent<OwnBalancePayload>;
       // 期待値（自分 p1 の 9500 円）は入力から独立に記述する。
@@ -162,9 +162,9 @@ describe("realtime_sync/fanout ロール投影による可視境界", () => {
         ts: 0,
         payload: { name: "花子" },
       };
-      expect(projectForRole(othersAnswers, answererCtx)).toBeNull();
-      expect(projectForRole(settlementTable, answererCtx)).toBeNull();
-      expect(projectForRole(roster, answererCtx)).toBeNull();
+      expect(projectForRole(othersAnswers, contestantCtx)).toBeNull();
+      expect(projectForRole(settlementTable, contestantCtx)).toBeNull();
+      expect(projectForRole(roster, contestantCtx)).toBeNull();
     });
 
     it("正解開示イベントは解答者へ配信されない（自分の可視面に含まれない）", () => {
@@ -174,7 +174,7 @@ describe("realtime_sync/fanout ロール投影による可視境界", () => {
         ts: 0,
         payload: { correctValue: 50 },
       };
-      expect(projectForRole(revealed, answererCtx)).toBeNull();
+      expect(projectForRole(revealed, contestantCtx)).toBeNull();
     });
 
     it("入力ロック等の自分に関わる進行イベントは解答者へ配信される", () => {
@@ -186,7 +186,7 @@ describe("realtime_sync/fanout ロール投影による可視境界", () => {
         payload: {},
       };
       const projected = projectForRole(locked, {
-        role: "answerer",
+        role: "contestant",
         participantId: "p1",
         disclosed: false,
       });
@@ -204,10 +204,10 @@ describe("realtime_sync/fanout ロール投影による可視境界", () => {
         payload: { balances: { p2: 10000 } },
       };
       // participantId 無し → 自分の残額を特定できないため配信しない。
-      expect(projectForRole(ev, { role: "answerer", disclosed: true })).toBeNull();
+      expect(projectForRole(ev, { role: "contestant", disclosed: true })).toBeNull();
       // 自分（p1）が当該更新に含まれない → 配信しない。
       expect(
-        projectForRole(ev, { role: "answerer", participantId: "p1", disclosed: true }),
+        projectForRole(ev, { role: "contestant", participantId: "p1", disclosed: true }),
       ).toBeNull();
     });
   });

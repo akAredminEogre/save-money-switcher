@@ -20,38 +20,38 @@ import { ROLE_LABELS } from "../../src/game_state/role_labels.js";
 // shared_domain_model §1.5 の「可視ロールラベルの単一供給点」を検証し、次の 2 つの
 // DoD を機械可検化する:
 //   - dod_labels_business_facing: 全サーフェスの可視文言でロールが 司会者/解答者/観客
-//     の可視ラベルで表され、内部識別子 host/answerer/audience が露出しない。
+//     の可視ラベルで表され、内部識別子 host/contestant/audience が露出しない。
 //   - dod_labels_single_source: 可視ロールラベルが単一のラベル定義
 //     src/game_state/role_labels.ts（ROLE_LABELS）から供給される。
 // これらは VB-80「全サーフェスでロールが 司会者/解答者/観客 の可視ラベルで表され
-// host/answerer/audience が露出せず、単一ラベル定義から供給される」に対応する。
+// host/contestant/audience が露出せず、単一ラベル定義から供給される」に対応する。
 // ここでは唯一の供給点である src/game_state/role_labels.ts の ROLE_LABELS を実際に
 // import して評価し、各サーフェスの可視文言がこの写像から供給されることを型・実値で
 // 押さえる。
 describe("game_state/role_labels 可視ロールラベルの単一供給", () => {
   // codd: covers vb=VB-80
-  it("全ロールを 司会者/解答者/観客 の可視ラベルへ写し内部識別子 host/answerer/audience を露出しない", () => {
+  it("全ロールを 司会者/解答者/観客 の可視ラベルへ写し内部識別子 host/contestant/audience を露出しない", () => {
     // 単一ラベル定義（src/game_state/role_labels.ts）からの写像を、SUT の出力とは
     // 独立に固定した設計確定の可視文言（surface_copy_obligations §1.5・
     // shared_domain_model §1.5・decision_records §1.4 が verbatim に固定）と照合する。
     // dod_labels_business_facing の「司会者/解答者/観客 で表す」側を押さえる。
     expect(ROLE_LABELS.host).toBe("司会者");
-    expect(ROLE_LABELS.answerer).toBe("解答者");
+    expect(ROLE_LABELS.contestant).toBe("解答者");
     expect(ROLE_LABELS.audience).toBe("観客");
 
     // 可視ラベル「値」のみ（内部識別子であるキーは対象外）を走査し、
-    // host / answerer / audience の内部識別子が可視文言へ漏れないことを確かめる。
-    // dod_labels_business_facing の「内部識別子 host/answerer/audience を露出しない」
+    // host / contestant / audience の内部識別子が可視文言へ漏れないことを確かめる。
+    // dod_labels_business_facing の「内部識別子 host/contestant/audience を露出しない」
     // 側を押さえる。ラベルが内部識別子へ差し替わると toBe と本ガードの双方が RED になる。
     for (const label of Object.values(ROLE_LABELS)) {
-      expect(label).not.toMatch(/host|answerer|audience/i);
+      expect(label).not.toMatch(/host|contestant|audience/i);
     }
   });
 
   it("3 ロールすべてに非空の可視ラベルが単一供給点から供給され、ラベルが互いに重複しない", () => {
     // dod_labels_single_source: 唯一の供給点 ROLE_LABELS が全ロールを網羅し、
     // 識別可能な相異なるラベルを与えることを確かめる（供給点の完全性と一意性）。
-    const roles = ["host", "answerer", "audience"] as const;
+    const roles = ["host", "contestant", "audience"] as const;
     for (const role of roles) {
       expect(typeof ROLE_LABELS[role]).toBe("string");
       expect(ROLE_LABELS[role].length).toBeGreaterThan(0);

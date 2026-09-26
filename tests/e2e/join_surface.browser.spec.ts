@@ -186,7 +186,7 @@ describe("参加受付サーフェス（/join）の可視要素・禁止要素�
       // 方式の内部語を露出してはならない（§3.2「禁止コピーの不在は文言差に依らず検証必須」）。
       const visibleText = await page.locator("body").innerText();
 
-      // dod_join_full_plain_copy: 内部ロール識別子（host/answerer/audience）の非露出。
+      // dod_join_full_plain_copy: 内部ロール識別子（host/contestant/audience）の非露出。
       expect(
         scanForbiddenCopy(visibleText, { categories: ["internal_role_identifier"] }),
         "/join にロール識別子が無いこと",

@@ -19,7 +19,7 @@
  *
  * 全ブラウザスペックが import する正準の assertion 面。禁止コピー走査（forbidden-copy）を
  * 再エクスポートしつつ、円建て（`円` を含み `point`/`pt`/`点` を含まない）・d モードの 6 列
- * 見出し（氏名/解答/誤差/増減円/ピタリ賞/残額）・ロール可視ラベル（内部識別子 host/answerer/
+ * 見出し（氏名/解答/誤差/増減円/ピタリ賞/残額）・ロール可視ラベル（内部識別子 host/contestant/
  * audience 非露出）の各アサートを供給する。金額単位・可視ラベルは producer（`src/scoring/yen`・
  * `src/game_state/role_labels`）の宣言へ束縛し、二重定義のドリフトを排除する。
  */
@@ -89,14 +89,14 @@ export function isVisibleRoleLabel(label: string): boolean {
 }
 
 /**
- * 可視文言に内部ロール識別子（host/answerer/audience）が露出していないことを保証する
+ * 可視文言に内部ロール識別子（host/contestant/audience）が露出していないことを保証する
  * （ロールは司会者/解答者/観客の可視ラベルでのみ表す・VB-80）。
  */
 export function assertRoleLabelsBusinessFacing(text: string): void {
   const leaks = scanForbiddenCopy(text, { categories: ["internal_role_identifier"] });
   if (leaks.length > 0) {
     throw new Error(
-      `可視文言に内部ロール識別子(host/answerer/audience)が露出しています: ${leaks
+      `可視文言に内部ロール識別子(host/contestant/audience)が露出しています: ${leaks
         .map((v) => v.match)
         .join(", ")}`,
     );

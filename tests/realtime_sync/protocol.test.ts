@@ -39,7 +39,7 @@ import {
 
 describe("realtime_sync/protocol の語彙を確定値に固定する", () => {
   it("ロール/進行段階/TV モードの語彙を確定値どおり公開する", () => {
-    expect([...ROLES]).toEqual(["host", "answerer", "audience"]);
+    expect([...ROLES]).toEqual(["host", "contestant", "audience"]);
     expect([...GAME_STAGES]).toEqual([
       "accepting",
       "answers_locked",
@@ -240,25 +240,25 @@ describe("クライアントコマンド語彙と許可ロール（司会者限�
       expect(isHostOnlyCommand(cmd)).toBe(true);
       expect([...allowedRolesForCommand(cmd)]).toEqual(["host"]);
       expect(isCommandAllowedForRole(cmd, "host")).toBe(true);
-      expect(isCommandAllowedForRole(cmd, "answerer")).toBe(false);
+      expect(isCommandAllowedForRole(cmd, "contestant")).toBe(false);
       expect(isCommandAllowedForRole(cmd, "audience")).toBe(false);
     }
   });
 
   it("解答者・任意ロールのコマンドは司会者限定に含めない", () => {
     expect(isHostOnlyCommand("submit_answer")).toBe(false);
-    expect([...COMMAND_ALLOWED_ROLES.submit_answer]).toEqual(["answerer"]);
-    expect(isCommandAllowedForRole("submit_answer", "answerer")).toBe(true);
+    expect([...COMMAND_ALLOWED_ROLES.submit_answer]).toEqual(["contestant"]);
+    expect(isCommandAllowedForRole("submit_answer", "contestant")).toBe(true);
     expect(isCommandAllowedForRole("submit_answer", "host")).toBe(false);
     expect(isCommandAllowedForRole("submit_answer", "audience")).toBe(false);
 
     expect(isHostOnlyCommand("join")).toBe(false);
-    expect([...allowedRolesForCommand("join")]).toEqual(["answerer"]);
+    expect([...allowedRolesForCommand("join")]).toEqual(["contestant"]);
 
     // resume はトークン提示による任意ロールの再接続を許す。
     expect(isHostOnlyCommand("resume")).toBe(false);
     expect(isCommandAllowedForRole("resume", "host")).toBe(true);
-    expect(isCommandAllowedForRole("resume", "answerer")).toBe(true);
+    expect(isCommandAllowedForRole("resume", "contestant")).toBe(true);
     expect(isCommandAllowedForRole("resume", "audience")).toBe(true);
   });
 

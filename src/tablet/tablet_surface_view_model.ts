@@ -23,7 +23,7 @@ import { tabletStatusLabel, isInputLocked, type TabletInputStatus } from "./tabl
 /**
  * 解答者タブレット面の表示モデル（`module:tablet`・surface_copy_obligations §2.3 /
  * op_render_tablet_surface / dod_tablet_minimal_elements_only /
- * dod_tablet_no_others_info / dod_tablet_answerer_copy_only）。
+ * dod_tablet_no_others_info / dod_tablet_contestant_copy_only）。
  *
  * タブレットは **入力専用最小 UI** であり、可視要素は 問題番号・数値入力（−10/−1/+1/+10 の
  * 4 ボタン）・送信／送信済み・自分の残額（円）・受付中／締切 に限られる（N-1・第三要件）。
@@ -100,7 +100,7 @@ export interface TabletSurfaceViewModel {
   readonly displayName?: string;
 }
 
-const ANSWERER_ROLE: Role = "answerer";
+const CONTESTANT_ROLE: Role = "contestant";
 // 数値入力は −10/−1/+1/+10 の 4 ボタン方式（テンキー直接入力ではない・N-1）。
 const STEP_DELTAS = [-10, -1, 1, 10] as const;
 const NUMERIC_INPUT_LABEL = "数値入力";
@@ -127,7 +127,7 @@ export function buildTabletSurfaceViewModel(state: TabletSurfaceState): TabletSu
     disabled: locked,
   }));
   return {
-    roleLabel: ROLE_LABELS[ANSWERER_ROLE],
+    roleLabel: ROLE_LABELS[CONTESTANT_ROLE],
     numericInputLabel: NUMERIC_INPUT_LABEL,
     statusLabel: tabletStatusLabel(state.status),
     questionNumberLabel: `第${state.questionNumber}問`,

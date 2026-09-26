@@ -316,7 +316,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   if (path === "/events" && req.method === "GET") {
     const roleParam = url.searchParams.get("role");
     const role: Role =
-      roleParam === "host" || roleParam === "answerer" || roleParam === "audience"
+      roleParam === "host" || roleParam === "contestant" || roleParam === "audience"
         ? roleParam
         : "audience";
     const participantId = url.searchParams.get("participantId");

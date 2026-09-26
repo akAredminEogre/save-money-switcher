@@ -64,7 +64,7 @@ describe("participants/join_surface /join サーフェス描画（SCO §2.6・op
     // 満席メッセージに限定して禁止露出を走査する。
     expect(vm.message).not.toMatch(/MAX_TABLET_CONNECTIONS|JOIN_ACCESS_TOKEN|PUBLIC_BASE_URL/);
     expect(vm.message).not.toMatch(/\d+\s*\/\s*\d+/); // 接続数会計（◯/◯台）
-    expect(vm.message).not.toMatch(/host|answerer|audience/i); // 内部ロール識別子
+    expect(vm.message).not.toMatch(/host|contestant|audience/i); // 内部ロール識別子
     expect(vm.message).not.toMatch(/point|pt|点/i);
   });
 
@@ -117,8 +117,8 @@ describe("participants/join_surface /join サーフェス描画（SCO §2.6・op
     });
     if (vm.kind !== "form") throw new Error("form を期待");
     // 可視ロールラベルは単一供給点から供給される（解答者ラベルを含む）。
-    expect(vm.heading).toContain(ROLE_LABELS.answerer);
-    // 内部識別子 host/answerer/audience は可視文言へ出さない。
-    expect(vm.heading).not.toMatch(/host|answerer|audience/i);
+    expect(vm.heading).toContain(ROLE_LABELS.contestant);
+    // 内部識別子 host/contestant/audience は可視文言へ出さない。
+    expect(vm.heading).not.toMatch(/host|contestant|audience/i);
   });
 });

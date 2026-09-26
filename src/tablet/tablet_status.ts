@@ -19,7 +19,7 @@
  *
  * 解答者面は「入力を受け付けている（受付中）」「締め切られた（締切）」の 2 状態のみを
  * 可視化する。ここで供給する語は **運用語**（受付中／締切）であり、内部イベント名
- * （accepting / answers_locked 等）を可視文言へ露出させない（dod_tablet_answerer_copy_only /
+ * （accepting / answers_locked 等）を可視文言へ露出させない（dod_tablet_contestant_copy_only /
  * VB-79）。タブレットは入力専用最小面ゆえ、状態は入力可否の 2 値に限り、開示・正解発表・
  * 精算といった他段階を解答者へ出さない（他段階は TV／制御盤の役割）。
  *

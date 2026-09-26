@@ -29,7 +29,7 @@ steps:
 - &id001
   id: role_labels_single_source
   kind: copy_source_module
-  rationale: Define ROLE_LABELS (host→司会者 / answerer→解答者 / audience→観客) keyed by Role
+  rationale: Define ROLE_LABELS (host→司会者 / contestant→解答者 / audience→観客) keyed by Role
     as the single canonical label source that every surface imports, so internal role
     identifiers never leak into visible copy.
   source_design_section: §2.8 可視ラベルの単一供給 / op_map_role_labels_in_copy (dod_labels_single_source)
@@ -86,10 +86,10 @@ steps:
   rationale: Render the host operational console at /control-panel exposing every
     host trigger (問題を読み込む/そこまで/解答オープン！/正解発表/精算/次へ/戻る/個別ジャンプ/取消/編集) as 司会者向け operation
     words, the participant roster (self-input participants.name), and the join QR,
-    while excluding the answerer number-input face; stage状態 uses status_copy and roles
+    while excluding the contestant number-input face; stage状態 uses status_copy and roles
     use ROLE_LABELS with no internal identifier/event-name/config-key leak.
   source_design_section: §2.2 / op_render_control_panel_surface (dod_cp_visible_host_triggers,
-    dod_cp_no_answerer_input_face, dod_cp_shows_join_qr_and_roster, dod_cp_no_internal_leak)
+    dod_cp_no_contestant_input_face, dod_cp_shows_join_qr_and_roster, dod_cp_no_internal_leak)
   target_path_hint: src/control_panel/
   inputs: []
   expected_outputs:
@@ -105,7 +105,7 @@ steps:
   id: control_panel_connection_count_display
   kind: count_readback_render
   rationale: On the host console render the tablet-connection 把握 as "◯/◯台" whose source
-    is the current answerer connection count and the resolved MAX_TABLET_CONNECTIONS;
+    is the current contestant connection count and the resolved MAX_TABLET_CONNECTIONS;
     at capacity it reads e.g. 8/8台, and this count is rendered host-only and never
     surfaced to /tablet, /tv, or /join.
   source_design_section: §2.2 / op_render_control_panel_surface expected_outcomes
@@ -127,9 +127,9 @@ steps:
   rationale: Render /tablet as an input-only minimal UI limited to 問題番号・4-button 数値入力(0〜100
     clamp)・送信/送信済み・自分の残額 (latest own balance via formatYen)・受付中/締切 (via status_copy),
     excluding host controls, others' answers/balances/scores, output content, and
-    全体一覧, with answerer-only copy and no permission-boundary explanation.
+    全体一覧, with contestant-only copy and no permission-boundary explanation.
   source_design_section: §2.3 / op_render_tablet_surface (dod_tablet_minimal_elements_only,
-    dod_tablet_no_others_info, dod_tablet_no_control_actions, dod_tablet_answerer_copy_only)
+    dod_tablet_no_others_info, dod_tablet_no_control_actions, dod_tablet_contestant_copy_only)
   target_path_hint: src/tablet/
   inputs: []
   expected_outputs:
@@ -259,7 +259,7 @@ steps:
   id: map_role_labels_in_copy
   kind: copy_enforcement
   rationale: Bind every surface's role-bearing copy to ROLE_LABELS so roles read 司会者/解答者/観客
-    everywhere and the internal identifiers host/answerer/audience never appear in
+    everywhere and the internal identifiers host/contestant/audience never appear in
     any visible 文言.
   source_design_section: §2.8 / op_map_role_labels_in_copy (dod_labels_business_facing,
     dod_labels_single_source)
@@ -277,8 +277,8 @@ steps:
 - &id014
   id: test_role_labels_unit
   kind: unit_test
-  rationale: Assert ROLE_LABELS maps host/answerer/audience to 司会者/解答者/観客 and that
-    no emitted label contains the internal identifiers host/answerer/audience.
+  rationale: Assert ROLE_LABELS maps host/contestant/audience to 司会者/解答者/観客 and that
+    no emitted label contains the internal identifiers host/contestant/audience.
   source_design_section: §2.11 tests/game_state/role_labels.test.ts
   target_path_hint: tests/game_state/role_labels.test.ts
   inputs: []
@@ -333,7 +333,7 @@ steps:
   kind: browser_e2e_test
   rationale: Drive /control-panel with Playwright (declared/verified in Vitest) to
     assert the visible host triggers, roster (self-input names) and join QR are present,
-    the answerer number-input send face is absent, and no 内部ロール識別子/内部イベント名/設定キー名/point/pt/点/デモ表記
+    the contestant number-input send face is absent, and no 内部ロール識別子/内部イベント名/設定キー名/point/pt/点/デモ表記
     appear.
   source_design_section: §2.2 / op_render_control_panel_surface (dod_cp_*)
   target_path_hint: tests/e2e/control_panel_surface.browser.spec.ts
