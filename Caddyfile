@@ -1,0 +1,7 @@
+# Caddyfile（cmd_2553 S6）。SITE_ADDRESS はデプロイ時注入（例: <静的IP>.sslip.io — 独自ドメインなし・
+# 追加課金なしで Let's Encrypt の有効 TLS を得る）。SSE のため flush_interval -1 を明示する。
+{$SITE_ADDRESS} {
+	reverse_proxy app:3000 {
+		flush_interval -1
+	}
+}

@@ -1,0 +1,17 @@
+node_modules
+dist
+data
+tmp
+test-results
+screenshots
+docs
+tests
+codd
+findings.md
+.env
+.env.*
+*.md
+.git
+.gitignore
+# Dockerfile / docker-compose.yml / Caddyfile はビルド成果物に不要だが、
+# リモートコンテキストビルド等でデプロイ資産として参照されるため除外しない（Copilot PR#5 指摘）。
