@@ -7,7 +7,8 @@
   if (params.has("mode")) return; // 静的モード表示は購読せず初期 chrome を保つ
   var app = document.getElementById("app");
   if (!app) return;
-  var es = new EventSource("/events?role=audience");
+  // 観客向け受動面。購読可否と投影ロールはサーバが決める（観客投影のみが流れる）。
+  var es = new EventSource("/events?surface=tv");
   es.onmessage = function (ev) {
     try {
       var msg = JSON.parse(ev.data);

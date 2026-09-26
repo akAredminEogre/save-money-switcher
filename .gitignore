@@ -16,6 +16,9 @@ dist/
 # CoDD verify output (regenerated each run, machine-local)
 .codd/verify/
 
+# 永続データ（アカウント等・実データゆえ非コミット）
+data/
+
 # Test artifacts
 test-results/
 # Smoke/E2E screenshots (may contain PII, machine-local)

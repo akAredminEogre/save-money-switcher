@@ -38,12 +38,12 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type BrowserContext } from "playwright";
 import { assertServerHealthy } from "./helpers/server-health.js";
+import { startAppInstance, createAdminContext, type AppInstance } from "./helpers/app-instance.js";
 import { scanForbiddenCopy } from "./helpers/assertions.js";
 
-const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const TABLET_URL = `${BASE_URL}/tablet`;
+
 
 /** 司会者向け操作語（§2.2・§2.7 が verbatim に固定・可視文言として /tablet に不在）。 */
 const HOST_OPERATIONAL_WORDS = [
@@ -103,18 +103,28 @@ const ROSTER_COPY = ["参加者", "全員", "一覧"];
 
 describe("タブレット面の可視要素・禁止コピー・禁止導線（SCO-2・dod_tablet_*）", () => {
   let browser: Browser;
+  let app: AppInstance;
+  let context: BrowserContext;
+  let TABLET_URL: string;
 
+  // 案A（2026-08-28 殿裁可）で解答面の身元は Cookie セッションが持つため、本スペック専用の
+  // 隔離実体を起動し、使い捨ての資格情報でログインした文脈から面を開く。
   beforeAll(async () => {
     browser = await chromium.launch({ headless: true });
-  }, 60_000);
+    app = await startAppInstance("tablet");
+    TABLET_URL = `${app.baseUrl}/tablet`;
+    context = await createAdminContext(browser, app);
+  }, 180_000);
 
   afterAll(async () => {
+    if (context) await context.close();
     if (browser) await browser.close();
+    if (app) await app.stop();
   });
 
   // codd: covers vb=VB-41
   it("可視要素・可視文言が解答者向け入力専用に限られ、司会者操作語・内部露出・point/pt/点 が無い", async () => {
-    const page = await browser.newPage();
+    const page = await context.newPage();
     try {
       const res = await page.goto(TABLET_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
@@ -160,7 +170,7 @@ describe("タブレット面の可視要素・禁止コピー・禁止導線（S
 
   // codd: covers vb=VB-44
   it("他者の氏名・解答・残額・得点、出題本文・メディア、全体一覧が表示されない", async () => {
-    const page = await browser.newPage();
+    const page = await context.newPage();
     try {
       const res = await page.goto(TABLET_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
@@ -188,7 +198,7 @@ describe("タブレット面の可視要素・禁止コピー・禁止導線（S
 
   // codd: covers vb=VB-24
   it("締切・開示・正解発表・精算・モード切替・取消の操作要素が /tablet に存在しない", async () => {
-    const page = await browser.newPage();
+    const page = await context.newPage();
     try {
       const res = await page.goto(TABLET_URL, { waitUntil: "domcontentloaded" });
       expect(res).not.toBeNull();
