@@ -53,7 +53,7 @@ import { accountsFilePath, createJsonAccountStore } from "./accounts/json_accoun
 import { createPgAccountStore } from "./accounts/pg_account_store.js";
 import { createPgEpisodeStore } from "./episodes/pg_episode_store.js";
 import { resolveStoreBackend } from "./config/store_backend.js";
-import { createPgPool, type Pool } from "./persistence/pg/pool.js";
+import { createPgPool } from "./persistence/pg/pool.js";
 import { assertReleaseReady, ensureSchema } from "./persistence/pg/ensure_schema.js";
 import { migrateJsonToPg } from "./persistence/pg/migrate_from_json.js";
 import {
@@ -298,15 +298,7 @@ function sendRedirect(res: ServerResponse, location: string, setCookie?: string)
 const storeBackend = resolveStoreBackend();
 
 /** PG バックエンド時だけ生成する単一 Pool（json 時は接続を一切作らない）。 */
-let pgPool: Pool | undefined;
-try {
-  pgPool = storeBackend === "pg" ? createPgPool() : undefined;
-} catch (err) {
-  const name = err instanceof Error ? err.name : "UnknownError";
-  const message = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`[save-money-switcher] persistence init failed: ${name}: ${message}\n`);
-  process.exit(1);
-}
+const pgPool = storeBackend === "pg" ? createPgPool() : undefined;
 
 /** アカウント永続層（設計 D7・境界の裏ゆえ実装差し替えが局所で済む）。 */
 const accountStore =
@@ -618,6 +610,7 @@ const ERROR_MESSAGES: Readonly<Record<string, string>> = {
   login_id: "ログインIDを確かめてくだされ。",
   duplicate_login_id: "そのログインIDは既に使われています。",
   weak_password: "パスワードが短すぎます。",
+  password_mismatch: "確認用のパスワードが一致しません。",
   display_name: "お名前を確かめてくだされ。",
   not_invited: "この回へは招待されていません。",
   episode_busy: "別の回が進行中です。進行中の回を終えてからお試しくだされ。",
@@ -756,13 +749,21 @@ function serializeAdminEpisodeDetail(
     (view.members.length > 0 ? `<ul data-field="member-list">${memberRows}</ul>` : "") +
     `<form id="member-create-form" name="member-create" method="post" action="${base}/contestants" data-form="member-create">` +
     `<label for="member-create-login-id">ログインID` +
-    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="off" data-1p-ignore ` +
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 回の解答者作成フォームの
+    // login_id からも data-1p-ignore を除去し、account-create フォームと扱いを揃える（同じ signup 型）。
+    `<input type="text" id="member-create-login-id" name="login_id" autocomplete="username" ` +
     `maxlength="${view.loginIdMaxLength}" aria-label="ログインID"></label>` +
     `<label for="member-create-password">はじめのパスワード（${view.minPasswordLength}文字以上）` +
     `<input type="password" id="member-create-password" name="password" autocomplete="new-password" ` +
     `aria-label="はじめのパスワード"></label>` +
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を追加し、
+    // account-create と同型で『新規パスワード生成』を一意化＋ログインフォームとのシグネチャ分岐で
+    // 保存済みログインの item マッチを断つ。出典: https://www.1password.dev/web/compatible-website-design/
+    `<label for="member-create-confirm-password">はじめのパスワード（確認）` +
+    `<input type="password" id="member-create-confirm-password" name="confirm_password" autocomplete="new-password" ` +
+    `aria-label="はじめのパスワード（確認）"></label>` +
     `<label for="member-create-display-name">お名前` +
-    `<input type="text" id="member-create-display-name" name="display_name" autocomplete="off" ` +
+    `<input type="text" id="member-create-display-name" name="display_name" autocomplete="off" data-1p-ignore ` +
     `maxlength="${view.displayNameMaxLength}" aria-label="お名前"></label>` +
     `<button type="submit" data-op="create-member">${escapeHtml(view.memberCreateSubmitLabel)}</button>` +
     `</form>` +
@@ -814,12 +815,26 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
         `name="account-update-${escapeHtml(account.id)}" ` +
         `method="post" action="/admin/accounts/${encodeURIComponent(account.id)}" ` +
         `data-form="account-update">` +
-        `<input type="text" autocomplete="username" data-1p-ignore value="${escapeHtml(account.loginId)}" readonly hidden>` +
+        // cmd_2553「次の手」: 更新行が保持しておった隠しログインID欄（value 入り・name 無し・
+        // 送信対象外の PM ヒント）を撤去する。autocomplete="off" では Chrome がパスワード欄向けの
+        // off を無視するうえ、値自体が残るため「この頁には既存資格情報が在る＝合言葉変更の場面」と
+        // 分類され、同頁の新規作成フォームで生成提案が抑止されておった（7735984 の in-place 無効化では
+        // 消えぬ汚染源）。欄ごと除けば /admin/accounts が正常に働く /admin/episodes（更新行なし）と
+        // 同じ「既存資格情報なし」の頁文脈になる。account.id は form の id/name/action に在るため機能不変。
         `<input type="text" id="account-update-display-name-${escapeHtml(account.id)}" ` +
         `name="display_name" value="${escapeHtml(account.displayName)}" autocomplete="off" ` +
         `maxlength="20" aria-label="お名前">` +
+        // cmd_2553 Stage1: 更新行の password 欄を既定=閉の <details> で包み、初期の可視/フォーカス面から
+        // 外す。閉じた <details> の子は display:none ゆえ、頁内で可視な new-password 欄が作成フォームの
+        // 1 個だけになり、PM の生成提案が復活する（機序 M2）。ネイティブ要素ゆえ JS 不要・no-JS でも動く。
+        // 保存ボタンは details の外に残す: 表示名だけ直す時に details を開かずに済み、空 password は
+        // 更新ハンドラ（/admin/accounts/:id）が『変更なし』扱いにする（main.ts の password !== "" ガード）
+        // ゆえ挙動は保たれる。input 文字列は served HTML に残る（details 内）ため既存 spec の contains 判定は不変。
+        `<details data-field="account-update-password">` +
+        `<summary>パスワードを変更する</summary>` +
         `<input type="password" id="account-update-password-${escapeHtml(account.id)}" ` +
-        `name="password" autocomplete="new-password" aria-label="新しいパスワード">` +
+        `name="password" autocomplete="new-password" aria-label="新しいパスワード" data-1p-ignore>` +
+        `</details>` +
         `<button type="submit" data-op="update-account">この人を保存する</button>` +
         `</form></li>`,
     )
@@ -831,13 +846,26 @@ function serializeAdminAccounts(accounts: readonly Account[], message: string): 
     (rows === "" ? `<p data-field="empty">解答者はまだいません。</p>` : `<ul data-field="account-list">${rows}</ul>`) +
     `<form id="account-create-form" name="account-create" method="post" action="/admin/accounts" data-form="account-create">` +
     `<label for="account-create-login-id">ログインID` +
-    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="off" data-1p-ignore ` +
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 作成フォームの login_id から
+    // data-1p-ignore を除去する。有力仮説＝この属性が 1Password に username 欄を無視させ、
+    // new-password 欄との対応付け（signup 分類）を弱めて生成サジェスト自体を抑止している。
+    // 9/18 御指示（username 保持＋data-1p-ignore 付与）の反転だが殿明示裁可済。password 欄は
+    // 元より data-1p-ignore を持たぬゆえ変更なし。
+    `<input type="text" id="account-create-login-id" name="login_id" autocomplete="username" ` +
     `aria-label="ログインID"></label>` +
     `<label for="account-create-password">はじめのパスワード` +
     `<input type="password" id="account-create-password" name="password" autocomplete="new-password" ` +
     `aria-label="はじめのパスワード"></label>` +
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を追加する。
+    // 効能 (a) 1Password 公式の new-password 型（password＋confirm の 2 つの new-password）に合致させ、
+    // 当該フォームを『新規パスワード生成』の場面として一意化する。効能 (b) ログインフォーム（password 欄 1 個）
+    // とフィールドシグネチャが分岐し、同一ドメインに保存済みの admin ログインが item マッチして『埋める』提案を
+    // 出す挙動を断つ。出典: https://www.1password.dev/web/compatible-website-design/
+    `<label for="account-create-confirm-password">はじめのパスワード（確認）` +
+    `<input type="password" id="account-create-confirm-password" name="confirm_password" autocomplete="new-password" ` +
+    `aria-label="はじめのパスワード（確認）"></label>` +
     `<label for="account-create-display-name">お名前` +
-    `<input type="text" id="account-create-display-name" name="display_name" autocomplete="off" ` +
+    `<input type="text" id="account-create-display-name" name="display_name" autocomplete="off" data-1p-ignore ` +
     `maxlength="20" aria-label="お名前"></label>` +
     `<button type="submit" data-op="create-account">解答者を作る</button>` +
     `</form>` +
@@ -1194,9 +1222,16 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       const body = await readFormOrJsonBody(req);
       if (body === null) return sendRedirect(res, `${base}?error=invalid_request`);
       try {
+        const password = body["password"] ?? "";
+        // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄の一致検証（加算・非破壊）。
+        // 確認欄が空＝旧クライアント後方互換ゆえ従来どおり通す。confirm は検証のみで保存しない。
+        const confirm = body["confirm_password"];
+        if (confirm !== undefined && confirm !== "" && confirm !== password) {
+          return sendRedirect(res, `${base}?error=password_mismatch`);
+        }
         const contestant = await createAccount(accountStore, {
           loginId: body["login_id"] ?? "",
-          password: body["password"] ?? "",
+          password,
           role: "contestant",
           displayName: body["display_name"] ?? "",
         });
@@ -1228,9 +1263,17 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const body = await readFormOrJsonBody(req);
     if (body === null) return sendRedirect(res, "/admin/accounts?error=invalid_request");
     try {
+      const password = body["password"] ?? "";
+      // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄の一致検証（加算・非破壊）。
+      // 確認欄が空＝旧クライアント後方互換ゆえ従来どおり通す。confirm は検証のみで保存しない
+      // （createAccount の引数は不変）。
+      const confirm = body["confirm_password"];
+      if (confirm !== undefined && confirm !== "" && confirm !== password) {
+        return sendRedirect(res, "/admin/accounts?error=password_mismatch");
+      }
       await createAccount(accountStore, {
         loginId: body["login_id"] ?? "",
-        password: body["password"] ?? "",
+        password,
         role: "contestant",
         displayName: body["display_name"] ?? "",
       });

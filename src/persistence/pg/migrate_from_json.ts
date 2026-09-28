@@ -156,9 +156,14 @@ export async function migrateEpisodes(
     questionCache.set(episodeId, new Set(existing.map((q) => q.question_number)));
   }
   for (const row of questions) {
+    // episode_id 単位のキャッシュで存在確認クエリを省く（main の性能改善を維持）。
     const already = questionCache.get(row.episode_id)?.has(row.question_number) ?? false;
-    await pgStore.upsertQuestion(row);
-    if (!already) inserted += 1;
+    // 非破壊: 既存の PG 行は上書きしない（古い JSON バックアップで新しい PG 問題を潰さない）。
+    // 挿入は不在時のみ行い、既存行が JSON と食い違う場合は下の検証ループが不一致として報告する。
+    if (!already) {
+      await pgStore.upsertQuestion(row);
+      inserted += 1;
+    }
   }
 
   // 検証: 各表で JSON 行が PG に存在し全カラム一致（値は出さず列名のみ）。

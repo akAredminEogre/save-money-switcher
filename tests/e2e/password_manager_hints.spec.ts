@@ -6,8 +6,6 @@
  * 本スペックが証跡化する契約（HTML 上の標準形）:
  *   - 新しくパスワードを決める欄（はじめのパスワード・新しいパスワード）は `autocomplete="new-password"`。
  *   - ログイン面のパスワード欄は `autocomplete="current-password"`、ID 欄は `autocomplete="username"`。
- *   - 新規作成フォームのログインID欄は `autocomplete="off" data-1p-ignore` を名乗る
- *     （1Password が既存ログイン一致と判定しないための是正・cmd_2553 redo 2026-09-18）。
  *   - どの欄も `type="password"` / `name` / `id` を持ち、`<form>` に囲われ、`<label for>` か
  *     隠しの username 欄で「誰のパスワードか」が機械可読である。
  *   - 各 `<form>` は一意の `id` / `name` を名乗る（1Password 公式の互換要件
@@ -127,7 +125,7 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(form).toContain('name="login"');
   });
 
-  it("解答者アカウント作成（はじめのパスワード）は new-password を名乗り、ログインID欄は 1Password に無視させる", async () => {
+  it("解答者アカウント作成（はじめのパスワード）は username + new-password を名乗る", async () => {
     const html = await getHtml(app.baseUrl, "/admin/accounts", adminCookie);
     const form = formOf(html, "account-create");
     const id = inputOf(form, "login_id");
@@ -135,22 +133,35 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
 
     expect(form).toContain('method="post"');
     expect(form).toContain('action="/admin/accounts"');
-    expect(id).toContain('autocomplete="off"');
-    expect(id).toContain('data-1p-ignore');
+    expect(id).toContain('autocomplete="username"');
     expect(id).toContain('id="account-create-login-id"');
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 作成フォームの login_id から
+    // data-1p-ignore を除去する。有力仮説＝この属性が 1Password に username 欄を無視させ、
+    // new-password 欄との signup 対応付けを弱めて生成サジェストを抑止していた。
+    expect(id).not.toContain("data-1p-ignore");
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="account-create-password"');
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を追加し、
+    // 『新規パスワード生成』の場面として一意化する＋ログインフォーム（password 欄 1 個）とシグネチャを分岐させ、
+    // 同一ドメインの保存済み admin ログインの item マッチを断つ（出典 www.1password.dev/web/compatible-website-design）。
+    const confirm = inputOf(form, "confirm_password");
+    expect(confirm).toContain('type="password"');
+    expect(confirm).toContain('autocomplete="new-password"');
+    expect(confirm).toContain('id="account-create-confirm-password"');
     expect(form).toContain('<label for="account-create-login-id">');
     expect(form).toContain('<label for="account-create-password">');
+    expect(form).toContain('<label for="account-create-confirm-password">');
     // お名前は username と取り違えられぬよう明示的に対象外とする。
     expect(inputOf(form, "display_name")).toContain('autocomplete="off"');
+    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
+    expect(inputOf(form, "display_name")).toContain("data-1p-ignore");
     // 1Password 互換要件: フォームは一意の id / name を名乗る。
     expect(form).toContain('id="account-create-form"');
     expect(form).toContain('name="account-create"');
   });
 
-  it("解答者アカウント更新（この人を保存する）は new-password と隠しの username を持つ", async () => {
+  it("解答者アカウント更新（この人を保存する）は new-password を持ち、PM から隠されている", async () => {
     const html = await getHtml(app.baseUrl, "/admin/accounts", adminCookie);
     const form = formOf(html, "account-update");
     const password = inputOf(form, "password");
@@ -158,30 +169,45 @@ describe("パスワード管理ソフト向けの入力欄（cmd_2553 追補）"
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toMatch(/id="account-update-password-[^"]+"/);
-    // 「誰のパスワードか」を知らせる隠し欄。`name` を持たぬゆえ送信対象にはならない。
-    expect(form).toContain(
-      `<input type="text" autocomplete="username" data-1p-ignore value="${CONTESTANT_LOGIN_ID}" readonly hidden>`,
-    );
+    // 更新行は管理者が他者のパスワードを変えるフォームゆえ PM に保存させない。
+    expect(password).toContain("data-1p-ignore");
+    // cmd_2553「次の手」: 更新行の隠しログインID欄（value 入り）は撤去した。値が残ると
+    // 「この頁には既存資格情報が在る」と分類され、同頁の新規作成フォームで生成提案が抑止される
+    // （autocomplete="off" は Chrome がパスワード欄向けに無視するうえ値自体が残るため無効化しきれぬ）。
+    // ゆえに欄ごと除き、更新行に解答者のログインID値を DOM へ出さぬことを契約とする。
+    expect(form).not.toContain(`value="${CONTESTANT_LOGIN_ID}"`);
+    expect(form).not.toContain("readonly hidden");
     // 1Password 互換要件: 更新行のフォームは account.id を含む一意の id / name を名乗る。
     expect(form).toMatch(/id="account-update-form-[^"]+"/);
     expect(form).toMatch(/name="account-update-[^"]+"/);
   });
 
-  it("回の解答者作成（はじめのパスワード）は new-password を名乗り、ログインID欄は 1Password に無視させる", async () => {
+  it("回の解答者作成（はじめのパスワード）は username + new-password を名乗る", async () => {
     const html = await getHtml(app.baseUrl, `/admin/episodes/${episodeId}`, adminCookie);
     const form = formOf(html, "member-create");
     const id = inputOf(form, "login_id");
     const password = inputOf(form, "password");
 
     expect(form).toContain(`action="/admin/episodes/${episodeId}/contestants"`);
-    expect(id).toContain('autocomplete="off"');
-    expect(id).toContain('data-1p-ignore');
+    expect(id).toContain('autocomplete="username"');
     expect(id).toContain('id="member-create-login-id"');
+    // cmd_2553 検証ラウンド2（殿ご裁可 2026-09-24・lp_2553_04）: 作成フォームの login_id から
+    // data-1p-ignore を除去（account-create と扱いを揃える）。
+    expect(id).not.toContain("data-1p-ignore");
     expect(password).toContain('type="password"');
     expect(password).toContain('autocomplete="new-password"');
     expect(password).toContain('id="member-create-password"');
+    // cmd_2553 Stage2（軍師設計・殿授権 2026-09-24）: 確認用パスワード欄（2つ目の new-password）を account-create と
+    // 同型で追加し、『新規パスワード生成』を一意化＋ログインフォームとのシグネチャ分岐で保存済みログインのマッチを断つ。
+    const confirm = inputOf(form, "confirm_password");
+    expect(confirm).toContain('type="password"');
+    expect(confirm).toContain('autocomplete="new-password"');
+    expect(confirm).toContain('id="member-create-confirm-password"');
     expect(form).toContain('<label for="member-create-login-id">');
     expect(form).toContain('<label for="member-create-password">');
+    expect(form).toContain('<label for="member-create-confirm-password">');
+    // 保存済みログインの一致を誘発せぬよう 1Password に無視させる（是正 cmd_2553 suppress-saved-login）。
+    expect(inputOf(form, "display_name")).toContain("data-1p-ignore");
     // 1Password 互換要件: フォームは一意の id / name を名乗る。
     expect(form).toContain('id="member-create-form"');
     expect(form).toContain('name="member-create"');
